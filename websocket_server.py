@@ -13,9 +13,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from .agent import process_analytics_request
-from .dependencies import AnalyticsDependencies
-from .settings import settings
+from agent import process_analytics_request
+from dependencies import AnalyticsDependencies
+from settings import settings
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=settings.log_level)

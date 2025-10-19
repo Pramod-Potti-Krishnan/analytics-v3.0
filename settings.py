@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator, ConfigDict
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from env file
 load_dotenv()
 
 

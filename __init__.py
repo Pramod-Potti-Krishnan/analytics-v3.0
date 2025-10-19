@@ -7,9 +7,9 @@ charts and visualizations through a WebSocket API with real-time progress stream
 
 __version__ = "3.0.0"
 
-from .agent import process_analytics_request
-from .dependencies import AnalyticsDependencies
-from .settings import settings
+from agent import process_analytics_request
+from dependencies import AnalyticsDependencies
+from settings import settings
 
 __all__ = [
     "process_analytics_request",

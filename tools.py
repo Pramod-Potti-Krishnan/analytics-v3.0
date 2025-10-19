@@ -15,8 +15,8 @@ import seaborn as sns
 from datetime import datetime, timedelta
 from pydantic_ai import RunContext
 
-from .dependencies import AnalyticsDependencies
-from .providers import get_openai_client
+from dependencies import AnalyticsDependencies
+from providers import get_openai_client
 
 logger = logging.getLogger(__name__)
 

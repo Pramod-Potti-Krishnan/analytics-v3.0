@@ -4,7 +4,7 @@ OpenAI provider configuration for analytics microservice.
 
 from typing import Optional
 import openai
-from .settings import settings
+from settings import settings
 
 
 def get_llm_model(model_choice: Optional[str] = None):

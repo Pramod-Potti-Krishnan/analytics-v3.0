@@ -11,8 +11,8 @@ import io
 from datetime import datetime
 
 if TYPE_CHECKING:
-    from .storage import SupabaseStorage
-    from .job_manager import JobManager
+    from storage import SupabaseStorage
+    from job_manager import JobManager
 
 logger = logging.getLogger(__name__)
 
