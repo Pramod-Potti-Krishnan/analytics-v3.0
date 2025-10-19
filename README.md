@@ -2,6 +2,15 @@
 
 A REST API analytics microservice that generates comprehensive charts and visualizations, storing them in Supabase Storage and returning public URLs with underlying data.
 
+## 🌐 Production URL
+
+**Live API**: `https://analytics-v30-production.up.railway.app`
+
+Test it now:
+```bash
+curl https://analytics-v30-production.up.railway.app/health
+```
+
 ## Features
 
 - 🚀 **REST API** with async job processing and polling
@@ -11,7 +20,7 @@ A REST API analytics microservice that generates comprehensive charts and visual
 - ☁️ **Supabase Storage** for chart hosting with public URLs
 - 📈 **Job Progress Tracking** with optional polling endpoint
 - 🔄 **Concurrent Job Processing** with automatic cleanup
-- 🚂 **Railway Ready** for immediate deployment
+- 🚂 **Railway Deployed** and production-ready
 
 ## Quick Start
 
@@ -44,12 +53,14 @@ The service will start on `http://localhost:8080`
 
 ### 3. Test with REST Client
 
+#### Using Production API
+
 ```python
 import requests
 import time
 
-# Submit chart generation request
-response = requests.post("http://localhost:8080/generate", json={
+# Submit chart generation request to production
+response = requests.post("https://analytics-v30-production.up.railway.app/generate", json={
     "content": "Show quarterly revenue growth for 2024",
     "title": "Q1-Q4 2024 Revenue",
     "chart_type": "bar_vertical",
@@ -62,7 +73,7 @@ print(f"Job created: {job_id}")
 
 # Poll for results
 while True:
-    status_response = requests.get(f"http://localhost:8080/status/{job_id}")
+    status_response = requests.get(f"https://analytics-v30-production.up.railway.app/status/{job_id}")
     status = status_response.json()
 
     print(f"Status: {status['status']} - Progress: {status.get('progress', 0)}%")
@@ -75,6 +86,36 @@ while True:
         print(f"Error: {status.get('error')}")
         break
 
+    time.sleep(1)
+```
+
+#### Using Local Development
+
+```python
+import requests
+import time
+
+# For local development, use localhost
+BASE_URL = "http://localhost:8080"
+
+response = requests.post(f"{BASE_URL}/generate", json={
+    "content": "Show quarterly revenue growth for 2024",
+    "title": "Q1-Q4 2024 Revenue",
+    "chart_type": "bar_vertical",
+    "theme": "professional"
+})
+
+job_data = response.json()
+job_id = job_data["job_id"]
+
+# Poll for completion
+while True:
+    status_response = requests.get(f"{BASE_URL}/status/{job_id}")
+    status = status_response.json()
+
+    if status["status"] == "completed":
+        print(f"Chart URL: {status['chart_url']}")
+        break
     time.sleep(1)
 ```
 
@@ -237,6 +278,472 @@ Service information.
 - `professional` - Muted professional colors
 - `colorful` - Bright, vibrant colors
 - `minimal` - Grayscale minimalist
+
+## 🔌 Integration Guide for Other Services
+
+This section shows how to integrate the Analytics Microservice v3 into your application.
+
+### Base URLs
+
+- **Production**: `https://analytics-v30-production.up.railway.app`
+- **Local Development**: `http://localhost:8080`
+
+### Integration Pattern
+
+The microservice uses an async job pattern:
+1. **Submit** chart generation request → Get `job_id`
+2. **Poll** status endpoint until completion
+3. **Retrieve** chart URL and data from completed job
+
+### Python Integration
+
+```python
+import requests
+import time
+from typing import Dict, Any, Optional
+
+class AnalyticsClient:
+    """Client for Analytics Microservice v3"""
+
+    def __init__(self, base_url: str = "https://analytics-v30-production.up.railway.app"):
+        self.base_url = base_url.rstrip('/')
+
+    def generate_chart(
+        self,
+        content: str,
+        title: str = "Analytics Chart",
+        chart_type: str = "bar_vertical",
+        theme: str = "professional",
+        data: Optional[list] = None,
+        poll_interval: float = 1.0,
+        max_wait: int = 60
+    ) -> Dict[str, Any]:
+        """
+        Generate a chart and wait for completion.
+
+        Args:
+            content: Description of analytics needed
+            title: Chart title
+            chart_type: Type of chart (see docs for options)
+            theme: Color theme (default, dark, professional, colorful, minimal)
+            data: Optional user-provided data
+            poll_interval: Seconds between status checks
+            max_wait: Maximum seconds to wait for completion
+
+        Returns:
+            Dict with chart_url, chart_data, and metadata
+
+        Raises:
+            TimeoutError: If chart generation exceeds max_wait
+            RuntimeError: If chart generation fails
+        """
+        # Submit request
+        response = requests.post(f"{self.base_url}/generate", json={
+            "content": content,
+            "title": title,
+            "chart_type": chart_type,
+            "theme": theme,
+            "data": data
+        })
+        response.raise_for_status()
+
+        job_data = response.json()
+        job_id = job_data["job_id"]
+
+        # Poll for completion
+        elapsed = 0
+        while elapsed < max_wait:
+            status_response = requests.get(f"{self.base_url}/status/{job_id}")
+            status_response.raise_for_status()
+            status = status_response.json()
+
+            if status["status"] == "completed":
+                return {
+                    "chart_url": status["chart_url"],
+                    "chart_data": status["chart_data"],
+                    "chart_type": status["chart_type"],
+                    "theme": status["theme"],
+                    "metadata": status.get("metadata", {})
+                }
+            elif status["status"] == "failed":
+                raise RuntimeError(f"Chart generation failed: {status.get('error')}")
+
+            time.sleep(poll_interval)
+            elapsed += poll_interval
+
+        raise TimeoutError(f"Chart generation timed out after {max_wait} seconds")
+
+    def get_status(self, job_id: str) -> Dict[str, Any]:
+        """Get current status of a job."""
+        response = requests.get(f"{self.base_url}/status/{job_id}")
+        response.raise_for_status()
+        return response.json()
+
+    def health_check(self) -> Dict[str, Any]:
+        """Check service health."""
+        response = requests.get(f"{self.base_url}/health")
+        response.raise_for_status()
+        return response.json()
+
+
+# Example usage
+if __name__ == "__main__":
+    client = AnalyticsClient()
+
+    # Generate a chart
+    result = client.generate_chart(
+        content="Show monthly sales data for 2024",
+        title="2024 Sales Performance",
+        chart_type="line",
+        theme="professional"
+    )
+
+    print(f"Chart URL: {result['chart_url']}")
+    print(f"Chart has {len(result['chart_data']['labels'])} data points")
+```
+
+### JavaScript/TypeScript Integration
+
+```javascript
+class AnalyticsClient {
+    constructor(baseUrl = 'https://analytics-v30-production.up.railway.app') {
+        this.baseUrl = baseUrl.replace(/\/$/, '');
+    }
+
+    async generateChart({
+        content,
+        title = 'Analytics Chart',
+        chartType = 'bar_vertical',
+        theme = 'professional',
+        data = null,
+        pollInterval = 1000,
+        maxWait = 60000
+    }) {
+        // Submit request
+        const response = await fetch(`${this.baseUrl}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content,
+                title,
+                chart_type: chartType,
+                theme,
+                data
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to submit chart request: ${response.statusText}`);
+        }
+
+        const { job_id } = await response.json();
+
+        // Poll for completion
+        const startTime = Date.now();
+        while (Date.now() - startTime < maxWait) {
+            const statusResponse = await fetch(`${this.baseUrl}/status/${job_id}`);
+
+            if (!statusResponse.ok) {
+                throw new Error(`Failed to get job status: ${statusResponse.statusText}`);
+            }
+
+            const status = await statusResponse.json();
+
+            if (status.status === 'completed') {
+                return {
+                    chartUrl: status.chart_url,
+                    chartData: status.chart_data,
+                    chartType: status.chart_type,
+                    theme: status.theme,
+                    metadata: status.metadata || {}
+                };
+            } else if (status.status === 'failed') {
+                throw new Error(`Chart generation failed: ${status.error}`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        throw new Error(`Chart generation timed out after ${maxWait}ms`);
+    }
+
+    async getStatus(jobId) {
+        const response = await fetch(`${this.baseUrl}/status/${jobId}`);
+        if (!response.ok) {
+            throw new Error(`Failed to get status: ${response.statusText}`);
+        }
+        return response.json();
+    }
+
+    async healthCheck() {
+        const response = await fetch(`${this.baseUrl}/health`);
+        if (!response.ok) {
+            throw new Error(`Health check failed: ${response.statusText}`);
+        }
+        return response.json();
+    }
+}
+
+// Example usage
+const client = new AnalyticsClient();
+
+client.generateChart({
+    content: 'Show monthly sales data for 2024',
+    title: '2024 Sales Performance',
+    chartType: 'line',
+    theme: 'professional'
+})
+.then(result => {
+    console.log('Chart URL:', result.chartUrl);
+    console.log('Data points:', result.chartData.labels.length);
+})
+.catch(error => {
+    console.error('Chart generation failed:', error);
+});
+```
+
+### cURL Examples
+
+```bash
+# Submit chart generation request
+curl -X POST https://analytics-v30-production.up.railway.app/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Show quarterly revenue for 2024",
+    "title": "Q1-Q4 2024 Revenue",
+    "chart_type": "bar_vertical",
+    "theme": "professional"
+  }'
+
+# Response: {"job_id": "550e8400-e29b-41d4-a716-446655440000", "status": "processing"}
+
+# Check job status
+curl https://analytics-v30-production.up.railway.app/status/550e8400-e29b-41d4-a716-446655440000
+
+# Health check
+curl https://analytics-v30-production.up.railway.app/health
+```
+
+### FastAPI/Flask Integration
+
+```python
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import requests
+
+app = FastAPI()
+
+ANALYTICS_URL = "https://analytics-v30-production.up.railway.app"
+
+class ChartRequest(BaseModel):
+    content: str
+    title: str = "Chart"
+    chart_type: str = "bar_vertical"
+    theme: str = "professional"
+
+@app.post("/api/generate-chart")
+async def generate_chart(request: ChartRequest):
+    """Generate a chart using the analytics microservice."""
+    try:
+        # Submit to analytics service
+        response = requests.post(
+            f"{ANALYTICS_URL}/generate",
+            json=request.dict()
+        )
+        response.raise_for_status()
+
+        job_data = response.json()
+        job_id = job_data["job_id"]
+
+        # Return job_id for client-side polling
+        # Or wait for completion server-side
+        return {
+            "job_id": job_id,
+            "status_url": f"{ANALYTICS_URL}/status/{job_id}"
+        }
+
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chart-status/{job_id}")
+async def get_chart_status(job_id: str):
+    """Check status of a chart generation job."""
+    try:
+        response = requests.get(f"{ANALYTICS_URL}/status/{job_id}")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+### React Integration
+
+```typescript
+import { useState, useCallback } from 'react';
+
+interface ChartResult {
+    chartUrl: string;
+    chartData: {
+        labels: string[];
+        values: number[];
+        title: string;
+    };
+    chartType: string;
+    theme: string;
+}
+
+const ANALYTICS_URL = 'https://analytics-v30-production.up.railway.app';
+
+export function useAnalyticsChart() {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [result, setResult] = useState<ChartResult | null>(null);
+
+    const generateChart = useCallback(async (
+        content: string,
+        title: string = 'Chart',
+        chartType: string = 'bar_vertical',
+        theme: string = 'professional'
+    ) => {
+        setLoading(true);
+        setError(null);
+        setResult(null);
+
+        try {
+            // Submit request
+            const submitResponse = await fetch(`${ANALYTICS_URL}/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, title, chart_type: chartType, theme })
+            });
+
+            if (!submitResponse.ok) {
+                throw new Error('Failed to submit chart request');
+            }
+
+            const { job_id } = await submitResponse.json();
+
+            // Poll for completion
+            while (true) {
+                const statusResponse = await fetch(`${ANALYTICS_URL}/status/${job_id}`);
+
+                if (!statusResponse.ok) {
+                    throw new Error('Failed to get job status');
+                }
+
+                const status = await statusResponse.json();
+
+                if (status.status === 'completed') {
+                    setResult({
+                        chartUrl: status.chart_url,
+                        chartData: status.chart_data,
+                        chartType: status.chart_type,
+                        theme: status.theme
+                    });
+                    break;
+                } else if (status.status === 'failed') {
+                    throw new Error(status.error || 'Chart generation failed');
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    return { generateChart, loading, error, result };
+}
+
+// Example component usage
+function ChartGenerator() {
+    const { generateChart, loading, error, result } = useAnalyticsChart();
+
+    const handleGenerate = () => {
+        generateChart(
+            'Show monthly sales for 2024',
+            '2024 Sales Performance',
+            'line',
+            'professional'
+        );
+    };
+
+    return (
+        <div>
+            <button onClick={handleGenerate} disabled={loading}>
+                {loading ? 'Generating...' : 'Generate Chart'}
+            </button>
+            {error && <p>Error: {error}</p>}
+            {result && <img src={result.chartUrl} alt={result.chartData.title} />}
+        </div>
+    );
+}
+```
+
+### Error Handling Best Practices
+
+```python
+import requests
+from requests.exceptions import RequestException, Timeout, HTTPError
+
+def safe_generate_chart(content: str, **kwargs) -> dict:
+    """
+    Generate chart with comprehensive error handling.
+    """
+    base_url = "https://analytics-v30-production.up.railway.app"
+
+    try:
+        # Submit request with timeout
+        response = requests.post(
+            f"{base_url}/generate",
+            json={"content": content, **kwargs},
+            timeout=10
+        )
+        response.raise_for_status()
+        job_id = response.json()["job_id"]
+
+        # Poll with retries
+        max_attempts = 60
+        for attempt in range(max_attempts):
+            try:
+                status_response = requests.get(
+                    f"{base_url}/status/{job_id}",
+                    timeout=10
+                )
+                status_response.raise_for_status()
+                status = status_response.json()
+
+                if status["status"] == "completed":
+                    return status
+                elif status["status"] == "failed":
+                    return {
+                        "success": False,
+                        "error": status.get("error", "Unknown error")
+                    }
+
+            except Timeout:
+                print(f"Status check timeout (attempt {attempt + 1})")
+                continue
+            except HTTPError as e:
+                if e.response.status_code == 404:
+                    return {"success": False, "error": "Job not found"}
+                raise
+
+            time.sleep(1)
+
+        return {"success": False, "error": "Timeout waiting for completion"}
+
+    except Timeout:
+        return {"success": False, "error": "Request timeout"}
+    except HTTPError as e:
+        return {"success": False, "error": f"HTTP error: {e.response.status_code}"}
+    except RequestException as e:
+        return {"success": False, "error": f"Network error: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "error": f"Unexpected error: {str(e)}"}
+```
 
 ## Deployment
 
