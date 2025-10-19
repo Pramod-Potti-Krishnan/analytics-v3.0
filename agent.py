@@ -7,11 +7,11 @@ import json
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from .providers import get_openai_client
-from .dependencies import AnalyticsDependencies
-from .settings import settings
-from .tools import chart_generator_direct, data_synthesizer_direct, theme_applier
-from .storage import SupabaseStorage
+from providers import get_openai_client
+from dependencies import AnalyticsDependencies
+from settings import settings
+from tools import chart_generator_direct, data_synthesizer_direct, theme_applier
+from storage import SupabaseStorage
 
 logger = logging.getLogger(__name__)
 

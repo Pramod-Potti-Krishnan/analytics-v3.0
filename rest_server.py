@@ -11,11 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
 
-from .settings import settings
-from .job_manager import JobManager
-from .storage import SupabaseStorage
-from .dependencies import AnalyticsDependencies
-from .agent import process_analytics_direct
+from settings import settings
+from job_manager import JobManager
+from storage import SupabaseStorage
+from dependencies import AnalyticsDependencies
+from agent import process_analytics_direct
 
 logger = logging.getLogger(__name__)
 
