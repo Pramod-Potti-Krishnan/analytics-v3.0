@@ -256,6 +256,9 @@ async def generate_analytics_slide(
     This endpoint matches the Text Service API pattern for seamless Director integration.
     Returns complete slide content ready for Layout Builder.
 
+    For L02 layout: Returns 2 HTML fields (element_3 chart, element_2 observations).
+    For L01/L03 layouts: Returns standard content fields.
+
     Args:
         layout: Layout type (L01, L02, L03)
         analytics_type: Analytics visualization type (revenue_over_time, market_share, etc.)
@@ -274,28 +277,45 @@ async def generate_analytics_slide(
                 detail=f"Invalid analytics type: {analytics_type}. Supported: {[t.value for t in AnalyticsType]}"
             )
 
-        # Import here to avoid circular dependency
-        from agent import process_analytics_slide
+        # L02 uses new Chart.js-based generator (Director integration)
+        if layout == "L02":
+            from agent import generate_l02_analytics
 
-        # Process analytics generation
-        result = await process_analytics_slide(
-            analytics_type=analytics_type,
-            layout=layout,
-            request_data=request.dict(),
-            storage=storage
-        )
+            logger.info(f"Generating L02 analytics: {analytics_type}")
 
-        if not result.get("success"):
-            raise HTTPException(
-                status_code=500,
-                detail=result.get("error", "Analytics generation failed")
+            result = await generate_l02_analytics(request.dict())
+
+            # Return Text Service compatible response
+            # For L02: content contains element_3 (chart) and element_2 (observations)
+            return {
+                "content": result.get("content", {}),
+                "metadata": result.get("metadata", {})
+            }
+
+        # L01/L03 use existing ApexCharts-based generator
+        else:
+            from agent import process_analytics_slide
+
+            logger.info(f"Generating {layout} analytics: {analytics_type}")
+
+            result = await process_analytics_slide(
+                analytics_type=analytics_type,
+                layout=layout,
+                request_data=request.dict(),
+                storage=storage
             )
 
-        # Return Text Service compatible response
-        return {
-            "content": result.get("content", {}),
-            "metadata": result.get("metadata", {})
-        }
+            if not result.get("success"):
+                raise HTTPException(
+                    status_code=500,
+                    detail=result.get("error", "Analytics generation failed")
+                )
+
+            # Return Text Service compatible response
+            return {
+                "content": result.get("content", {}),
+                "metadata": result.get("metadata", {})
+            }
 
     except HTTPException:
         raise

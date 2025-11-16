@@ -427,3 +427,254 @@ def _detect_data_format(data: list) -> str:
         return "currency"
 
     return "number"
+
+
+async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generate L02 analytics slide with Chart.js + observations.
+
+    Returns 2 separate HTML fields for Director Agent integration:
+    - element_3: Chart HTML (1260×720px)
+    - element_2: Observations HTML (540×720px)
+
+    Follows Director Agent integration specification v1.0.
+
+    Args:
+        request_data: Request from Director Agent
+            - presentation_id: Presentation identifier
+            - slide_id: Slide identifier
+            - slide_number: Slide position
+            - narrative: User narrative/description
+            - topics: List of topic keywords
+            - data: Array of {label, value} data points
+            - context: {theme, audience, slide_title, subtitle, ...}
+            - options: {enable_editor: bool, chart_height: int}
+
+    Returns:
+        Dictionary with content (element_3, element_2) and metadata:
+        {
+            "content": {
+                "element_3": "<div>chart html</div>",
+                "element_2": "<div>observations html</div>"
+            },
+            "metadata": {
+                "analytics_type": "...",
+                "chart_type": "...",
+                "layout": "L02",
+                ...
+            }
+        }
+    """
+    try:
+        from chartjs_generator import ChartJSGenerator
+        from layout_assembler import assemble_l02_layout
+        from session_manager import get_session_manager
+
+        start_time = datetime.utcnow()
+
+        # Extract request fields
+        presentation_id = request_data.get("presentation_id", "unknown")
+        slide_id = request_data.get("slide_id", "slide-unknown")
+        slide_number = request_data.get("slide_number", 1)
+        narrative = request_data.get("narrative", "")
+        topics = request_data.get("topics", [])
+        data = request_data.get("data", [])
+        context = request_data.get("context", {})
+        options = request_data.get("options", {})
+
+        # Configuration
+        theme = context.get("theme", "professional")
+        audience = context.get("audience", "executives")
+        slide_title = context.get("slide_title", "Analytics")
+        subtitle = context.get("subtitle", "")
+        enable_editor = options.get("enable_editor", False)
+
+        # Determine analytics type from narrative/topics
+        analytics_type = _infer_analytics_type(narrative, topics, data)
+
+        # Determine chart type
+        chart_type = get_chart_type(analytics_type)
+
+        # Convert data format for Chart.js
+        chart_data = {
+            "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
+            "values": [d.get("value", 0) for d in data],
+            "series_name": slide_title,
+            "format": _detect_data_format(data)
+        }
+
+        logger.info(
+            f"Generating L02 analytics: {analytics_type} ({chart_type}) "
+            f"for presentation {presentation_id}, slide {slide_number}"
+        )
+
+        # Initialize generators
+        chart_gen = ChartJSGenerator(theme=theme)
+        insight_gen = InsightGenerator()
+        session_mgr = get_session_manager()
+
+        # Get prior slides for context
+        prior_slides = session_mgr.get_prior_slides(presentation_id, limit=3)
+
+        # Generate chart HTML (Chart.js canvas)
+        chart_html = None
+        if chart_type == "line":
+            chart_html = chart_gen.generate_line_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "bar_vertical":
+            chart_html = chart_gen.generate_bar_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "donut":
+            chart_html = chart_gen.generate_donut_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        else:
+            # Default to bar chart
+            chart_html = chart_gen.generate_bar_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+
+        if not chart_html:
+            raise ValueError(f"Failed to generate {chart_type} chart")
+
+        # Generate observations/insights (max 500 chars for L02)
+        insights_text = await insight_gen.generate_l02_explanation(
+            chart_type=chart_type,
+            data=chart_data,
+            narrative=narrative,
+            audience=audience,
+            context={
+                **context,
+                "prior_slides": prior_slides,
+                "max_chars": 500  # L02 requirement
+            }
+        )
+
+        # Assemble L02 layout (returns element_3 and element_2)
+        l02_content = assemble_l02_layout(
+            canvas_html=chart_html,
+            chart_id=f"chart-{slide_id}",
+            insights_text=insights_text,
+            theme=theme,
+            enable_editor=enable_editor
+        )
+
+        # Update session context
+        session_mgr.update_context(
+            presentation_id=presentation_id,
+            slide_data={
+                "slide_number": slide_number,
+                "slide_id": slide_id,
+                "analytics_type": analytics_type,
+                "narrative": narrative,
+                "data": data,
+                "theme": theme
+            }
+        )
+
+        # Calculate generation time
+        generation_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+
+        # Prepare metadata
+        metadata = {
+            "analytics_type": analytics_type,
+            "chart_type": chart_type,
+            "layout": "L02",
+            "chart_library": "chartjs",
+            "model_used": "gpt-4o-mini",
+            "data_points": len(data),
+            "generation_time_ms": int(generation_time),
+            "theme": theme,
+            "generated_at": datetime.utcnow().isoformat(),
+            "interactive_editor": enable_editor
+        }
+
+        logger.info(
+            f"Successfully generated L02 analytics slide in {generation_time:.0f}ms "
+            f"({analytics_type}, {len(data)} data points)"
+        )
+
+        return {
+            "content": l02_content,  # Contains element_3 and element_2
+            "metadata": metadata
+        }
+
+    except Exception as e:
+        logger.error(f"L02 analytics generation failed: {e}", exc_info=True)
+
+        # Return error with empty content
+        return {
+            "content": {
+                "element_3": f"<div style='padding: 40px; color: red;'>Error: {str(e)}</div>",
+                "element_2": "<div style='padding: 40px;'>Unable to generate observations.</div>"
+            },
+            "metadata": {
+                "layout": "L02",
+                "error": str(e),
+                "generated_at": datetime.utcnow().isoformat()
+            }
+        }
+
+
+def _infer_analytics_type(narrative: str, topics: list, data: list) -> str:
+    """
+    Infer analytics type from narrative, topics, and data.
+
+    Args:
+        narrative: User narrative/description
+        topics: List of topic keywords
+        data: Data points
+
+    Returns:
+        Analytics type (revenue_over_time, market_share, etc.)
+    """
+    narrative_lower = narrative.lower()
+    topics_lower = [t.lower() for t in topics]
+
+    # Revenue/growth keywords → revenue_over_time
+    if any(word in narrative_lower for word in ["revenue", "growth", "sales", "income"]):
+        return "revenue_over_time"
+
+    # Market/share keywords → market_share
+    if any(word in narrative_lower for word in ["market", "share", "distribution", "breakdown"]):
+        return "market_share"
+
+    # Quarterly/comparison keywords → quarterly_comparison
+    if any(word in narrative_lower for word in ["quarterly", "quarter", "q1", "q2", "q3", "q4", "comparison"]):
+        return "quarterly_comparison"
+
+    # Year-over-year keywords → yoy_growth
+    if any(word in narrative_lower for word in ["year-over-year", "yoy", "annual", "yearly"]):
+        return "yoy_growth"
+
+    # KPI/metrics keywords → kpi_metrics
+    if any(word in narrative_lower for word in ["kpi", "metrics", "performance", "indicators"]):
+        return "kpi_metrics"
+
+    # Default based on data structure
+    if len(data) <= 5:
+        return "market_share"  # Few categories → donut chart
+    else:
+        return "revenue_over_time"  # Time series → line chart

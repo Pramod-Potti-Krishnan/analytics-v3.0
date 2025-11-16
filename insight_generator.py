@@ -105,12 +105,21 @@ Example: "Revenue grew steadily throughout FY 2024, achieving 42% growth from Q1
             narrative: User's description
             statistical_summary: Optional statistical analysis (R², correlations, etc.)
             audience: Target audience
-            context: Optional context
+            context: Optional context (can include max_chars limit)
 
         Returns:
-            4-6 sentence detailed explanation (max 250 words)
+            4-6 sentence detailed explanation (respects max_chars from context)
         """
+        # Extract max_chars from context (default 500 for L02)
+        max_chars = 500
+        if context and "max_chars" in context:
+            max_chars = context["max_chars"]
+
         data_summary = self._summarize_data(data)
+
+        # Adjust prompt based on character limit
+        word_estimate = max_chars // 5  # Roughly 5 chars per word
+        sentence_count = "4-6" if max_chars >= 400 else "3-4"
 
         prompt = f"""You are a business analyst generating detailed explanations for complex charts in presentations.
 
@@ -120,14 +129,17 @@ Statistical Info: {statistical_summary or 'Not provided'}
 User Request: {narrative}
 Audience: {audience}
 
-Generate 4-6 sentences (max 250 words) that:
+**IMPORTANT: Your response must be {max_chars} characters or less.**
+
+Generate {sentence_count} sentences (approx {word_estimate} words) that:
 1. Explain what the visualization shows
 2. Highlight key statistical findings (correlations, outliers, trends)
 3. Provide interpretation and business implications
 4. Suggest actionable insights or next steps
 
 Write professionally for {audience}. Include specific numbers when relevant.
-This will appear in a text panel next to the chart, so be detailed but clear.
+This will appear in a text panel next to the chart, so be concise yet insightful.
+Keep total length under {max_chars} characters.
 
 Example: "This scatter plot reveals a strong positive correlation (R² = 0.87) between marketing spend and sales revenue. Each $1 invested in marketing generates approximately $4.20 in sales. Notable outliers in Q2 suggest seasonal variations that should be factored into budget planning. The trend line indicates diminishing returns above $50K monthly spend, suggesting an optimal investment threshold."
 """
@@ -138,7 +150,7 @@ Example: "This scatter plot reveals a strong positive correlation (R² = 0.87) b
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a business analyst expert at interpreting complex data visualizations and explaining them clearly."
+                        "content": "You are a business analyst expert at interpreting complex data visualizations and explaining them clearly and concisely."
                     },
                     {
                         "role": "user",
@@ -146,17 +158,29 @@ Example: "This scatter plot reveals a strong positive correlation (R² = 0.87) b
                     }
                 ],
                 temperature=0.7,
-                max_tokens=300
+                max_tokens=min(300, max_chars // 3)  # Limit tokens based on char limit
             )
 
             explanation = response.choices[0].message.content.strip()
-            logger.info(f"Generated L02 explanation: {len(explanation)} characters")
+
+            # Enforce character limit with truncation if needed
+            if len(explanation) > max_chars:
+                logger.warning(
+                    f"L02 explanation ({len(explanation)} chars) exceeds {max_chars}, truncating..."
+                )
+                explanation = explanation[:max_chars - 3] + "..."
+
+            logger.info(f"Generated L02 explanation: {len(explanation)}/{max_chars} characters")
             return explanation
 
         except Exception as e:
             logger.error(f"Failed to generate L02 explanation: {e}")
             # Fallback
-            return self._generate_fallback_explanation(data, narrative)
+            fallback = self._generate_fallback_explanation(data, narrative)
+            # Ensure fallback also respects limit
+            if len(fallback) > max_chars:
+                fallback = fallback[:max_chars - 3] + "..."
+            return fallback
 
     async def generate_l03_descriptions(
         self,

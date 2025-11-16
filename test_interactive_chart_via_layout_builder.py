@@ -33,7 +33,7 @@ def generate_interactive_chart_presentation():
     # 1. Relative URL (default) - requires layout builder to proxy: "/api/charts"
     # 2. Absolute URL - direct to analytics service: "http://localhost:8080/api/charts"
     # 3. Production URL: "https://your-analytics.railway.app/api/charts"
-    api_url = "http://localhost:8080/api/charts"  # ✅ LOCAL ANALYTICS SERVICE
+    api_url = "https://analytics-v30-production.up.railway.app/api/charts"  # ✅ RAILWAY PRODUCTION
 
     chart_html = generator.generate_line_chart(
         data={
