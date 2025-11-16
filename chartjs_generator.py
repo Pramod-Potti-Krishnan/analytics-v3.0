@@ -367,7 +367,10 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts"
     ) -> str:
         """
         Generate Chart.js pie chart.
@@ -376,15 +379,24 @@ class ChartJSGenerator:
             data: Chart data with:
                 - labels: Slice labels
                 - values: Slice values
+            enable_editor: Whether to include interactive edit button
+            presentation_id: Presentation UUID for editor persistence
+            api_base_url: Base URL for chart data API
         """
-        return self._generate_circular_chart("pie", data, height, chart_id, options)
+        return self._generate_circular_chart(
+            "pie", data, height, chart_id, options,
+            enable_editor, presentation_id, api_base_url
+        )
 
     def generate_doughnut_chart(
         self,
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts"
     ) -> str:
         """
         Generate Chart.js doughnut chart.
@@ -393,8 +405,14 @@ class ChartJSGenerator:
             data: Chart data with:
                 - labels: Slice labels
                 - values: Slice values
+            enable_editor: Whether to include interactive edit button
+            presentation_id: Presentation UUID for editor persistence
+            api_base_url: Base URL for chart data API
         """
-        return self._generate_circular_chart("doughnut", data, height, chart_id, options)
+        return self._generate_circular_chart(
+            "doughnut", data, height, chart_id, options,
+            enable_editor, presentation_id, api_base_url
+        )
 
     def _generate_circular_chart(
         self,
@@ -402,7 +420,10 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int,
         chart_id: Optional[str],
-        options: Optional[Dict[str, Any]]
+        options: Optional[Dict[str, Any]],
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts"
     ) -> str:
         """Internal method for pie/doughnut charts."""
         labels = data.get("labels", [])
@@ -461,7 +482,14 @@ class ChartJSGenerator:
         if options:
             config["options"] = self._merge_options(config["options"], options)
 
-        return self._wrap_in_canvas(config, height, chart_id or f"{chart_type}-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"{chart_type}-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url
+        )
 
     # ========================================
     # SCATTER & BUBBLE CHARTS
