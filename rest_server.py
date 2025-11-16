@@ -16,6 +16,7 @@ from job_manager import JobManager
 from storage import SupabaseStorage
 from dependencies import AnalyticsDependencies
 from agent import process_analytics_direct
+from analytics_types import AnalyticsType, get_analytics_layout
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,45 @@ class JobResponse(BaseModel):
     """Job creation response."""
     job_id: str
     status: str
+
+
+class AnalyticsRequest(BaseModel):
+    """Analytics generation request (Text Service compatible pattern)."""
+    presentation_id: str = Field(..., description="Presentation UUID")
+    slide_id: str = Field(..., description="Slide identifier")
+    slide_number: int = Field(..., description="Slide position in deck")
+    narrative: str = Field(..., description="User's description of analytics needed")
+    data: list = Field(..., description="Chart data points [{label, value}, ...]")
+    context: dict = Field(default_factory=dict, description="Presentation context (theme, audience, etc.)")
+    constraints: dict = Field(default_factory=dict, description="Layout constraints (dimensions, etc.)")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "presentation_id": "pres-123",
+                "slide_id": "slide-7",
+                "slide_number": 7,
+                "narrative": "Show quarterly revenue growth highlighting strong Q3-Q4 performance",
+                "data": [
+                    {"label": "Q1 2024", "value": 125000},
+                    {"label": "Q2 2024", "value": 145000},
+                    {"label": "Q3 2024", "value": 162000},
+                    {"label": "Q4 2024", "value": 178000}
+                ],
+                "context": {
+                    "theme": "professional",
+                    "audience": "Board of Directors",
+                    "slide_title": "Quarterly Revenue Growth",
+                    "subtitle": "FY 2024 Performance"
+                }
+            }
+        }
+
+
+class BatchAnalyticsRequest(BaseModel):
+    """Batch analytics generation request."""
+    presentation_id: str
+    slides: list = Field(..., description="List of analytics requests")
 
 
 async def process_chart_job(job_id: str, request_data: Dict[str, Any]):
@@ -125,11 +165,15 @@ async def root():
         "status": "running",
         "api_type": "REST",
         "endpoints": {
-            "generate": "POST /generate",
+            "generate": "POST /generate (Legacy PNG generation)",
             "status": "GET /status/{job_id}",
             "health": "GET /health",
-            "stats": "GET /stats"
-        }
+            "stats": "GET /stats",
+            "analytics": "POST /api/v1/analytics/{layout}/{type} (Text Service compatible)",
+            "batch": "POST /api/v1/analytics/batch"
+        },
+        "supported_analytics": [t.value for t in AnalyticsType],
+        "supported_layouts": ["L01", "L02", "L03"]
     }
 
 
@@ -198,6 +242,201 @@ async def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     return status
+
+
+@app.post("/api/v1/analytics/{layout}/{analytics_type}")
+async def generate_analytics_slide(
+    layout: str,
+    analytics_type: str,
+    request: AnalyticsRequest
+):
+    """
+    Generate analytics slide content (Text Service compatible).
+
+    This endpoint matches the Text Service API pattern for seamless Director integration.
+    Returns complete slide content ready for Layout Builder.
+
+    Args:
+        layout: Layout type (L01, L02, L03)
+        analytics_type: Analytics visualization type (revenue_over_time, market_share, etc.)
+        request: Analytics generation request
+
+    Returns:
+        Slide content with chart HTML and insights
+    """
+    try:
+        # Validate analytics type
+        try:
+            atype = AnalyticsType(analytics_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid analytics type: {analytics_type}. Supported: {[t.value for t in AnalyticsType]}"
+            )
+
+        # Import here to avoid circular dependency
+        from agent import process_analytics_slide
+
+        # Process analytics generation
+        result = await process_analytics_slide(
+            analytics_type=analytics_type,
+            layout=layout,
+            request_data=request.dict(),
+            storage=storage
+        )
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Analytics generation failed")
+            )
+
+        # Return Text Service compatible response
+        return {
+            "content": result.get("content", {}),
+            "metadata": result.get("metadata", {})
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Analytics generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/analytics/batch")
+async def generate_analytics_batch(request: BatchAnalyticsRequest):
+    """
+    Generate multiple analytics slides in batch (parallel processing).
+
+    Args:
+        request: Batch request with multiple slide specifications
+
+    Returns:
+        List of slide contents with charts and insights
+    """
+    try:
+        from agent import process_analytics_slide
+
+        results = []
+
+        # Process slides in parallel
+        tasks = []
+        for slide_req in request.slides:
+            analytics_type = slide_req.get("analytics_type")
+            layout = slide_req.get("layout") or get_analytics_layout(analytics_type)
+
+            task = process_analytics_slide(
+                analytics_type=analytics_type,
+                layout=layout,
+                request_data=slide_req,
+                storage=storage
+            )
+            tasks.append(task)
+
+        # Wait for all to complete
+        import asyncio
+        completed_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Format results
+        for i, result in enumerate(completed_results):
+            if isinstance(result, Exception):
+                results.append({
+                    "success": False,
+                    "slide_id": request.slides[i].get("slide_id"),
+                    "error": str(result)
+                })
+            else:
+                results.append({
+                    "success": result.get("success", False),
+                    "slide_id": request.slides[i].get("slide_id"),
+                    "content": result.get("content", {}),
+                    "metadata": result.get("metadata", {})
+                })
+
+        return {
+            "presentation_id": request.presentation_id,
+            "slides": results,
+            "total": len(results),
+            "successful": sum(1 for r in results if r.get("success"))
+        }
+
+    except Exception as e:
+        logger.error(f"Batch analytics generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========================================
+# INTERACTIVE CHART EDITOR API
+# ========================================
+
+class ChartDataUpdate(BaseModel):
+    """Request to update chart data."""
+    chart_id: str = Field(..., description="Chart identifier")
+    presentation_id: str = Field(..., description="Presentation UUID")
+    labels: list = Field(..., description="X-axis labels")
+    values: list = Field(..., description="Y-axis values")
+    timestamp: str = Field(default=None, description="Update timestamp")
+
+
+@app.post("/api/charts/update-data")
+async def update_chart_data(data: ChartDataUpdate):
+    """
+    Save edited chart data (for interactive editor).
+
+    Args:
+        data: Chart data with labels and values
+
+    Returns:
+        Success status and message
+    """
+    try:
+        logger.info(f"Updating chart data: {data.chart_id} in presentation {data.presentation_id}")
+
+        # TODO: Save to database when ChartData model is available
+        # For now, just return success to allow client-side editing
+        # In production, you'd save to PostgreSQL or Supabase
+
+        return {
+            "success": True,
+            "message": "Chart data updated successfully",
+            "chart_id": data.chart_id,
+            "presentation_id": data.presentation_id,
+            "labels_count": len(data.labels),
+            "values_count": len(data.values)
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to update chart data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/charts/get-data/{presentation_id}")
+async def get_chart_data(presentation_id: str):
+    """
+    Get all saved chart data for a presentation.
+
+    Args:
+        presentation_id: Presentation UUID
+
+    Returns:
+        List of chart data edits
+    """
+    try:
+        logger.info(f"Fetching chart data for presentation: {presentation_id}")
+
+        # TODO: Load from database when ChartData model is available
+        # For now, return empty list
+
+        return {
+            "success": True,
+            "presentation_id": presentation_id,
+            "charts": []
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to fetch chart data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def run_server():

@@ -745,6 +745,378 @@ def safe_generate_chart(content: str, **kwargs) -> dict:
         return {"success": False, "error": f"Unexpected error: {str(e)}"}
 ```
 
+## 📊 Text Service-Compatible Analytics API (NEW)
+
+The Analytics Microservice v3 now provides a Text Service-compatible API for generating complete slide content with interactive ApexCharts visualizations and AI-generated insights. This API follows the same pattern as the Text Service for seamless integration with the Director Agent.
+
+### Key Features
+
+- **Interactive ApexCharts** with animations and Reveal.js integration
+- **AI-Generated Insights** using GPT-4o-mini for contextual business analysis
+- **Three Layout Options**: L01 (centered chart + insight), L02 (chart + explanation), L03 (side-by-side comparison)
+- **Complete Slide Content**: Chart HTML, insights, titles, and subtitles
+- **Text Service Pattern**: Compatible request/response format for Director integration
+
+### Analytics Types
+
+The service supports the following analytics types:
+
+| Analytics Type | Description | Default Layout | Chart Type |
+|---------------|-------------|----------------|------------|
+| `revenue_over_time` | Revenue tracking over time | L01 | Line chart |
+| `quarterly_comparison` | Compare quarterly metrics | L01 | Bar chart |
+| `market_share` | Market share distribution | L01 | Donut chart |
+| `yoy_growth` | Year-over-year growth comparison | L03 | Bar chart (dual) |
+| `kpi_metrics` | Key performance indicators | L02 | Mixed charts |
+
+### Layout Types
+
+#### L01: Centered Chart with Insights
+- **Chart**: 1800×600px centered interactive chart (element_4)
+- **Body Text**: AI-generated insight below chart (element_3)
+- **Use Case**: Single-metric focus with key takeaway
+
+#### L02: Chart with Detailed Explanation
+- **Chart**: 1260×720px chart on left side (element_3)
+- **Explanation**: Detailed analysis on right (element_2)
+- **Use Case**: Complex data requiring explanation
+
+#### L03: Side-by-Side Comparison
+- **Left Chart**: 840×540px chart (element_4)
+- **Right Chart**: 840×540px chart (element_2)
+- **Descriptions**: Paired short descriptions (element_3, element_5)
+- **Use Case**: Before/after, A/B testing, regional comparisons
+
+### POST /api/v1/analytics/{layout}/{analytics_type}
+
+Generate complete slide content with interactive analytics.
+
+**URL Parameters:**
+- `layout`: Layout type (L01, L02, or L03)
+- `analytics_type`: Analytics visualization type (see table above)
+
+**Request Body (Text Service Pattern):**
+```json
+{
+    "presentation_id": "pres-123",
+    "slide_id": "slide-7",
+    "slide_number": 7,
+    "narrative": "Show quarterly revenue growth highlighting strong Q3-Q4 performance",
+    "data": [
+        {"label": "Q1 2024", "value": 125000},
+        {"label": "Q2 2024", "value": 145000},
+        {"label": "Q3 2024", "value": 162000},
+        {"label": "Q4 2024", "value": 178000}
+    ],
+    "context": {
+        "theme": "professional",
+        "audience": "Board of Directors",
+        "slide_title": "Quarterly Revenue Growth",
+        "subtitle": "FY 2024 Performance",
+        "presentation_name": "Board Review Q4 2024"
+    },
+    "constraints": {
+        "max_data_points": 12,
+        "chart_height": 600
+    }
+}
+```
+
+**Response (L01 Layout):**
+```json
+{
+    "content": {
+        "slide_title": "Quarterly Revenue Growth",
+        "element_1": "FY 2024 Performance",
+        "element_4": "<div id=\"chart-058150c2\" style=\"width: 100%; height: 600px;\">...</div>\n<script src=\"https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js\"></script>\n<script>...</script>",
+        "element_3": "Revenue for FY 2024 demonstrated a robust upward trajectory, increasing from $125,000 in Q1 to $178,000 by Q4, marking a total growth of 42.4%. Notably, the most significant surge occurred between Q3 and Q4...",
+        "presentation_name": "Board Review Q4 2024",
+        "company_logo": "📊"
+    },
+    "metadata": {
+        "analytics_type": "revenue_over_time",
+        "layout": "L01",
+        "chart_library": "apexcharts",
+        "chart_type": "line",
+        "model_used": "gpt-4o-mini",
+        "data_points": 4,
+        "generation_time_ms": 3007,
+        "theme": "professional",
+        "generated_at": "2025-11-14T06:30:24.598338"
+    }
+}
+```
+
+**Response (L03 Layout - Side-by-Side Comparison):**
+```json
+{
+    "content": {
+        "slide_title": "Year-over-Year Revenue Growth",
+        "element_1": "2023 vs 2024 Quarterly Comparison",
+        "element_4": "<div id=\"chart-left-slide-1\">...</div><script>...</script>",
+        "element_2": "<div id=\"chart-right-slide-1\">...</div><script>...</script>",
+        "element_3": "2023 baseline showing quarterly revenue growth from Q1 to Q4. Average quarterly revenue: $152,500.",
+        "element_5": "2024 performance demonstrating 25% YoY growth across all quarters. Average quarterly revenue: $190,750.",
+        "presentation_name": "Annual Board Review 2024",
+        "company_logo": "📊"
+    },
+    "metadata": {
+        "analytics_type": "yoy_growth",
+        "layout": "L03",
+        "chart_library": "apexcharts",
+        "chart_type": "bar",
+        "model_used": "gpt-4o-mini",
+        "data_points": 8,
+        "generation_time_ms": 3001,
+        "theme": "professional",
+        "generated_at": "2025-11-14T06:31:02.862981"
+    }
+}
+```
+
+### POST /api/v1/analytics/batch
+
+Generate multiple analytics slides in parallel.
+
+**Request Body:**
+```json
+{
+    "presentation_id": "pres-123",
+    "slides": [
+        {
+            "analytics_type": "revenue_over_time",
+            "layout": "L01",
+            "slide_id": "slide-5",
+            "slide_number": 5,
+            "narrative": "Show revenue growth",
+            "data": [{"label": "Q1", "value": 100}, ...],
+            "context": {...}
+        },
+        {
+            "analytics_type": "market_share",
+            "layout": "L01",
+            "slide_id": "slide-6",
+            "slide_number": 6,
+            "narrative": "Show market share",
+            "data": [{"label": "Product A", "value": 35}, ...],
+            "context": {...}
+        }
+    ]
+}
+```
+
+**Response:**
+```json
+{
+    "presentation_id": "pres-123",
+    "slides": [
+        {
+            "success": true,
+            "slide_id": "slide-5",
+            "content": {...},
+            "metadata": {...}
+        },
+        {
+            "success": true,
+            "slide_id": "slide-6",
+            "content": {...},
+            "metadata": {...}
+        }
+    ],
+    "total": 2,
+    "successful": 2
+}
+```
+
+### Python Director Integration Example
+
+```python
+import requests
+from typing import Dict, Any
+
+class AnalyticsServiceClient:
+    """Client for Analytics Microservice v3 (Text Service Pattern)"""
+
+    def __init__(self, base_url: str = "http://localhost:8080"):
+        self.base_url = base_url.rstrip('/')
+
+    def generate_analytics_slide(
+        self,
+        analytics_type: str,
+        layout: str,
+        presentation_id: str,
+        slide_id: str,
+        slide_number: int,
+        narrative: str,
+        data: list,
+        context: dict,
+        constraints: dict = None
+    ) -> Dict[str, Any]:
+        """
+        Generate analytics slide content following Text Service pattern.
+
+        Args:
+            analytics_type: Type of analytics (revenue_over_time, market_share, etc.)
+            layout: Layout type (L01, L02, L03)
+            presentation_id: Presentation UUID
+            slide_id: Slide identifier
+            slide_number: Slide position
+            narrative: User's description of analytics
+            data: Chart data points
+            context: Presentation context (theme, audience, title, etc.)
+            constraints: Optional layout constraints
+
+        Returns:
+            Dict with content and metadata
+        """
+        url = f"{self.base_url}/api/v1/analytics/{layout}/{analytics_type}"
+
+        payload = {
+            "presentation_id": presentation_id,
+            "slide_id": slide_id,
+            "slide_number": slide_number,
+            "narrative": narrative,
+            "data": data,
+            "context": context,
+            "constraints": constraints or {}
+        }
+
+        response = requests.post(url, json=payload, timeout=30)
+        response.raise_for_status()
+
+        return response.json()
+
+# Example usage in Director Agent
+client = AnalyticsServiceClient()
+
+result = client.generate_analytics_slide(
+    analytics_type="revenue_over_time",
+    layout="L01",
+    presentation_id="pres-001",
+    slide_id="slide-7",
+    slide_number=7,
+    narrative="Show quarterly revenue growth highlighting strong Q3-Q4 performance",
+    data=[
+        {"label": "Q1 2024", "value": 125000},
+        {"label": "Q2 2024", "value": 145000},
+        {"label": "Q3 2024", "value": 162000},
+        {"label": "Q4 2024", "value": 178000}
+    ],
+    context={
+        "theme": "professional",
+        "audience": "Board of Directors",
+        "slide_title": "Quarterly Revenue Growth",
+        "subtitle": "FY 2024 Performance",
+        "presentation_name": "Board Review Q4 2024"
+    }
+)
+
+# Access the generated content
+chart_html = result["content"]["element_4"]  # ApexCharts HTML
+insight = result["content"]["element_3"]     # AI-generated insight
+slide_title = result["content"]["slide_title"]
+subtitle = result["content"]["element_1"]
+```
+
+### Chart HTML Structure
+
+The generated chart HTML includes:
+
+1. **Self-contained ApexCharts**: Complete HTML with embedded configuration
+2. **Reveal.js Integration**: Charts animate when slide becomes active
+3. **Responsive Design**: Charts adapt to container size
+4. **Interactive Features**: Hover tooltips, zoom, pan (where applicable)
+5. **Theme Support**: Colors match presentation theme
+
+Example chart HTML structure:
+```html
+<div id="chart-abc123" style="width: 100%; height: 600px;"></div>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js"></script>
+<script>
+(function() {
+  // ApexCharts configuration
+  const options = {
+    chart: { type: "line", height: 600, animations: { enabled: true } },
+    series: [{ name: "Revenue", data: [125000, 145000, 162000, 178000] }],
+    xaxis: { categories: ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024"] },
+    // ... full configuration
+  };
+
+  const chart = new ApexCharts(document.querySelector('#chart-abc123'), options);
+
+  // Reveal.js integration - animate on slide appearance
+  if (typeof Reveal !== 'undefined') {
+    Reveal.on('slidechanged', function(event) {
+      const currentSlide = event.currentSlide;
+      if (currentSlide && currentSlide.querySelector('#chart-abc123')) {
+        if (!chart.rendered) {
+          chart.render();
+          chart.rendered = true;
+        }
+      }
+    });
+  } else {
+    chart.render();  // Fallback for non-Reveal.js contexts
+  }
+})();
+</script>
+```
+
+### Testing the Analytics API
+
+Use the provided test files to validate the implementation:
+
+```bash
+# Test L01 layout (centered chart with insights)
+python3 test_analytics_l01.py
+
+# Test L03 layout (side-by-side comparison)
+python3 test_analytics_l03.py
+```
+
+Both test files will:
+- Validate service health
+- Test all analytics types
+- Generate JSON output for inspection
+- Create HTML previews for visualization
+- Report test results with detailed validation
+
+### Migration from Legacy PNG API
+
+If you're migrating from the legacy `/generate` endpoint (PNG charts):
+
+**Old Pattern (PNG generation):**
+```python
+response = requests.post(f"{BASE_URL}/generate", json={
+    "content": "Show revenue",
+    "chart_type": "bar_vertical"
+})
+job_id = response.json()["job_id"]
+# Poll for PNG URL...
+```
+
+**New Pattern (Interactive HTML):**
+```python
+response = requests.post(f"{BASE_URL}/api/v1/analytics/L01/revenue_over_time", json={
+    "presentation_id": "pres-001",
+    "slide_id": "slide-7",
+    "slide_number": 7,
+    "narrative": "Show revenue",
+    "data": [{"label": "Q1", "value": 100}, ...],
+    "context": {"theme": "professional", "slide_title": "Revenue"}
+})
+result = response.json()
+chart_html = result["content"]["element_4"]  # Immediate response, no polling
+```
+
+**Key Differences:**
+- ✅ Synchronous response (no job polling)
+- ✅ Interactive charts (not static PNG)
+- ✅ AI-generated insights included
+- ✅ Complete slide content ready for Layout Builder
+- ✅ Reveal.js integration built-in
+- ✅ Text Service-compatible format
+
 ## Deployment
 
 ### Railway Deployment

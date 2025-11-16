@@ -12,6 +12,9 @@ from dependencies import AnalyticsDependencies
 from settings import settings
 from tools import chart_generator_direct, data_synthesizer_direct, theme_applier
 from storage import SupabaseStorage
+from analytics_types import get_chart_type, get_layout_dimensions
+from apexcharts_generator import ApexChartsGenerator
+from insight_generator import InsightGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -194,3 +197,233 @@ async def process_analytics_request(request_data: Dict[str, Any]) -> Dict[str, A
     finally:
         if 'deps' in locals():
             await deps.cleanup()
+
+
+async def process_analytics_slide(
+    analytics_type: str,
+    layout: str,
+    request_data: Dict[str, Any],
+    storage: Optional[SupabaseStorage] = None
+) -> Dict[str, Any]:
+    """
+    Process analytics slide generation (Text Service compatible pattern).
+
+    Generates complete slide content with ApexCharts HTML and LLM-generated insights,
+    formatted for Layout Builder layouts (L01, L02, L03).
+
+    Args:
+        analytics_type: Type of analytics (revenue_over_time, market_share, etc.)
+        layout: Layout type (L01, L02, L03)
+        request_data: Request parameters matching Text Service pattern
+        storage: Optional Supabase storage instance
+
+    Returns:
+        Dictionary with content and metadata in Text Service format
+    """
+    try:
+        start_time = datetime.utcnow()
+
+        # Extract request fields
+        presentation_id = request_data.get("presentation_id")
+        slide_id = request_data.get("slide_id")
+        slide_number = request_data.get("slide_number")
+        narrative = request_data.get("narrative", "")
+        data = request_data.get("data", [])
+        context = request_data.get("context", {})
+        constraints = request_data.get("constraints", {})
+
+        # Get configuration
+        theme = context.get("theme", "professional")
+        audience = context.get("audience", "executives")
+        slide_title = context.get("slide_title", "Analytics")
+        subtitle = context.get("subtitle", "")
+
+        # Get layout dimensions
+        dimensions = get_layout_dimensions(layout)
+        chart_height = dimensions.get("chart_height", 600)
+        chart_width = dimensions.get("chart_width", 1800)
+
+        # Get chart type for this analytics type
+        chart_type = get_chart_type(analytics_type)
+
+        # Convert data format
+        chart_data = {
+            "labels": [d.get("label") for d in data],
+            "values": [d.get("value") for d in data],
+            "series_name": slide_title,
+            "format": _detect_data_format(data)
+        }
+
+        logger.info(f"Generating {analytics_type} as {chart_type} chart in {layout} layout")
+
+        # Initialize generators
+        chart_gen = ApexChartsGenerator(theme=theme)
+        insight_gen = InsightGenerator()
+
+        # Generate chart HTML
+        chart_html = chart_gen.generate_chart_html(
+            chart_type=chart_type,
+            data=chart_data,
+            height=chart_height,
+            width=chart_width
+        )
+
+        # Generate content based on layout
+        if layout == "L01":
+            # L01: Centered chart with body text below
+            insight = await insight_gen.generate_l01_insight(
+                chart_type=chart_type,
+                data=chart_data,
+                narrative=narrative,
+                audience=audience,
+                context=context
+            )
+
+            content = {
+                "slide_title": slide_title,
+                "element_1": subtitle,
+                "element_4": chart_html,
+                "element_3": insight,
+                "presentation_name": context.get("presentation_name", ""),
+                "company_logo": context.get("company_logo", "📊")
+            }
+
+        elif layout == "L02":
+            # L02: Chart left with detailed explanation right
+            explanation = await insight_gen.generate_l02_explanation(
+                chart_type=chart_type,
+                data=chart_data,
+                narrative=narrative,
+                audience=audience,
+                context=context
+            )
+
+            content = {
+                "slide_title": slide_title,
+                "element_1": subtitle,
+                "element_3": chart_html,
+                "element_2": explanation,
+                "presentation_name": context.get("presentation_name", ""),
+                "company_logo": context.get("company_logo", "📊")
+            }
+
+        elif layout == "L03":
+            # L03: Side-by-side comparison
+            # Split data into left and right
+            mid_point = len(data) // 2
+            left_data = {
+                "labels": [d.get("label") for d in data[:mid_point]],
+                "values": [d.get("value") for d in data[:mid_point]],
+                "series_name": "Before",
+                "format": chart_data["format"]
+            }
+            right_data = {
+                "labels": [d.get("label") for d in data[mid_point:]],
+                "values": [d.get("value") for d in data[mid_point:]],
+                "series_name": "After",
+                "format": chart_data["format"]
+            }
+
+            # Generate two charts
+            left_chart = chart_gen.generate_chart_html(
+                chart_type=chart_type,
+                data=left_data,
+                height=chart_height,
+                width=chart_width,
+                chart_id=f"chart-left-{slide_id}"
+            )
+
+            right_chart = chart_gen.generate_chart_html(
+                chart_type=chart_type,
+                data=right_data,
+                height=chart_height,
+                width=chart_width,
+                chart_id=f"chart-right-{slide_id}"
+            )
+
+            # Generate paired descriptions
+            left_desc, right_desc = await insight_gen.generate_l03_descriptions(
+                left_data=left_data,
+                right_data=right_data,
+                narrative=narrative
+            )
+
+            content = {
+                "slide_title": slide_title,
+                "element_1": subtitle,
+                "element_4": left_chart,
+                "element_2": right_chart,
+                "element_3": left_desc,
+                "element_5": right_desc,
+                "presentation_name": context.get("presentation_name", ""),
+                "company_logo": context.get("company_logo", "📊")
+            }
+
+        else:
+            raise ValueError(f"Unsupported layout: {layout}")
+
+        # Calculate generation time
+        generation_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+
+        # Prepare metadata
+        metadata = {
+            "analytics_type": analytics_type,
+            "layout": layout,
+            "chart_library": "apexcharts",
+            "chart_type": chart_type,
+            "model_used": "gpt-4o-mini",
+            "data_points": len(data),
+            "generation_time_ms": int(generation_time),
+            "theme": theme,
+            "generated_at": datetime.utcnow().isoformat()
+        }
+
+        logger.info(f"Successfully generated {layout} analytics slide in {generation_time:.0f}ms")
+
+        return {
+            "success": True,
+            "content": content,
+            "metadata": metadata
+        }
+
+    except Exception as e:
+        logger.error(f"Analytics slide generation failed: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e),
+            "content": {},
+            "metadata": {
+                "analytics_type": analytics_type,
+                "layout": layout,
+                "error": str(e)
+            }
+        }
+
+
+def _detect_data_format(data: list) -> str:
+    """
+    Detect data format from values (currency, percentage, or number).
+
+    Args:
+        data: List of data points with label and value
+
+    Returns:
+        Format type: "currency", "percentage", or "number"
+    """
+    if not data:
+        return "number"
+
+    # Check first few values
+    sample_values = [d.get("value", 0) for d in data[:3]]
+
+    # If all values are between 0 and 100, likely percentage
+    if all(0 <= v <= 100 for v in sample_values):
+        # But only if they're not all whole numbers above 10
+        if not all(v > 10 and v == int(v) for v in sample_values):
+            return "percentage"
+
+    # If values are large (> 1000), likely currency
+    if any(v > 1000 for v in sample_values):
+        return "currency"
+
+    return "number"
