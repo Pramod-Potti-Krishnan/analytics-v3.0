@@ -11,7 +11,7 @@ import requests
 from datetime import datetime
 
 # Base URL for analytics service
-BASE_URL = "http://localhost:8080"  # Change to Railway URL for production testing
+BASE_URL = "https://analytics-v30-production.up.railway.app"  # Railway production URL
 
 
 def test_l02_revenue_over_time():
