@@ -537,7 +537,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
         elif chart_type == "donut":
-            chart_html = chart_gen.generate_donut_chart(
+            chart_html = chart_gen.generate_doughnut_chart(
                 data=chart_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
