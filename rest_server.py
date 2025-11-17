@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Analytics Microservice v3",
     description="""
-## Analytics Service v3.1.3 - Director Integration Ready (9 Analytics Types)
+## Analytics Service v3.1.4 - Hotfix: Analytics Type Routing (9 Analytics Types)
 
 Generate interactive Chart.js and ApexCharts visualizations with AI-powered insights.
 
@@ -80,7 +80,7 @@ response = requests.post(
 - **Chart Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
 - **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
     """,
-    version="3.1.3",
+    version="3.1.4",
     contact={
         "name": "Analytics Service Team",
         "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
@@ -672,7 +672,10 @@ async def generate_analytics_slide(
 
             logger.info(f"Generating L02 analytics: {analytics_type}")
 
-            result = await generate_l02_analytics(request.dict())
+            # Pass analytics_type explicitly in request dict (v3.1.4 hotfix)
+            request_dict = request.dict()
+            request_dict['analytics_type'] = analytics_type
+            result = await generate_l02_analytics(request_dict)
 
             # Return Text Service compatible response
             # For L02: content contains element_3 (chart) and element_2 (observations)

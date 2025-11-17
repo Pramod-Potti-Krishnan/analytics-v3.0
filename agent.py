@@ -559,8 +559,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         subtitle = context.get("subtitle", "")
         enable_editor = options.get("enable_editor", True)  # Director Approach 3: enabled by default
 
-        # Determine analytics type from narrative/topics
-        analytics_type = _infer_analytics_type(narrative, topics, data)
+        # Determine analytics type: use explicit parameter if provided, otherwise infer (v3.1.4 hotfix)
+        analytics_type = request_data.get('analytics_type') or _infer_analytics_type(narrative, topics, data)
 
         # Determine chart type
         chart_type = get_chart_type(analytics_type)
