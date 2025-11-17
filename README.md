@@ -1,6 +1,6 @@
 # Analytics Microservice v3
 
-**Version**: 3.1.5
+**Version**: 3.1.6
 **Status**: ✅ Production Ready
 **Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
 
@@ -17,7 +17,7 @@ curl https://analytics-v30-production.up.railway.app/health
 
 ## 🚀 Director Integration Quick Start
 
-**New in v3.1.5**: Fixed Chart.js type mapping bug where 6 analytics types rendered as bar charts. All 9 analytics types now render with correct Chart.js type (pie, scatter, bubble, radar, etc.).
+**New in v3.1.6**: Fixed data transformation bugs for scatter, bubble, and radar charts. All 9 analytics types now render with correct data (labels preserved, varying radii, populated datasets).
 
 **Features**: Comprehensive Director Agent integration with data validation, structured errors, and chart type discovery.
 
