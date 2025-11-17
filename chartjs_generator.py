@@ -1360,35 +1360,38 @@ class ChartJSGenerator:
 </div>
 
 <!-- Modal Popup for Editor -->
-<div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+<div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
 
         <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e0e0e0;">
-            <h2 style="margin: 0; font-size: 20px; color: #333;">📊 Edit Chart Data</h2>
-            <button onclick="closeChartEditor_{js_safe_id}()" style="background: none; border: none; font-size: 32px; color: #666; cursor: pointer;">&times;</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: none;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">📊</span>
+                <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: white;">Edit Chart Data</h2>
+            </div>
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: rgba(255,255,255,0.2); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; color: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">&times;</button>
         </div>
 
         <!-- Body -->
-        <div style="padding: 24px; overflow-y: auto; flex: 1;">
-            <table id="table-{chart_id}" style="width: 100%; border-collapse: collapse;">
+        <div style="padding: 32px; overflow-y: auto; flex: 1; background: #f8f9fa;">
+            <table id="table-{chart_id}" style="width: 100%; border-collapse: separate; border-spacing: 0; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                 <thead>
-                    <tr>
-                        <th style="background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">#</th>
-                        <th style="background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Label</th>
-                        <th style="background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Value</th>
-                        <th style="background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Actions</th>
+                    <tr style="background: linear-gradient(to right, #f8f9fa, #e9ecef);">
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; width: 60px;">#</th>
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Label</th>
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Value</th>
+                        <th style="padding: 16px 20px; text-align: center; font-weight: 600; color: #495057; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; width: 100px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-{chart_id}"></tbody>
             </table>
-            <button onclick="addRow_{js_safe_id}()" style="margin-top: 12px; background: #f0f0f0; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; cursor: pointer;">+ Add Row</button>
+            <button onclick="addRow_{js_safe_id}()" style="margin-top: 20px; background: white; color: #667eea; border: 2px dashed #667eea; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; width: 100%;" onmouseover="this.style.background='#f8f9ff'; this.style.borderColor='#764ba2'" onmouseout="this.style.background='white'; this.style.borderColor='#667eea'">+ Add Row</button>
         </div>
 
         <!-- Footer -->
-        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e0e0e0;">
-            <button onclick="closeChartEditor_{js_safe_id}()" style="background: #f0f0f0; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Cancel</button>
-            <button onclick="saveChartData_{js_safe_id}()" style="background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">💾 Save & Update</button>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 24px 32px; background: white; border-top: 1px solid #e9ecef;">
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">Cancel</button>
+            <button onclick="saveChartData_{js_safe_id}()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'">💾 Save & Update</button>
         </div>
     </div>
 </div>
@@ -1420,18 +1423,21 @@ class ChartJSGenerator:
 
         labels.forEach((label, index) => {{
             const row = document.createElement('tr');
+            row.style.transition = 'background 0.2s';
             row.innerHTML = `
-                <td style="padding: 8px;">${{index + 1}}</td>
-                <td style="padding: 8px;">
-                    <input type="text" class="label-input" value="${{label}}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600;">${{index + 1}}</td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="text" class="label-input" value="${{label}}" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
                 </td>
-                <td style="padding: 8px;">
-                    <input type="number" class="value-input" value="${{values[index]}}" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="number" class="value-input" value="${{values[index]}}" step="any" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
                 </td>
-                <td style="padding: 8px;">
-                    <button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">🗑️</button>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; text-align: center;">
+                    <button onclick="deleteRow_{js_safe_id}(this)" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(238, 90, 111, 0.3);" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(238, 90, 111, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(238, 90, 111, 0.3)'">🗑️ Delete</button>
                 </td>
             `;
+            row.onmouseover = () => row.style.background = '#f8f9ff';
+            row.onmouseout = () => row.style.background = 'transparent';
             tbody.appendChild(row);
         }});
 
@@ -1446,18 +1452,21 @@ class ChartJSGenerator:
         const tbody = document.getElementById('tbody-{chart_id}');
         const rowCount = tbody.querySelectorAll('tr').length;
         const row = document.createElement('tr');
+        row.style.transition = 'background 0.2s';
         row.innerHTML = `
-            <td style="padding: 8px;">${{rowCount + 1}}</td>
-            <td style="padding: 8px;">
-                <input type="text" class="label-input" value="" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600;">${{rowCount + 1}}</td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                <input type="text" class="label-input" value="" placeholder="Enter label" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
             </td>
-            <td style="padding: 8px;">
-                <input type="number" class="value-input" value="0" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                <input type="number" class="value-input" value="0" step="any" placeholder="Enter value" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
             </td>
-            <td style="padding: 8px;">
-                <button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">🗑️</button>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; text-align: center;">
+                <button onclick="deleteRow_{js_safe_id}(this)" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(238, 90, 111, 0.3);" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(238, 90, 111, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(238, 90, 111, 0.3)'">🗑️ Delete</button>
             </td>
         `;
+        row.onmouseover = () => row.style.background = '#f8f9ff';
+        row.onmouseout = () => row.style.background = 'transparent';
         tbody.appendChild(row);
     }};
 
@@ -1466,6 +1475,14 @@ class ChartJSGenerator:
     }};
 
     window.saveChartData_{js_safe_id} = async function() {{
+        // Lazy lookup: Get chart at save time (not script load time)
+        const chart = window.chartInstances?.['{chart_id}'];
+        if (!chart) {{
+            console.error('Chart not found when saving');
+            alert('Chart not available. Please refresh and try again.');
+            return;
+        }}
+
         const rows = document.querySelectorAll('#tbody-{chart_id} tr');
         const newLabels = [];
         const newValues = [];
