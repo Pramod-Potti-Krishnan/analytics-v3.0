@@ -257,6 +257,9 @@ async def process_analytics_slide(
 
         logger.info(f"Generating {analytics_type} as {chart_type} chart in {layout} layout")
 
+        # Generate unique chart ID
+        chart_id = f"chart-{slide_id}" if slide_id else f"chart-{analytics_type}-{int(datetime.utcnow().timestamp())}"
+
         # Initialize generators
         chart_gen = ChartJSGenerator(theme=theme)
         insight_gen = InsightGenerator()
@@ -296,11 +299,12 @@ async def process_analytics_slide(
                     output_mode="inline_script"
                 )
 
-        # Generate chart HTML
+        # Generate chart HTML with inline script mode for Layout Builder compliance
         chart_html = generate_chartjs_html(
             chart_type=chart_type,
             data=chart_data,
-            height=chart_height
+            height=chart_height,
+            chart_id=chart_id
         )
 
         # Generate content based on layout

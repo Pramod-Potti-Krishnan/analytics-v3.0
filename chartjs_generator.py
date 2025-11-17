@@ -130,7 +130,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"  # "revealchart" (legacy) or "inline_script" (Layout Builder)
+        output_mode: str = "inline_script"  # "inline_script" (Layout Builder) or "revealchart" (legacy)
     ) -> str:
         """
         Generate Chart.js line chart.
@@ -266,7 +266,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js bar chart (vertical or horizontal).
@@ -337,7 +337,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """Generate horizontal bar chart."""
         return self.generate_bar_chart(
@@ -399,7 +399,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js pie chart.
@@ -427,7 +427,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js doughnut chart.
@@ -456,7 +456,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """Internal method for pie/doughnut charts."""
         labels = data.get("labels", [])
@@ -538,7 +538,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js scatter plot.
@@ -582,7 +582,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js bubble chart.
@@ -630,7 +630,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js radar chart.
@@ -705,7 +705,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js polar area chart.
@@ -784,7 +784,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate mixed chart (e.g., line + bar).
@@ -855,7 +855,7 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "revealchart"  # "revealchart" or "inline_script"
+        output_mode: str = "inline_script"  # "revealchart" or "inline_script"
     ) -> str:
         """
         Wrap Chart.js config in canvas element.
