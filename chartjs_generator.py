@@ -494,12 +494,6 @@ class ChartJSGenerator:
                             "padding": 15
                         }
                     },
-                    "tooltip": {
-                        "enabled": True,
-                        "callbacks": {
-                            "label": "function(context) { return context.label + ': ' + context.parsed + '%'; }"
-                        }
-                    },
                     "datalabels": {
                         "display": True,
                         "color": "#fff",
@@ -1557,12 +1551,6 @@ class ChartJSGenerator:
                         "usePointStyle": True
                     }
                 },
-                "tooltip": {
-                    "enabled": True,
-                    "mode": "index",
-                    "intersect": False,
-                    "callbacks": self._get_tooltip_callback(format_type, chart_type)
-                },
                 "datalabels": {
                     # GUARANTEED: Always display data labels
                     "display": True,
@@ -1696,33 +1684,6 @@ class ChartJSGenerator:
             return {
                 "callback": "function(value) { return value.toLocaleString(); }"
             }
-
-    def _get_tooltip_callback(self, format_type: str, chart_type: str) -> dict:
-        """Get tooltip callback for formatting."""
-        if chart_type in ["scatter", "bubble"]:
-            # Scatter/bubble use parsed.x and parsed.y
-            if format_type == "currency":
-                return {
-                    "label": "function(context) { return '(' + context.parsed.x + ', $' + context.parsed.y.toLocaleString() + ')'; }"
-                }
-            else:
-                return {
-                    "label": "function(context) { return '(' + context.parsed.x + ', ' + context.parsed.y + ')'; }"
-                }
-        else:
-            # Standard charts use parsed.y or just parsed
-            if format_type == "currency":
-                return {
-                    "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': $' + val.toLocaleString(); }"
-                }
-            elif format_type == "percentage":
-                return {
-                    "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': ' + val.toFixed(1) + '%'; }"
-                }
-            else:
-                return {
-                    "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': ' + val.toLocaleString(); }"
-                }
 
     def _get_datalabel_formatter(self, format_type: str) -> str:
         """
