@@ -1395,14 +1395,21 @@ class ChartJSGenerator:
 
 <script>
 (function() {{
-    // Get chart instance (already created by inline script above)
-    const chart = window.chartInstances?.['{chart_id}'];
-
     window.openChartEditor_{js_safe_id} = function() {{
+        // Lazy lookup: Get chart at button click time (not script load time)
+        console.log('=== Edit Button Clicked ===');
+        console.log('Looking for chart ID: {chart_id}');
+        const chart = window.chartInstances?.['{chart_id}'];
+        console.log('window.chartInstances:', window.chartInstances);
+        console.log('Chart found:', !!chart);
+
         if (!chart) {{
+            console.error('Chart not found in window.chartInstances');
             alert('Chart not ready. Please wait and try again.');
             return;
         }}
+
+        console.log('✅ Chart found, opening editor');
 
         // Populate table
         const tbody = document.getElementById('tbody-{chart_id}');
