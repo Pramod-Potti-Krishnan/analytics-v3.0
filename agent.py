@@ -694,23 +694,24 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
         elif chart_type == "scatter":
-            # Convert label-value format to scatter datasets format (x-y coordinates)
-            # Preserve labels as custom property for tooltips
-            scatter_data = {
+            # v3.1.7: Use LINE chart with unconnected points instead of scatter
+            # This ensures editor compatibility while maintaining the same visual (correlation analysis)
+            # Editor can now properly display and edit labels and values
+            line_points_data = {
+                "labels": chart_data["labels"],  # Editor-compatible labels array
                 "datasets": [{
                     "label": slide_title,
-                    "data": [
-                        {
-                            "x": i,
-                            "y": v,
-                            "label": chart_data["labels"][i]  # Preserve original label
-                        }
-                        for i, v in enumerate(chart_data["values"])
-                    ]
+                    "data": chart_data["values"],  # Simple value array (editor-compatible)
+                    "showLine": False,  # Show points only, no connecting line
+                    "pointRadius": 8,
+                    "pointHoverRadius": 12,
+                    "pointBackgroundColor": "#FF6B6B",
+                    "pointBorderColor": "#fff",
+                    "pointBorderWidth": 2
                 }]
             }
-            chart_html = chart_gen.generate_scatter_plot(
-                data=scatter_data,
+            chart_html = chart_gen.generate_line_chart(
+                data=line_points_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
                 enable_editor=enable_editor,
@@ -718,24 +719,32 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
         elif chart_type == "bubble":
-            # Convert label-value format to bubble datasets format (x-y-r coordinates)
-            # Preserve labels and vary bubble radius based on value
-            bubble_data = {
+            # v3.1.7: Use BAR chart with intensity colors instead of bubble
+            # This ensures editor compatibility while showing multidimensional analysis
+            # Color intensity indicates magnitude (darker = higher value)
+            values = chart_data["values"]
+            max_value = max(values) if values else 1
+            min_value = min(values) if values else 0
+            value_range = max_value - min_value if max_value != min_value else 1
+
+            # Generate colors with varying intensity (0.3 to 0.9 opacity)
+            colors = [
+                f"rgba(255, 107, 107, {0.3 + ((v - min_value) / value_range * 0.6)})"
+                for v in values
+            ]
+
+            bar_intensity_data = {
+                "labels": chart_data["labels"],  # Editor-compatible labels
                 "datasets": [{
                     "label": slide_title,
-                    "data": [
-                        {
-                            "x": i,
-                            "y": v,
-                            "r": max(5, min(30, v / 5)),  # Scale radius based on value (5-30 range)
-                            "label": chart_data["labels"][i]  # Preserve original label
-                        }
-                        for i, v in enumerate(chart_data["values"])
-                    ]
+                    "data": chart_data["values"],  # Simple value array (editor-compatible)
+                    "backgroundColor": colors,  # Varying intensity shows magnitude
+                    "borderColor": "rgba(255, 107, 107, 1.0)",
+                    "borderWidth": 2
                 }]
             }
-            chart_html = chart_gen.generate_bubble_chart(
-                data=bubble_data,
+            chart_html = chart_gen.generate_bar_chart(
+                data=bar_intensity_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
                 enable_editor=enable_editor,
