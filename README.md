@@ -1,6 +1,6 @@
 # Analytics Microservice v3
 
-**Version**: 3.1.2
+**Version**: 3.1.4 (Hotfix)
 **Status**: ✅ Production Ready
 **Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
 
@@ -17,7 +17,9 @@ curl https://analytics-v30-production.up.railway.app/health
 
 ## 🚀 Director Integration Quick Start
 
-**New in v3.1.2**: Comprehensive Director Agent integration with data validation, structured errors, and chart type discovery.
+**New in v3.1.4 (Hotfix)**: Fixed critical regression where analytics_type routing was broken. All 9 analytics types now work correctly.
+
+**Features**: Comprehensive Director Agent integration with data validation, structured errors, and chart type discovery.
 
 ### Minimal Working Example
 
@@ -52,8 +54,9 @@ chart_html = result["content"]["element_3"]         # Chart.js chart (1260×720p
 observations_html = result["content"]["element_2"]  # Observations panel (540×720px)
 ```
 
-### Key Features (v3.1.2)
+### Key Features (v3.1.4)
 
+- ✅ **9 Analytics Types Working** - All analytics types correctly routed (v3.1.4 hotfix)
 - ✅ **Comprehensive Data Validation** - Prevents crashes on invalid input
 - ✅ **Structured Error Responses** - Actionable error messages with fix suggestions
 - ✅ **Chart Type Discovery** - Complete catalog via `/api/v1/chart-types`
