@@ -286,8 +286,28 @@ async def process_analytics_slide(
                     api_base_url=api_base_url,
                     output_mode="inline_script"
                 )
-            elif chart_type == "bar":
+            elif chart_type == "bar" or chart_type == "bar_vertical":
                 return chart_gen.generate_bar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "bar_horizontal":
+                return chart_gen.generate_horizontal_bar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "pie":
+                return chart_gen.generate_pie_chart(
                     data=data,
                     height=height,
                     chart_id=chart_id,
@@ -306,8 +326,48 @@ async def process_analytics_slide(
                     api_base_url=api_base_url,
                     output_mode="inline_script"
                 )
+            elif chart_type == "scatter":
+                return chart_gen.generate_scatter_plot(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "bubble":
+                return chart_gen.generate_bubble_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "radar":
+                return chart_gen.generate_radar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "polar_area" or chart_type == "polarArea":
+                return chart_gen.generate_polar_area_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
             else:
-                # Default to bar chart for unknown types
+                # Default to bar chart for truly unknown types
                 logger.warning(f"Unknown chart type '{chart_type}', defaulting to bar chart")
                 return chart_gen.generate_bar_chart(
                     data=data,
@@ -586,7 +646,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Get prior slides for context
         prior_slides = session_mgr.get_prior_slides(presentation_id, limit=3)
 
-        # Generate chart HTML (Chart.js canvas)
+        # Generate chart HTML (Chart.js canvas) - v3.1.5 fix for Chart.js type mapping
         chart_html = None
         if chart_type == "line":
             chart_html = chart_gen.generate_line_chart(
@@ -597,7 +657,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
-        elif chart_type == "bar_vertical":
+        elif chart_type == "bar" or chart_type == "bar_vertical":
             chart_html = chart_gen.generate_bar_chart(
                 data=chart_data,
                 height=720,
@@ -606,7 +666,25 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
-        elif chart_type == "donut":
+        elif chart_type == "bar_horizontal":
+            chart_html = chart_gen.generate_horizontal_bar_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "pie":
+            chart_html = chart_gen.generate_pie_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type in ["donut", "doughnut"]:
             chart_html = chart_gen.generate_doughnut_chart(
                 data=chart_data,
                 height=720,
@@ -615,8 +693,59 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
+        elif chart_type == "scatter":
+            # Convert label-value format to scatter datasets format (x-y coordinates)
+            scatter_data = {
+                "datasets": [{
+                    "label": slide_title,
+                    "data": [{"x": i, "y": v} for i, v in enumerate(chart_data["values"])]
+                }]
+            }
+            chart_html = chart_gen.generate_scatter_plot(
+                data=scatter_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "bubble":
+            # Convert label-value format to bubble datasets format (x-y-r coordinates)
+            bubble_data = {
+                "datasets": [{
+                    "label": slide_title,
+                    "data": [{"x": i, "y": v, "r": 10} for i, v in enumerate(chart_data["values"])]
+                }]
+            }
+            chart_html = chart_gen.generate_bubble_chart(
+                data=bubble_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "radar":
+            chart_html = chart_gen.generate_radar_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "polar_area" or chart_type == "polarArea":
+            chart_html = chart_gen.generate_polar_area_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
         else:
-            # Default to bar chart
+            # Default to bar chart for unknown types
+            logger.warning(f"Unknown chart type '{chart_type}', defaulting to bar chart")
             chart_html = chart_gen.generate_bar_chart(
                 data=chart_data,
                 height=720,
