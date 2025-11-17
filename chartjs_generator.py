@@ -952,6 +952,12 @@ class ChartJSGenerator:
         # This follows Layout Builder specification with Reveal.js timing fix
         inline_script = f"""(function() {{
       function initChart() {{
+        // Guard: Check if chart already exists (prevent double initialization)
+        if (window.chartInstances && window.chartInstances['{chart_id}']) {{
+          console.log('Chart {chart_id} already initialized, skipping');
+          return;
+        }}
+
         const ctx = document.getElementById('{chart_id}').getContext('2d');
         const chartConfig = {config_json};
         const chart = new Chart(ctx, chartConfig);
@@ -959,6 +965,8 @@ class ChartJSGenerator:
         // Store reference for editor access
         window.chartInstances = window.chartInstances || {{}};
         window.chartInstances['{chart_id}'] = chart;
+
+        console.log('✅ Chart {chart_id} initialized successfully');
       }}
 
       // Reveal.js-aware initialization to ensure animations play
