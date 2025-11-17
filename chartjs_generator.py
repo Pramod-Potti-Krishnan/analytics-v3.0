@@ -1364,12 +1364,9 @@ class ChartJSGenerator:
     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
 
         <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: none;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">📊</span>
-                <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: white;">Edit Chart Data</h2>
-            </div>
-            <button onclick="closeChartEditor_{js_safe_id}()" style="background: rgba(255,255,255,0.2); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; color: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">&times;</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #e9ecef;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #667eea;">📊 Edit Chart Data</h2>
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; color: #6b7280; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&times;</button>
         </div>
 
         <!-- Body -->
@@ -1425,7 +1422,7 @@ class ChartJSGenerator:
             const row = document.createElement('tr');
             row.style.transition = 'background 0.2s';
             row.innerHTML = `
-                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 10px;">${{index + 1}}</td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${{index + 1}}</td>
                 <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
                     <input type="text" class="label-input" value="${{label}}" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
                 </td>
@@ -1454,7 +1451,7 @@ class ChartJSGenerator:
         const row = document.createElement('tr');
         row.style.transition = 'background 0.2s';
         row.innerHTML = `
-            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 10px;">${{rowCount + 1}}</td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${{rowCount + 1}}</td>
             <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
                 <input type="text" class="label-input" value="" placeholder="Enter label" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
             </td>
