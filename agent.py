@@ -695,10 +695,18 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             )
         elif chart_type == "scatter":
             # Convert label-value format to scatter datasets format (x-y coordinates)
+            # Preserve labels as custom property for tooltips
             scatter_data = {
                 "datasets": [{
                     "label": slide_title,
-                    "data": [{"x": i, "y": v} for i, v in enumerate(chart_data["values"])]
+                    "data": [
+                        {
+                            "x": i,
+                            "y": v,
+                            "label": chart_data["labels"][i]  # Preserve original label
+                        }
+                        for i, v in enumerate(chart_data["values"])
+                    ]
                 }]
             }
             chart_html = chart_gen.generate_scatter_plot(
@@ -711,10 +719,19 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             )
         elif chart_type == "bubble":
             # Convert label-value format to bubble datasets format (x-y-r coordinates)
+            # Preserve labels and vary bubble radius based on value
             bubble_data = {
                 "datasets": [{
                     "label": slide_title,
-                    "data": [{"x": i, "y": v, "r": 10} for i, v in enumerate(chart_data["values"])]
+                    "data": [
+                        {
+                            "x": i,
+                            "y": v,
+                            "r": max(5, min(30, v / 5)),  # Scale radius based on value (5-30 range)
+                            "label": chart_data["labels"][i]  # Preserve original label
+                        }
+                        for i, v in enumerate(chart_data["values"])
+                    ]
                 }]
             }
             chart_html = chart_gen.generate_bubble_chart(
@@ -726,8 +743,18 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
         elif chart_type == "radar":
+            # Convert label-value format to radar datasets format
+            # Radar charts need datasets array with data values
+            radar_data = {
+                "labels": chart_data["labels"],
+                "datasets": [{
+                    "label": slide_title,
+                    "data": chart_data["values"]
+                }],
+                "format": chart_data.get("format", "number")
+            }
             chart_html = chart_gen.generate_radar_chart(
-                data=chart_data,
+                data=radar_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
                 enable_editor=enable_editor,
