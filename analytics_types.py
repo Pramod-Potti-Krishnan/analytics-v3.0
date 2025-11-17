@@ -19,6 +19,13 @@ class AnalyticsType(str, Enum):
     YOY_GROWTH = "yoy_growth"
     KPI_METRICS = "kpi_metrics"
 
+    # Tier 2: Advanced Visualizations (v3.1.3+)
+    CATEGORY_RANKING = "category_ranking"                        # → bar_horizontal
+    CORRELATION_ANALYSIS = "correlation_analysis"                # → scatter
+    MULTIDIMENSIONAL_ANALYSIS = "multidimensional_analysis"      # → bubble
+    MULTI_METRIC_COMPARISON = "multi_metric_comparison"          # → radar
+    RADIAL_COMPOSITION = "radial_composition"                    # → polar_area (NEW in v3.1.3)
+
 
 class LayoutType(str, Enum):
     """Layout Builder layout types for analytics slides."""
@@ -30,21 +37,37 @@ class LayoutType(str, Enum):
 
 # Map analytics types to optimal Layout Builder layouts
 ANALYTICS_LAYOUT_MAP: Dict[AnalyticsType, LayoutType] = {
-    AnalyticsType.REVENUE_OVER_TIME: LayoutType.L01,
-    AnalyticsType.QUARTERLY_COMPARISON: LayoutType.L01,
-    AnalyticsType.MARKET_SHARE: LayoutType.L01,
-    AnalyticsType.YOY_GROWTH: LayoutType.L03,  # Side-by-side comparison
-    AnalyticsType.KPI_METRICS: LayoutType.L01,
+    # Tier 1: Core Business Analytics
+    AnalyticsType.REVENUE_OVER_TIME: LayoutType.L02,
+    AnalyticsType.QUARTERLY_COMPARISON: LayoutType.L02,
+    AnalyticsType.MARKET_SHARE: LayoutType.L02,
+    AnalyticsType.YOY_GROWTH: LayoutType.L02,
+    AnalyticsType.KPI_METRICS: LayoutType.L02,
+
+    # Tier 2: Advanced Visualizations (v3.1.3+)
+    AnalyticsType.CATEGORY_RANKING: LayoutType.L02,
+    AnalyticsType.CORRELATION_ANALYSIS: LayoutType.L02,
+    AnalyticsType.MULTIDIMENSIONAL_ANALYSIS: LayoutType.L02,
+    AnalyticsType.MULTI_METRIC_COMPARISON: LayoutType.L02,
+    AnalyticsType.RADIAL_COMPOSITION: LayoutType.L02,
 }
 
 
-# Map analytics types to ApexCharts chart types
+# Map analytics types to Chart.js/ApexCharts chart types
 ANALYTICS_CHART_MAP: Dict[AnalyticsType, str] = {
+    # Tier 1: Core Business Analytics
     AnalyticsType.REVENUE_OVER_TIME: "line",
-    AnalyticsType.QUARTERLY_COMPARISON: "bar",
-    AnalyticsType.MARKET_SHARE: "donut",
-    AnalyticsType.YOY_GROWTH: "bar",
-    AnalyticsType.KPI_METRICS: "bar",
+    AnalyticsType.QUARTERLY_COMPARISON: "bar_vertical",
+    AnalyticsType.MARKET_SHARE: "pie",
+    AnalyticsType.YOY_GROWTH: "bar_vertical",
+    AnalyticsType.KPI_METRICS: "doughnut",
+
+    # Tier 2: Advanced Visualizations (v3.1.3+)
+    AnalyticsType.CATEGORY_RANKING: "bar_horizontal",
+    AnalyticsType.CORRELATION_ANALYSIS: "scatter",
+    AnalyticsType.MULTIDIMENSIONAL_ANALYSIS: "bubble",
+    AnalyticsType.MULTI_METRIC_COMPARISON: "radar",
+    AnalyticsType.RADIAL_COMPOSITION: "polar_area",
 }
 
 

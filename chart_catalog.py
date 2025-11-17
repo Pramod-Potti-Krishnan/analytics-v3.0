@@ -239,9 +239,10 @@ CHARTJS_TYPES = [
             "Marketing spend vs. revenue"
         ],
         data_requirements={
-            "fields": ["x", "y"],
-            "label_format": "Point identifiers (optional)",
-            "value_format": "Two numeric values per point"
+            "fields": ["label", "value"],
+            "label_format": "Point identifiers (required)",
+            "value_format": "Single numeric value per point (service auto-converts to x-y coordinates)",
+            "note": "Despite being a scatter plot, uses label-value format like all other charts"
         },
         visual_properties={
             "animations": "Points appear with fade-in",
@@ -273,9 +274,10 @@ CHARTJS_TYPES = [
             "Age (x) vs. Salary (y) vs. Experience (size)"
         ],
         data_requirements={
-            "fields": ["x", "y", "r"],
-            "label_format": "Data point names",
-            "value_format": "Three numeric values (x, y, radius)"
+            "fields": ["label", "value"],
+            "label_format": "Data point names (required)",
+            "value_format": "Single numeric value per point (service auto-converts to x-y coordinates with derived radius)",
+            "note": "Despite being a 3D chart, uses label-value format like all other charts"
         },
         visual_properties={
             "animations": "Bubbles expand from center",

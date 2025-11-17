@@ -1,151 +1,96 @@
-# Analytics Service v3.1.2 - Director Integration Summary
+# Analytics Service v3.1.3 - Director Integration Summary (CORRECTED)
 
 **Date**: November 17, 2025
-**Version**: v3.1.2
+**Version**: v3.1.3 (Updated after Director Team compatibility testing)
 **Production URL**: https://analytics-v30-production.up.railway.app
-**Status**: ✅ **PRODUCTION READY - DEPLOYED**
+**Status**: 🔄 **UPDATES IN PROGRESS** - Fixing compatibility issues
+
+---
+
+## ⚠️ IMPORTANT CORRECTION
+
+**This document has been rewritten to accurately reflect the actual Analytics Service implementation** after Director v3.4 team discovered critical discrepancies in our original documentation.
+
+**Changes from v3.1.2**:
+- ✅ Corrected analytics types count (5 → 9 in v3.1.3)
+- ✅ Clarified analytics_type vs chart_type distinction
+- ✅ Fixed data format documentation (all charts use label-value only)
+- ✅ Clarified L02 layout response format
 
 ---
 
 ## 🎯 Executive Summary
 
-Analytics Service v3 has been comprehensively enhanced for Director Agent integration with **2,430+ lines of new code and documentation**. All changes have been deployed to production and are immediately available.
+Analytics Service v3.1.3 provides **5 analytics types** (expanding to **9 in this release**) that automatically select appropriate chart visualizations from a catalog of **13 chart types**.
 
-### What's New in v3.1.2
-- ✅ **Comprehensive Data Validation** - Service no longer crashes on invalid input
-- ✅ **Structured Error Responses** - Actionable error messages with fix suggestions
-- ✅ **Chart Type Discovery API** - 5 new endpoints for programmatic chart catalog access
-- ✅ **Complete Documentation** - 2,000+ lines covering integration, chart types, and errors
-- ✅ **Enhanced OpenAPI** - Professional API documentation with tags and examples
-- ✅ **Production Deployment** - All features live on Railway
+### Critical Distinction: Analytics Types vs Chart Types
+
+**❌ PREVIOUS DOCUMENTATION ERROR**: Claimed "9 analytics types supported"
+**✅ ACTUAL IMPLEMENTATION**: **5 analytics types** in v3.1.2, expanding to **9 in v3.1.3**
+
+**What's the difference?**
+
+| Concept | Definition | Count | User Controls |
+|---------|------------|-------|---------------|
+| **Analytics Type** | Business scenario endpoint (e.g., `revenue_over_time`) | 5→9 | ✅ YES - Specified in URL |
+| **Chart Type** | Visual format (e.g., `line`, `pie`, `scatter`) | 13 | ❌ NO - Auto-selected by service |
+
+**How it works**:
+```
+User requests → analytics_type (revenue_over_time)
+Service selects → chart_type (line)
+Service generates → Chart.js or ApexCharts visualization
+```
 
 ---
 
-## 📊 What We Delivered
+## 📊 Supported Analytics Types
 
-### Phase 1: Critical Fixes (6 hours)
-**Problem**: Service crashed on invalid data (NaN, Infinity, mismatched arrays)
-**Solution**: Comprehensive Pydantic validation
+### **v3.1.2 (Current Production) - 5 Types**
 
-**Files Created/Modified**:
-- `error_codes.py` (NEW - 200 lines) - Structured error handling system
-- `rest_server.py` (MODIFIED) - Added data validation with Pydantic models
+| Analytics Type | Chart Type Auto-Selected | Description | Layout |
+|---------------|-------------------------|-------------|---------|
+| `revenue_over_time` | line | Revenue trends over time | L02 |
+| `quarterly_comparison` | bar_vertical | Compare quarterly metrics | L02 |
+| `market_share` | pie | Market share distribution | L02 |
+| `yoy_growth` | bar_vertical | Year-over-year growth | L02 |
+| `kpi_metrics` | doughnut | KPI metrics visualization | L02 |
 
-**Key Improvements**:
+### **v3.1.3 (Deploying within 24 hours) - 9 Types**
+
+**NEW analytics types being added**:
+
+| Analytics Type | Chart Type Auto-Selected | Description | Layout |
+|---------------|-------------------------|-------------|---------|
+| ✅ `revenue_over_time` | line | Revenue trends over time | L02 |
+| ✅ `quarterly_comparison` | bar_vertical | Compare quarterly metrics | L02 |
+| ✅ `market_share` | pie | Market share distribution | L02 |
+| ✅ `yoy_growth` | bar_vertical | Year-over-year growth | L02 |
+| ✅ `kpi_metrics` | doughnut | KPI metrics visualization | L02 |
+| **🆕 `category_ranking`** | **bar_horizontal** | **Ranked category comparison** | **L02** |
+| **🆕 `correlation_analysis`** | **scatter** | **Correlation between variables** | **L02** |
+| **🆕 `multidimensional_analysis`** | **bubble** | **3-dimensional data analysis** | **L02** |
+| **🆕 `multi_metric_comparison`** | **radar** | **Compare multiple metrics** | **L02** |
+| **🆕 `radial_composition`** | **polar_area** | **Radial data composition** | **L02** |
+
+---
+
+## 🔧 API Usage
+
+### **Correct Endpoint Usage**
+
 ```python
-# Before: Service would crash
-data = [{"label": "Q1", "value": float('nan')}]  # 💥 Crash!
+# ✅ CORRECT - Use analytics_type in URL
+POST /api/v1/analytics/L02/revenue_over_time
 
-# After: Service returns structured error
-{
-  "success": false,
-  "error": {
-    "code": "INVALID_VALUES",
-    "message": "Value cannot be NaN",
-    "category": "validation",
-    "retryable": true,
-    "suggestion": "Ensure all values are finite numbers"
-  }
-}
+# ❌ WRONG - Cannot specify chart_type directly
+POST /api/v1/analytics/L02/line  # This will fail!
 ```
 
-**Validation Rules Implemented**:
-- 2-50 data points enforced
-- NaN and Infinity rejection
-- Duplicate label detection
-- Label/value array length matching
-- Empty field prevention
-- Field trimming (whitespace removal)
+### **Request Format (ALL Charts Use label-value Format)**
 
----
+**⚠️ CRITICAL**: All charts require `label` and `value` fields, regardless of chart type.
 
-### Phase 2: Quick Wins (4 hours)
-**Problem**: Director team had no way to discover available chart types
-**Solution**: Chart type discovery API with programmatic catalog
-
-**Files Created**:
-- `chart_catalog.py` (NEW - 400 lines) - Complete chart type specifications
-
-**New API Endpoints** (5 total):
-
-#### 1. **GET /api/v1/chart-types** - Complete Catalog
-```bash
-curl https://analytics-v30-production.up.railway.app/api/v1/chart-types
-```
-**Returns**: All 13 chart types with full specifications
-
-#### 2. **GET /api/v1/chart-types/chartjs** - Chart.js Types Only
-```bash
-curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/chartjs
-```
-**Returns**: 9 Chart.js chart types
-
-#### 3. **GET /api/v1/chart-types/apexcharts** - ApexCharts Types Only
-```bash
-curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/apexcharts
-```
-**Returns**: 4 ApexCharts chart types
-
-#### 4. **GET /api/v1/chart-types/{chart_id}** - Specific Chart Details
-```bash
-curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
-```
-**Returns**: Complete specification for a specific chart type
-
-#### 5. **GET /api/v1/layouts/{layout}/chart-types** - Layout Compatibility
-```bash
-curl https://analytics-v30-production.up.railway.app/api/v1/layouts/L02/chart-types
-```
-**Returns**: All chart types compatible with a specific layout
-
-**Chart Type Response Schema**:
-```typescript
-interface ChartType {
-  id: string;                      // "line", "bar_vertical", etc.
-  name: string;                    // "Line Chart"
-  description: string;             // Brief description
-  library: "Chart.js" | "ApexCharts";
-  supported_layouts: ("L01" | "L02" | "L03")[];
-  min_data_points: number;         // 2
-  max_data_points: number;         // 50
-  optimal_data_points: string;     // "3-20 points"
-  use_cases: string[];             // ["Revenue trends", ...]
-  examples: string[];              // Example scenarios
-  data_requirements: {
-    labels: string;
-    values: string;
-    validation_rules: string[];
-  };
-  visual_properties: {
-    colors: string;
-    legends: boolean;
-    tooltips: boolean;
-    animations: boolean;
-  };
-  interactive_features: string[];  // ["zoom", "pan", ...]
-}
-```
-
----
-
-### Phase 3: Comprehensive Documentation (5.5 hours)
-
-#### 3.1 Integration Guide (500+ lines)
-**File**: `docs/INTEGRATION_GUIDE.md`
-
-**Contents**:
-- Quick Start with minimal working example
-- API Overview (all endpoints with use cases)
-- Chart Type Discovery guide
-- Request/Response Schema (TypeScript interfaces)
-- Error Handling (all error codes, retry patterns)
-- Layout Integration (L02/L01/L03 specifications)
-- Data Validation (validation rules, pre-request checks)
-- Best Practices (6 recommended patterns)
-- Troubleshooting (common issues and solutions)
-- Migration Guide (from legacy to modern API)
-
-**Quick Start Example**:
 ```python
 import requests
 
@@ -168,477 +113,399 @@ response = requests.post(
         }
     }
 )
-
-result = response.json()
-# Use in Layout Builder
-chart_html = result["content"]["element_3"]         # Chart.js chart (1260×720px)
-observations_html = result["content"]["element_2"]  # Observations panel (540×720px)
 ```
 
-#### 3.2 Chart Type Catalog (600+ lines)
-**File**: `docs/CHART_TYPE_CATALOG.md`
+### **Data Format - IMPORTANT CLARIFICATION**
 
-**Contents**: Complete reference for all 13 chart types
+**❌ PREVIOUS DOCUMENTATION ERROR**:
+- Claimed scatter charts accept `{"x": value, "y": value}` format
+- Claimed bubble charts accept `{"x": value, "y": value, "r": value}` format
 
-**For Each Chart Type**:
-- Description and visual characteristics
-- Data constraints (min/max/optimal points)
-- Use cases with specific examples
-- When to use / when NOT to use
-- Visual properties and interactive features
-- Code examples with request/response
+**✅ ACTUAL IMPLEMENTATION**:
+- **ALL chart types** use `{"label": string, "value": number}` format
+- Scatter and bubble charts convert label-value data to x-y coordinates automatically
+- **No x-y-r format is supported** in current implementation
 
-**Supported Chart Types**:
-
-**Chart.js Types (L02 Layout)**:
-1. Line Chart (`line`) - Trends over time
-2. Vertical Bar Chart (`bar_vertical`) - Category comparisons
-3. Horizontal Bar Chart (`bar_horizontal`) - Ranked comparisons
-4. Pie Chart (`pie`) - Part-to-whole relationships
-5. Doughnut Chart (`doughnut`) - Part-to-whole with center space
-6. Scatter Plot (`scatter`) - Relationship between variables
-7. Bubble Chart (`bubble`) - 3-dimensional data
-8. Radar Chart (`radar`) - Multi-dimensional comparisons
-9. Polar Area Chart (`polar_area`) - Cyclic data comparison
-
-**ApexCharts Types**:
-10. Area Chart (`area`) - L01/L02/L03 - Cumulative trends
-11. Heatmap (`heatmap`) - L02 - Matrix data visualization
-12. Treemap (`treemap`) - L02 - Hierarchical data
-13. Waterfall Chart (`waterfall`) - L02 - Cumulative changes
-
-**Quick Reference Matrix**:
-| Chart Type | Min | Max | Optimal | Layouts | Library |
-|-----------|-----|-----|---------|---------|---------|
-| line | 2 | 50 | 3-20 | L02 | Chart.js |
-| bar_vertical | 2 | 30 | 3-12 | L02 | Chart.js |
-| bar_horizontal | 2 | 30 | 3-12 | L02 | Chart.js |
-| pie | 2 | 12 | 3-7 | L02 | Chart.js |
-| doughnut | 2 | 12 | 3-7 | L02 | Chart.js |
-| scatter | 5 | 500 | 10-100 | L02 | Chart.js |
-| bubble | 5 | 100 | 10-50 | L02 | Chart.js |
-| radar | 3 | 10 | 4-8 | L02 | Chart.js |
-| polar_area | 3 | 12 | 4-8 | L02 | Chart.js |
-| area | 2 | 100 | 5-30 | L01, L02, L03 | ApexCharts |
-| heatmap | 4 | 500 | 20-100 | L02 | ApexCharts |
-| treemap | 3 | 100 | 5-30 | L02 | ApexCharts |
-| waterfall | 2 | 30 | 4-12 | L02 | ApexCharts |
-
-#### 3.3 Error Codes Reference (450+ lines)
-**File**: `docs/ERROR_CODES.md`
-
-**Contents**: Complete error handling guide
-
-**Error Structure**:
-```typescript
-interface ErrorResponse {
-  success: false;
-  error: {
-    code: string;              // Error code (e.g., "DUPLICATE_LABELS")
-    message: string;           // Human-readable message
-    category: string;          // validation | processing | resource | rate_limit | system
-    field?: string;            // Field that caused error
-    details?: object;          // Additional context
-    retryable: boolean;        // Can this request be retried?
-    suggestion?: string;       // How to fix the error
-  };
-}
-```
-
-**Error Categories**:
-| Category | HTTP Status | Retryable | Description |
-|----------|-------------|-----------|-------------|
-| validation | 400 | ✅ Yes | User input errors - fix data and retry |
-| processing | 500 | ⚠️ Maybe | Internal processing errors |
-| resource | 404 | ❌ No | Resource not found |
-| rate_limit | 429 | ✅ Yes (delay) | Rate limited - retry with backoff |
-| system | 500 | ⚠️ Maybe | System errors |
-
-**All Error Codes Documented** (15+ codes):
-- `INVALID_DATA_POINTS` - Less than 2 or more than 50 data points
-- `INVALID_LABELS` - Empty or whitespace-only labels
-- `INVALID_VALUES` - Non-numeric, NaN, or Infinity values
-- `MISMATCHED_LENGTHS` - Labels and values arrays have different lengths
-- `DUPLICATE_LABELS` - Duplicate labels found in data
-- `DATA_RANGE_ERROR` - Data points outside min/max constraints
-- `EMPTY_FIELD` - Required field is empty
-- `INVALID_ANALYTICS_TYPE` - Unsupported analytics type
-- `INVALID_LAYOUT` - Unsupported layout type
-- `INVALID_CHART_TYPE` - Unsupported chart type
-- `CHART_GENERATION_FAILED` - Chart rendering failed
-- `INSIGHT_GENERATION_FAILED` - LLM insight generation failed
-- `LAYOUT_ASSEMBLY_FAILED` - Layout assembly failed
-- `STORAGE_ERROR` - Supabase storage error
-- `LLM_ERROR` - LLM service error
-- `JOB_NOT_FOUND` - Job ID not found
-- `CHART_NOT_FOUND` - Chart not found in storage
-- `PRESENTATION_NOT_FOUND` - Presentation not found
-- `RATE_LIMIT_EXCEEDED` - Too many requests
-- `UNKNOWN_ERROR` - Unexpected error
-
-**Example Error Handling**:
 ```python
-def call_analytics_service(request_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Call Analytics Service with proper error handling."""
-    try:
-        response = requests.post(
-            "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time",
-            json=request_data,
-            timeout=30
-        )
+# ✅ CORRECT - Works for ALL chart types (including scatter/bubble)
+data = [
+    {"label": "Point A", "value": 100},
+    {"label": "Point B", "value": 200}
+]
 
-        if response.status_code == 200:
-            return response.json()
-
-        # Handle structured errors
-        error_data = response.json()
-        error = error_data.get("error", {})
-
-        # Check if retryable
-        if error.get("retryable"):
-            # Implement retry logic with exponential backoff
-            print(f"Retryable error: {error['code']}")
-            print(f"Suggestion: {error.get('suggestion', 'No suggestion')}")
-            # Retry here...
-        else:
-            # Log and report non-retryable error
-            print(f"Non-retryable error: {error['code']}")
-            print(f"Message: {error['message']}")
-
-        return None
-    except requests.exceptions.Timeout:
-        print("Analytics Service timeout - retry with exponential backoff")
-        return None
-```
-
-#### 3.4 README Enhancement
-**File**: `README.md` (MODIFIED)
-
-**Added**: Director Integration Quick Start section at the top
-
-**Key Features Highlighted**:
-- ✅ **Comprehensive Data Validation** - Prevents crashes on invalid input
-- ✅ **Structured Error Responses** - Actionable error messages
-- ✅ **Chart Type Discovery** - Complete catalog via `/api/v1/chart-types`
-- ✅ **13+ Chart Types** - Chart.js (9 types) + ApexCharts (4 types)
-- ✅ **Interactive Editor** - Edit chart data directly in presentations (L02)
-- ✅ **Synchronous API** - No job polling needed
-
-**Documentation Links**:
-- [Integration Guide](docs/INTEGRATION_GUIDE.md)
-- [Chart Type Catalog](docs/CHART_TYPE_CATALOG.md)
-- [Error Codes](docs/ERROR_CODES.md)
-- [OpenAPI Docs](https://analytics-v30-production.up.railway.app/docs)
-
----
-
-### Phase 4: OpenAPI Enhancement (3 hours)
-**Problem**: API documentation was basic and unorganized
-**Solution**: Professional OpenAPI specification with tags and rich descriptions
-
-**Enhancements Made**:
-
-1. **Rich API Description with Quick Start**:
-```python
-app = FastAPI(
-    title="Analytics Microservice v3",
-    description="""
-## Analytics Service v3.1.2 - Director Integration Ready
-
-Generate interactive Chart.js and ApexCharts visualizations with AI-powered insights.
-
-### Key Features
-- ✅ **13+ Chart Types** (Chart.js + ApexCharts)
-- ✅ **Comprehensive Data Validation** (2-50 data points, NaN/Infinity rejection)
-- ✅ **Structured Error Responses** (retryable flags, fix suggestions)
-- ✅ **Chart Type Discovery** (complete catalog with use cases)
-- ✅ **Interactive Editor** (L02 charts)
-- ✅ **Text Service Compatible** (Director Agent integration)
-
-### Quick Start
-[Python code example included in docs]
-    """,
-    version="3.1.2"
-)
-```
-
-2. **Server Definitions**:
-```python
-servers=[
-    {
-        "url": "https://analytics-v30-production.up.railway.app",
-        "description": "Production server on Railway"
-    },
-    {
-        "url": "http://localhost:8080",
-        "description": "Local development server"
-    }
+# ❌ WRONG - NOT SUPPORTED (despite previous documentation)
+data = [
+    {"x": 100, "y": 200},  # Will fail validation
+    {"x": 150, "y": 300}
 ]
 ```
 
-3. **Contact and License Information**:
-```python
-contact={
-    "name": "Analytics Service Team",
-    "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
-},
-license_info={
-    "name": "MIT",
-    "url": "https://opensource.org/licenses/MIT"
+---
+
+## 📤 Response Format (L02 Layout Only)
+
+### **Successful Response Structure**
+
+```json
+{
+  "success": true,
+  "content": {
+    "element_3": "<div id=\"chart-slide-7\">...Chart HTML with inline Chart.js...</div>",
+    "element_2": "<p class=\"observations-text\">Generated observations paragraph...</p>",
+    "slide_id": "slide-7",
+    "layout": "L02"
+  },
+  "metadata": {
+    "chart_type": "line",
+    "analytics_type": "revenue_over_time",
+    "data_points": 4,
+    "theme": "professional",
+    "generation_time_ms": 1234,
+    "llm_model": "gemini-1.5-flash-002"
+  }
 }
 ```
 
-4. **Organized API Tags** (5 categories):
-- **Chart Discovery** - Discover available chart types, constraints, and compatibility
-- **Analytics Generation** - Generate analytics slides with charts and insights
-- **Interactive Editor** - Edit chart data interactively (L02 charts)
-- **Legacy** - Deprecated endpoints (marked for removal)
-- **Health & Monitoring** - Service health checks and statistics
+### **Response Fields Explained**
 
-5. **All Endpoints Tagged**:
-```python
-# Chart Discovery endpoints
-@app.get("/api/v1/chart-types", tags=["Chart Discovery"])
-@app.get("/api/v1/chart-types/chartjs", tags=["Chart Discovery"])
-@app.get("/api/v1/chart-types/apexcharts", tags=["Chart Discovery"])
-@app.get("/api/v1/chart-types/{chart_id}", tags=["Chart Discovery"])
-@app.get("/api/v1/layouts/{layout}/chart-types", tags=["Chart Discovery"])
+| Field | Type | Description | Size |
+|-------|------|-------------|------|
+| `element_3` | string | Complete Chart HTML with inline Chart.js/ApexCharts script | 2,000-50,000 chars |
+| `element_2` | string | Generated observations paragraph HTML | 100-1,000 chars |
+| `slide_id` | string | Echo of input slide_id | - |
+| `layout` | string | Always "L02" for analytics endpoint | - |
 
-# Analytics Generation endpoints
-@app.post("/api/v1/analytics/{layout}/{analytics_type}", tags=["Analytics Generation"])
-@app.post("/api/v1/analytics/batch", tags=["Analytics Generation"])
-
-# Interactive Editor endpoints
-@app.post("/api/charts/update-data", tags=["Interactive Editor"])
-@app.get("/api/charts/get-data/{presentation_id}", tags=["Interactive Editor"])
-
-# Legacy endpoints
-@app.post("/generate", tags=["Legacy"], deprecated=True)
-@app.get("/status/{job_id}", tags=["Legacy"])
-
-# Health & Monitoring endpoints
-@app.get("/health", tags=["Health & Monitoring"])
-@app.get("/stats", tags=["Health & Monitoring"])
-```
-
-**Access OpenAPI Docs**:
-- **Interactive Docs**: https://analytics-v30-production.up.railway.app/docs
-- **ReDoc**: https://analytics-v30-production.up.railway.app/redoc
-- **OpenAPI JSON**: https://analytics-v30-production.up.railway.app/openapi.json
+**⚠️ IMPORTANT**:
+- `element_3` and `element_2` are **ONLY returned for L02 layout**
+- L01 and L03 layouts use different field names
+- Always use `/api/v1/analytics/L02/{analytics_type}` endpoint for Director integration
 
 ---
 
-## 🚀 Production Deployment
+## 🔍 Chart Type Discovery API
 
-### Deployment Details
-- **Status**: ✅ **DEPLOYED TO PRODUCTION**
-- **Date**: November 17, 2025
-- **Deployment Method**: Git push to `main` branch → Railway auto-deploy
-- **Production URL**: https://analytics-v30-production.up.railway.app
-- **Health Check**: https://analytics-v30-production.up.railway.app/health
-- **OpenAPI Docs**: https://analytics-v30-production.up.railway.app/docs
+### **Why Use Chart Discovery?**
 
-### Verification Commands
+Chart discovery API lets you explore the **13 chart types** supported by the service, even though you can't directly specify them when using analytics_type endpoints.
+
+**Use cases**:
+- Understand what visualizations are possible
+- See data constraints for each chart type
+- Plan which analytics_type to use based on desired visualization
+
+### **Discovery Endpoints**
+
+#### 1. **GET /api/v1/chart-types** - Complete Catalog
 ```bash
-# 1. Check service health
-curl https://analytics-v30-production.up.railway.app/health
-
-# 2. Test chart discovery endpoint
 curl https://analytics-v30-production.up.railway.app/api/v1/chart-types
-
-# 3. Test specific chart type lookup
-curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
-
-# 4. Test layout compatibility
-curl https://analytics-v30-production.up.railway.app/api/v1/layouts/L02/chart-types
-
-# 5. View OpenAPI specification
-curl https://analytics-v30-production.up.railway.app/openapi.json
 ```
+**Returns**: All 13 chart types with specifications
 
-### Deployment Timeline
-1. ✅ **Phase 1-3 Completed**: November 16, 2025 (Previous session)
-2. ✅ **Phase 4 Completed**: November 17, 2025 (Current session)
-3. ✅ **Code Merged to Main**: November 17, 2025 (Commit: f8189c5)
-4. ✅ **Pushed to GitHub**: November 17, 2025
-5. ✅ **Railway Auto-Deploy**: November 17, 2025 (Successful)
-6. ✅ **Production Verification**: November 17, 2025 (All endpoints working)
+#### 2. **GET /api/v1/chart-types/chartjs** - Chart.js Types Only
+```bash
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/chartjs
+```
+**Returns**: 9 Chart.js chart types
+
+#### 3. **GET /api/v1/chart-types/{chart_id}** - Specific Chart Details
+```bash
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
+```
+**Returns**: Complete specification for a specific chart type
+
+### **13 Chart Types in Catalog**
+
+**Chart.js Types (9)**:
+1. `line` - Line Chart (trends over time)
+2. `bar_vertical` - Vertical Bar Chart (category comparison)
+3. `bar_horizontal` - Horizontal Bar Chart (ranked comparison)
+4. `pie` - Pie Chart (part-to-whole)
+5. `doughnut` - Doughnut Chart (part-to-whole with center)
+6. `scatter` - Scatter Plot (correlation)
+7. `bubble` - Bubble Chart (3-dimensional)
+8. `radar` - Radar Chart (multi-dimensional comparison)
+9. `polar_area` - Polar Area Chart (cyclic data)
+
+**ApexCharts Types (4)**:
+10. `area` - Area Chart (cumulative trends)
+11. `heatmap` - Heatmap (matrix visualization)
+12. `treemap` - Treemap (hierarchical data)
+13. `waterfall` - Waterfall Chart (cumulative changes)
+
+**Chart Type to Analytics Type Mapping (v3.1.3)**:
+
+| Chart Type | Analytics Type(s) That Use It |
+|-----------|------------------------------|
+| line | revenue_over_time |
+| bar_vertical | quarterly_comparison, yoy_growth |
+| bar_horizontal | category_ranking 🆕 |
+| pie | market_share |
+| doughnut | kpi_metrics |
+| scatter | correlation_analysis 🆕 |
+| bubble | multidimensional_analysis 🆕 |
+| radar | multi_metric_comparison 🆕 |
+| polar_area | radial_composition 🆕 |
 
 ---
 
-## 📋 Summary for Director Team
+## ✅ Data Validation Rules
 
-### What You Can Do Now
+### **Constraints (Strictly Enforced)**
 
-#### 1. **Discover Chart Types Programmatically**
-Instead of hardcoding chart types, fetch them from the API:
+| Rule | Constraint | Error Code |
+|------|-----------|-----------|
+| Minimum data points | 2 points | INVALID_DATA_POINTS |
+| Maximum data points | 50 points | INVALID_DATA_POINTS |
+| Label format | Non-empty string, 1-100 chars | INVALID_LABELS |
+| Value format | Finite number (no NaN/Infinity) | INVALID_VALUES |
+| Duplicate labels | All labels must be unique | DUPLICATE_LABELS |
+| Array matching | Labels and values same length | MISMATCHED_LENGTHS |
+
+### **Validation Example**
+
 ```python
-# Get all chart types with full specifications
-chart_types = requests.get(
-    "https://analytics-v30-production.up.railway.app/api/v1/chart-types"
-).json()
+# ✅ VALID
+data = [
+    {"label": "Q1 2024", "value": 125000},
+    {"label": "Q2 2024", "value": 145000}
+]
 
-# Display in UI dropdown
-for chart in chart_types["chart_types"]:
-    print(f"{chart['name']} - {chart['description']}")
+# ❌ INVALID - Too few points
+data = [{"label": "Q1", "value": 100}]  # Error: INVALID_DATA_POINTS
+
+# ❌ INVALID - NaN value
+data = [
+    {"label": "Q1", "value": 100},
+    {"label": "Q2", "value": float('nan')}  # Error: INVALID_VALUES
+]
+
+# ❌ INVALID - Duplicate labels
+data = [
+    {"label": "Q1", "value": 100},
+    {"label": "Q1", "value": 200}  # Error: DUPLICATE_LABELS
+]
+```
+
+---
+
+## ⚠️ Error Handling
+
+### **Structured Error Response**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_ANALYTICS_TYPE",
+    "message": "Invalid analytics type: category_ranking",
+    "category": "validation",
+    "field": "analytics_type",
+    "details": {
+      "provided": "category_ranking",
+      "allowed": [
+        "revenue_over_time",
+        "quarterly_comparison",
+        "market_share",
+        "yoy_growth",
+        "kpi_metrics"
+      ]
+    },
+    "retryable": false,
+    "suggestion": "Use one of the supported analytics types: revenue_over_time, quarterly_comparison, market_share, yoy_growth, kpi_metrics"
+  }
+}
+```
+
+### **Error Categories**
+
+| Category | HTTP Status | Retryable | Description |
+|----------|-------------|-----------|-------------|
+| validation | 400 | ✅ Yes (after fixing data) | User input errors |
+| processing | 500 | ⚠️ Maybe | Internal processing errors |
+| resource | 404 | ❌ No | Resource not found |
+| rate_limit | 429 | ✅ Yes (with delay) | Rate limited |
+| system | 500 | ⚠️ Maybe | System errors |
+
+### **Common Error Codes**
+
+| Error Code | When It Happens | Fix |
+|-----------|----------------|-----|
+| `INVALID_ANALYTICS_TYPE` | Using unsupported analytics_type | Use one of 5 supported types (9 in v3.1.3) |
+| `INVALID_DATA_POINTS` | Less than 2 or more than 50 points | Provide 2-50 data points |
+| `DUPLICATE_LABELS` | Duplicate labels in data | Ensure all labels are unique |
+| `INVALID_VALUES` | NaN, Infinity, or non-numeric values | Use finite numbers only |
+
+---
+
+## 📋 Director Team Integration Guide
+
+### **What Director Team Can Do Now (v3.1.2)**
+
+#### 1. **Generate L02 Analytics Slides**
+Use 5 supported analytics types:
+```python
+analytics_types = [
+    "revenue_over_time",
+    "quarterly_comparison",
+    "market_share",
+    "yoy_growth",
+    "kpi_metrics"
+]
+
+for analytics_type in analytics_types:
+    response = requests.post(
+        f"https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/{analytics_type}",
+        json={
+            "presentation_id": "pres-123",
+            "slide_id": f"slide-{analytics_type}",
+            "slide_number": 1,
+            "narrative": f"Show {analytics_type}",
+            "data": [
+                {"label": "Q1", "value": 100},
+                {"label": "Q2", "value": 150}
+            ]
+        }
+    )
+
+    if response.status_code == 200:
+        result = response.json()
+        chart_html = result["content"]["element_3"]
+        observations = result["content"]["element_2"]
+        # Use in Layout Builder
 ```
 
 #### 2. **Handle Errors Gracefully**
-All errors now include actionable suggestions:
 ```python
 response = requests.post(url, json=data)
 if response.status_code != 200:
     error = response.json()["error"]
+
+    # Check if retryable
     if error["retryable"]:
-        # Show retry button to user
-        print(f"Error: {error['message']}")
-        print(f"Fix: {error['suggestion']}")
+        print(f"Retryable error: {error['code']}")
+        print(f"Suggestion: {error['suggestion']}")
+        # Implement retry logic
+    else:
+        print(f"Permanent error: {error['code']}")
+        print(f"Message: {error['message']}")
 ```
 
 #### 3. **Validate Data Before Sending**
-Use the documented validation rules:
-- 2-50 data points
-- No NaN or Infinity values
-- Unique labels
-- Matching array lengths
-
-#### 4. **Choose the Right Chart Type**
-Use the catalog to recommend chart types:
 ```python
-# Get L02-compatible charts
-l02_charts = requests.get(
-    "https://analytics-v30-production.up.railway.app/api/v1/layouts/L02/chart-types"
-).json()
+def validate_analytics_data(data: List[Dict]) -> Tuple[bool, Optional[str]]:
+    """Validate data before sending to Analytics Service."""
 
-# Filter by data point count
-user_data_points = 15
-suitable_charts = [
-    c for c in l02_charts["chart_types"]
-    if c["min_data_points"] <= user_data_points <= c["max_data_points"]
+    # Check minimum points
+    if len(data) < 2:
+        return False, "Need at least 2 data points"
+
+    # Check maximum points
+    if len(data) > 50:
+        return False, "Maximum 50 data points allowed"
+
+    # Check for duplicates
+    labels = [d["label"] for d in data]
+    if len(labels) != len(set(labels)):
+        return False, "Duplicate labels found"
+
+    # Check for NaN/Infinity
+    for point in data:
+        if not isinstance(point["value"], (int, float)):
+            return False, f"Invalid value type: {point['value']}"
+        if point["value"] != point["value"]:  # NaN check
+            return False, "NaN values not allowed"
+        if abs(point["value"]) == float('inf'):
+            return False, "Infinity values not allowed"
+
+    return True, None
+```
+
+### **What Will Be Available in v3.1.3 (Within 24 hours)**
+
+#### 1. **4 Additional Analytics Types**
+```python
+# NEW analytics types (deploy within 24 hours)
+new_analytics_types = [
+    "category_ranking",           # → bar_horizontal
+    "correlation_analysis",       # → scatter
+    "multidimensional_analysis",  # → bubble
+    "multi_metric_comparison",    # → radar
+    "radial_composition"          # → polar_area
 ]
+
+# Total: 9 analytics types (up from 5)
 ```
 
-#### 5. **Use Interactive Editor (L02 Only)**
-For L02 charts, users can edit data directly:
-```javascript
-// Editor is automatically included in L02 charts
-// Users can click pencil icon to edit data
-// Changes are persisted via /api/charts/update-data endpoint
-```
+#### 2. **Full Chart Type Coverage**
+After v3.1.3 deployment:
+- ✅ All 9 Chart.js types accessible via analytics_type
+- ✅ All analytics types return element_3 and element_2 for L02
+- ✅ Consistent label-value data format across all types
 
 ---
 
-## 📊 By the Numbers
+## 📊 Comparison: Documentation vs Reality
 
-### Code and Documentation
-- **Total Lines**: 2,430+ lines of code and documentation
-- **New Files**: 6 files created
-- **Modified Files**: 5 files enhanced
-- **Documentation**: 2,000+ lines (INTEGRATION_GUIDE.md, CHART_TYPE_CATALOG.md, ERROR_CODES.md)
+### **v3.1.2 Documentation Claims vs Reality**
 
-### API Enhancements
-- **New Endpoints**: 5 chart discovery endpoints
-- **Error Codes**: 15+ structured error codes documented
-- **Chart Types**: 13 chart types fully documented
-- **OpenAPI Tags**: 5 logical categories
-
-### Production Readiness
-- ✅ **Data Validation**: 100% coverage
-- ✅ **Error Handling**: 100% structured
-- ✅ **Documentation**: 100% complete
-- ✅ **Deployment**: 100% successful
-- ✅ **Testing**: Production verified
+| Claim in Original Docs | Reality | Status |
+|------------------------|---------|--------|
+| "9 analytics types supported" | Only 5 analytics types | ❌ FALSE |
+| "13 chart types available" | 13 chart types in catalog | ✅ TRUE |
+| "Choose any chart type" | Cannot specify chart_type directly | ❌ MISLEADING |
+| "Scatter uses x-y format" | All charts use label-value format | ❌ FALSE |
+| "Bubble uses x-y-r format" | All charts use label-value format | ❌ FALSE |
+| "element_3 returned" | Only for L02 layout | ⚠️ INCOMPLETE |
+| "Structured errors" | Yes, implemented correctly | ✅ TRUE |
+| "Data validation" | Yes, implemented correctly | ✅ TRUE |
 
 ---
 
-## 🎯 Next Steps for Director Team
+## 🚀 Version History
 
-### Immediate Actions (Week 1)
-1. **Review Documentation**:
-   - Read [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) for API usage
-   - Review [CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md) for chart options
-   - Study [ERROR_CODES.md](docs/ERROR_CODES.md) for error handling
+### **v3.1.2 (Current Production)**
+- ✅ 5 analytics types
+- ✅ 13 chart types in discovery catalog
+- ✅ Comprehensive data validation
+- ✅ Structured error responses
+- ❌ Documentation inaccuracies
 
-2. **Test Chart Discovery API**:
-   ```bash
-   curl https://analytics-v30-production.up.railway.app/api/v1/chart-types
-   ```
-
-3. **Explore OpenAPI Docs**:
-   - Visit https://analytics-v30-production.up.railway.app/docs
-   - Try out endpoints in interactive mode
-
-### Integration Tasks (Week 2-3)
-1. **Implement Chart Discovery in Director UI**:
-   - Fetch chart types from `/api/v1/chart-types`
-   - Display in dropdown with descriptions
-   - Filter by layout compatibility
-
-2. **Add Error Handling**:
-   - Parse structured error responses
-   - Show user-friendly error messages
-   - Implement retry logic for retryable errors
-
-3. **Add Data Validation**:
-   - Validate data before sending to Analytics Service
-   - Show validation errors to users
-   - Prevent common mistakes (duplicate labels, NaN values)
-
-### Testing and Validation (Week 4)
-1. **Test All Chart Types**:
-   - Generate each of the 13 chart types
-   - Verify rendering and interactivity
-   - Test edge cases (min/max data points)
-
-2. **Error Scenario Testing**:
-   - Test all 15+ error codes
-   - Verify retry logic works
-   - Test timeout handling
-
-3. **Performance Testing**:
-   - Test with maximum data points (50)
-   - Test batch generation endpoint
-   - Monitor response times
+### **v3.1.3 (Deploying within 24 hours)**
+- ✅ 9 analytics types (expanded from 5)
+- ✅ Corrected documentation
+- ✅ All Chart.js types accessible
+- ✅ Analytics type to chart type mapping documented
 
 ---
 
 ## 📞 Support and Resources
 
-### Documentation Links
+### **Documentation Links**
 - **Integration Guide**: [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)
 - **Chart Type Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
 - **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
 - **OpenAPI Docs**: https://analytics-v30-production.up.railway.app/docs
 
-### API Endpoints
+### **API Endpoints**
 - **Production Base URL**: https://analytics-v30-production.up.railway.app
 - **Health Check**: https://analytics-v30-production.up.railway.app/health
 - **Chart Discovery**: https://analytics-v30-production.up.railway.app/api/v1/chart-types
 - **Interactive Docs**: https://analytics-v30-production.up.railway.app/docs
 
-### Code Repository
-- **GitHub**: https://github.com/Pramod-Potti-Krishnan/analytics-v3.0
-- **Branch**: `main`
-- **Latest Commit**: f8189c5 (Director Integration Preparation v3.1.2)
-
 ---
 
-## ✅ Conclusion
+## ✅ Acknowledgment of Director Team Findings
 
-Analytics Service v3.1.2 is **production-ready** with comprehensive Director integration support. All critical gaps identified during the planning phase have been addressed:
+We acknowledge and thank the Director v3.4 team for their thorough compatibility testing, which uncovered these critical documentation discrepancies:
 
-1. ✅ **Data Validation**: Service no longer crashes on invalid input
-2. ✅ **Error Handling**: Structured, actionable error responses
-3. ✅ **Chart Discovery**: Programmatic access to chart catalog
-4. ✅ **Documentation**: 2,000+ lines of comprehensive guides
-5. ✅ **Production Deployment**: All features live and verified
+1. ✅ **Issue 1: Limited Analytics Type Support** - CONFIRMED and FIXING
+2. ✅ **Issue 2: Data Schema Mismatch** - CONFIRMED and DOCUMENTED
+3. ✅ **Issue 3: Missing Response Fields** - CLARIFIED (L02-specific)
+4. ✅ **Issue 4: Documentation Inaccurate** - CONFIRMED and CORRECTED
 
-The Director team can now confidently integrate with Analytics Service v3 using the comprehensive documentation and APIs provided.
-
-**Total Development Time**: 18.5 hours (Phases 1-4)
-**Production Readiness**: 100%
-**Deployment Status**: ✅ Live on Railway
+**This document has been completely rewritten** to accurately reflect the Analytics Service implementation.
 
 ---
 
 *For questions or issues, please refer to the documentation or contact the Analytics Service team.*
+*Last Updated: November 17, 2025 - Post Director Team Compatibility Testing*
