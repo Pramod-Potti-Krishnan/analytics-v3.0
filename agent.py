@@ -270,7 +270,7 @@ async def process_analytics_slide(
             data: Dict,
             height: int,
             chart_id: Optional[str] = None,
-            enable_editor: bool = False,
+            enable_editor: bool = True,  # Director Approach 3: enabled by default
             presentation_id: Optional[str] = None,
             api_base_url: str = "/api/charts"
         ) -> str:
@@ -319,13 +319,16 @@ async def process_analytics_slide(
                     output_mode="inline_script"
                 )
 
+        # Read enable_editor from request, default to True (Director Approach 3)
+        enable_editor = request_data.get("enable_editor", True)
+
         # Generate chart HTML with inline script mode for Layout Builder compliance
         chart_html = generate_chartjs_html(
             chart_type=chart_type,
             data=chart_data,
             height=chart_height,
             chart_id=chart_id,
-            enable_editor=True,                           # Enable interactive chart editor
+            enable_editor=enable_editor,                   # Enabled by default, controllable per-request
             presentation_id=presentation_id,               # Pass presentation ID for persistence
             api_base_url="/api/charts"                     # API endpoint for chart data saves
         )
@@ -554,7 +557,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         audience = context.get("audience", "executives")
         slide_title = context.get("slide_title", "Analytics")
         subtitle = context.get("subtitle", "")
-        enable_editor = options.get("enable_editor", False)
+        enable_editor = options.get("enable_editor", True)  # Director Approach 3: enabled by default
 
         # Determine analytics type from narrative/topics
         analytics_type = _infer_analytics_type(narrative, topics, data)

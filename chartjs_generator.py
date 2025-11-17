@@ -969,20 +969,35 @@ class ChartJSGenerator:
 
       // Reveal.js-aware initialization to ensure animations play
       if (typeof Reveal !== 'undefined') {{
-        Reveal.addEventListener('slidechanged', function(event) {{
-          // Check if our chart's slide is now visible
-          if (event.currentSlide.querySelector('#{chart_id}')) {{
-            initChart();
+        // Wait for Reveal.js to be fully initialized before accessing methods
+        Reveal.on('ready', function() {{
+          try {{
+            const currentSlide = Reveal.getCurrentSlide();
+            if (currentSlide && currentSlide.querySelector('#{chart_id}')) {{
+              setTimeout(initChart, 100);  // Small delay for slide transition
+            }}
+          }} catch (e) {{
+            console.warn('Chart init on ready failed:', e);
           }}
         }});
 
-        // Also init if slide is already current on page load
-        if (Reveal.getCurrentSlide().querySelector('#{chart_id}')) {{
-          setTimeout(initChart, 100);  // Small delay for slide transition
-        }}
+        // Also listen for slide changes
+        Reveal.on('slidechanged', function(event) {{
+          try {{
+            if (event.currentSlide && event.currentSlide.querySelector('#{chart_id}')) {{
+              initChart();
+            }}
+          }} catch (e) {{
+            console.warn('Chart init on slide change failed:', e);
+          }}
+        }});
       }} else {{
         // No Reveal.js detected, init immediately (standalone mode)
-        initChart();
+        if (document.readyState === 'loading') {{
+          document.addEventListener('DOMContentLoaded', initChart);
+        }} else {{
+          initChart();
+        }}
       }}
     }})();"""
 
