@@ -1,0 +1,69 @@
+{
+  "test_suite": "Analytics Microservice v3 \u2194 Layout Builder Integration",
+  "timestamp": "2025-11-14T07:16:08.215675",
+  "analytics_service": "http://localhost:8080",
+  "layout_builder": "https://web-production-f0d13.up.railway.app",
+  "total_tests": 3,
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "test_name": "L01 Single Chart Integration",
+      "status": "PASSED",
+      "timestamp": "2025-11-14T07:15:51.363505",
+      "details": {
+        "presentation_id": "7446ecd2-fb72-4d34-92d6-15a38b124fd8",
+        "presentation_url": "https://web-production-f0d13.up.railway.app/p/7446ecd2-fb72-4d34-92d6-15a38b124fd8",
+        "apexcharts_present": true,
+        "chart_id_present": true,
+        "reveal_integration": true,
+        "analytics_metadata": {
+          "analytics_type": "revenue_over_time",
+          "layout": "L01",
+          "chart_library": "apexcharts",
+          "chart_type": "line",
+          "model_used": "gpt-4o-mini",
+          "data_points": 4,
+          "generation_time_ms": 2032,
+          "theme": "professional",
+          "generated_at": "2025-11-14T07:15:50.847426"
+        }
+      }
+    },
+    {
+      "test_name": "L03 Comparison Charts Integration",
+      "status": "PASSED",
+      "timestamp": "2025-11-14T07:15:57.267141",
+      "details": {
+        "presentation_id": "0d96ba92-034d-4e10-8c83-596a3b53890c",
+        "presentation_url": "https://web-production-f0d13.up.railway.app/p/0d96ba92-034d-4e10-8c83-596a3b53890c",
+        "left_chart_present": true,
+        "right_chart_present": true,
+        "apexcharts_present": true,
+        "analytics_metadata": {
+          "analytics_type": "yoy_growth",
+          "layout": "L03",
+          "chart_library": "apexcharts",
+          "chart_type": "bar",
+          "model_used": "gpt-4o-mini",
+          "data_points": 8,
+          "generation_time_ms": 3422,
+          "theme": "professional",
+          "generated_at": "2025-11-14T07:15:56.789230"
+        }
+      }
+    },
+    {
+      "test_name": "Full Presentation Integration",
+      "status": "PASSED",
+      "timestamp": "2025-11-14T07:16:08.214897",
+      "details": {
+        "presentation_id": "1653c89a-e13b-4d8d-b22b-9d23e2bff5c5",
+        "presentation_url": "https://web-production-f0d13.up.railway.app/p/1653c89a-e13b-4d8d-b22b-9d23e2bff5c5",
+        "total_slides": 4,
+        "analytics_slides": 3,
+        "apexcharts_references": 16
+      }
+    }
+  ]
+}

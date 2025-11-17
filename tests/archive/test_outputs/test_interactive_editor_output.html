@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Chart Editor Test</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+    <!-- Register datalabels plugin -->
+    <script>
+        Chart.register(ChartDataLabels);
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .instructions h3 {
+            color: #856404;
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+        }
+
+        .chart-wrapper {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            height: 700px;
+        }
+
+        canvas {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Interactive Chart Editor Test</h1>
+        <p class="subtitle">Chart.js with Built-in Data Editor</p>
+
+        <div class="instructions">
+            <h3>🎯 How to Test:</h3>
+            <ol>
+                <li>Click the <strong>"📊 Edit Data"</strong> button in the top-right corner of the chart</li>
+                <li>A modal popup will open showing the current data in an editable table</li>
+                <li>Edit any X-axis labels (quarters) or Y-axis values (revenue)</li>
+                <li>Click <strong>"+ Add Row"</strong> to add Q5 2025 data</li>
+                <li>Delete a row by clicking the 🗑️ button</li>
+                <li>Click <strong>"💾 Save & Update"</strong></li>
+                <li>Chart will update instantly!</li>
+                <li><strong>Note:</strong> Backend API not implemented yet, so data won't persist (browser only)</li>
+            </ol>
+        </div>
+
+        <div class="chart-wrapper">
+            
+<div class="chart-with-editor" style="position: relative;">
+    <canvas id="interactive-line-chart" data-chart="line" height="600">
+<!--
+{
+  "type": "line",
+  "data": {
+    "labels": [
+      "Q1 2024",
+      "Q2 2024",
+      "Q3 2024",
+      "Q4 2024"
+    ],
+    "datasets": [
+      {
+        "label": "Quarterly Revenue",
+        "data": [
+          125000,
+          145000,
+          178000,
+          195000
+        ],
+        "borderColor": "#FF6B6B",
+        "backgroundColor": "rgba(255, 107, 107, 0.2)",
+        "borderWidth": 4,
+        "pointRadius": 6,
+        "pointBackgroundColor": "#FF6B6B",
+        "pointBorderColor": "#fff",
+        "pointBorderWidth": 3,
+        "pointHoverRadius": 8,
+        "pointHoverBackgroundColor": "#FF6B6B",
+        "pointHoverBorderColor": "#fff",
+        "tension": 0.4,
+        "fill": true
+      }
+    ]
+  },
+  "options": {
+    "responsive": true,
+    "maintainAspectRatio": false,
+    "plugins": {
+      "legend": {
+        "display": true,
+        "position": "top",
+        "labels": {
+          "font": {
+            "size": 14,
+            "weight": "bold"
+          },
+          "padding": 15,
+          "usePointStyle": true
+        }
+      },
+      "tooltip": {
+        "enabled": true,
+        "mode": "index",
+        "intersect": false,
+        "callbacks": {
+          "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': $' + val.toLocaleString(); }"
+        }
+      },
+      "datalabels": {
+        "display": true,
+        "color": "#fff",
+        "font": {
+          "size": 14,
+          "weight": "bold"
+        },
+        "formatter": "function(value) {\n                if (value >= 1000000) {\n                    return '$' + (value/1000000).toFixed(1) + 'M';\n                } else if (value >= 1000) {\n                    return '$' + (value/1000).toFixed(0) + 'K';\n                } else {\n                    return '$' + value.toFixed(0);\n                }\n            }",
+        "anchor": "end",
+        "align": "top",
+        "offset": 4,
+        "backgroundColor": "rgba(0, 0, 0, 0.7)",
+        "borderRadius": 4,
+        "padding": 6
+      }
+    },
+    "scales": {
+      "x": {
+        "display": true,
+        "grid": {
+          "display": true,
+          "color": "rgba(0, 0, 0, 0.08)",
+          "lineWidth": 1
+        },
+        "ticks": {
+          "display": true,
+          "font": {
+            "size": 12,
+            "weight": "500"
+          },
+          "color": "#333",
+          "padding": 8,
+          "autoSkip": false,
+          "maxRotation": 45,
+          "minRotation": 0
+        },
+        "title": {
+          "display": true,
+          "text": "",
+          "font": {
+            "size": 13,
+            "weight": "bold"
+          },
+          "color": "#333"
+        }
+      },
+      "y": {
+        "display": true,
+        "beginAtZero": true,
+        "grid": {
+          "display": true,
+          "color": "rgba(0, 0, 0, 0.08)",
+          "lineWidth": 1
+        },
+        "ticks": {
+          "display": true,
+          "font": {
+            "size": 12,
+            "weight": "500"
+          },
+          "color": "#333",
+          "padding": 8,
+          "callback": "function(value) { return '$' + (value/1000).toFixed(0) + 'K'; }"
+        },
+        "title": {
+          "display": true,
+          "text": "Amount (USD)",
+          "font": {
+            "size": 13,
+            "weight": "bold"
+          },
+          "color": "#333"
+        }
+      }
+    }
+  }
+}
+-->
+</canvas>
+
+    <!-- Edit Button -->
+    <button class="chart-edit-btn"
+            onclick="openChartEditor_interactive-line-chart()"
+            style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 100; transition: all 0.2s;"
+            onmouseover="this.style.background='rgba(0,0,0,0.9)'; this.style.transform='scale(1.05)'"
+            onmouseout="this.style.background='rgba(0,0,0,0.7)'; this.style.transform='scale(1)'">
+        📊 Edit Data
+    </button>
+</div>
+
+<!-- Modal Popup -->
+<div id="modal-interactive-line-chart" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e0e0e0;">
+            <h2 style="margin: 0; font-size: 20px; color: #333;">📊 Edit Chart Data</h2>
+            <button onclick="closeChartEditor_interactive-line-chart()" style="background: none; border: none; font-size: 32px; color: #666; cursor: pointer; line-height: 1; padding: 0; width: 32px; height: 32px;">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 24px; overflow-y: auto; flex: 1;">
+            <div style="background: #f5f5f5; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+                <p style="margin: 4px 0; font-size: 14px;"><strong>Chart ID:</strong> interactive-line-chart</p>
+            </div>
+
+            <div style="overflow-x: auto; margin-bottom: 16px;">
+                <table id="table-interactive-line-chart" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px; width: 50px;">#</th>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;">Label (X-axis)</th>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;">Value (Y-axis)</th>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px; width: 80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-interactive-line-chart"></tbody>
+                </table>
+            </div>
+
+            <button onclick="addRow_interactive-line-chart()" style="background: #f0f0f0; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;">+ Add Row</button>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e0e0e0;">
+            <button onclick="closeChartEditor_interactive-line-chart()" style="background: #f0f0f0; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;">Cancel</button>
+            <button onclick="saveChartData_interactive-line-chart()" style="background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;">💾 Save & Update</button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Chart Editor -->
+<script>
+(function() {
+    let currentChart_interactive-line-chart = null;
+
+    function initChart_interactive-line-chart() {
+        const canvas = document.getElementById('interactive-line-chart');
+        if (!canvas) return;
+
+        // Wait for Chart.js to initialize
+        setTimeout(() => {
+            currentChart_interactive-line-chart = Chart.getChart(canvas);
+            if (!currentChart_interactive-line-chart) {
+                console.warn('Chart not initialized yet for interactive-line-chart');
+            }
+        }, 500);
+    }
+
+    window.openChartEditor_interactive-line-chart = function() {
+        if (!currentChart_interactive-line-chart) {
+            currentChart_interactive-line-chart = Chart.getChart(document.getElementById('interactive-line-chart'));
+        }
+
+        if (!currentChart_interactive-line-chart) {
+            alert('Chart not ready yet. Please wait a moment and try again.');
+            return;
+        }
+
+        // Populate table
+        const tbody = document.getElementById('tbody-interactive-line-chart');
+        tbody.innerHTML = '';
+
+        const labels = currentChart_interactive-line-chart.data.labels || [];
+        const values = currentChart_interactive-line-chart.data.datasets[0]?.data || [];
+
+        labels.forEach((label, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${index + 1}</td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                    <input type="text" class="label-input" value="${label}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                    <input type="number" class="value-input" value="${values[index]}" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                    <button onclick="deleteRow_interactive-line-chart(this)" style="background: #ff4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Show modal
+        document.getElementById('modal-interactive-line-chart').style.display = 'flex';
+    };
+
+    window.closeChartEditor_interactive-line-chart = function() {
+        document.getElementById('modal-interactive-line-chart').style.display = 'none';
+    };
+
+    window.addRow_interactive-line-chart = function() {
+        const tbody = document.getElementById('tbody-interactive-line-chart');
+        const rowCount = tbody.querySelectorAll('tr').length;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${rowCount + 1}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                <input type="text" class="label-input" value="" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+            </td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                <input type="number" class="value-input" value="0" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+            </td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                <button onclick="deleteRow_interactive-line-chart(this)" style="background: #ff4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+        renumberRows_interactive-line-chart();
+    };
+
+    window.deleteRow_interactive-line-chart = function(btn) {
+        btn.closest('tr').remove();
+        renumberRows_interactive-line-chart();
+    };
+
+    function renumberRows_interactive-line-chart() {
+        const rows = document.querySelectorAll('#tbody-interactive-line-chart tr');
+        rows.forEach((row, index) => {
+            row.querySelector('td:first-child').textContent = index + 1;
+        });
+    }
+
+    window.saveChartData_interactive-line-chart = async function() {
+        // Collect data from table
+        const rows = document.querySelectorAll('#tbody-interactive-line-chart tr');
+        const newLabels = [];
+        const newValues = [];
+
+        rows.forEach(row => {
+            const label = row.querySelector('.label-input').value;
+            const value = parseFloat(row.querySelector('.value-input').value);
+            newLabels.push(label);
+            newValues.push(value);
+        });
+
+        // Update chart in browser
+        currentChart_interactive-line-chart.data.labels = newLabels;
+        currentChart_interactive-line-chart.data.datasets[0].data = newValues;
+        currentChart_interactive-line-chart.update();
+
+        // Save to backend
+        try {
+            const response = await fetch('/api/charts/update-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chart_id: 'interactive-line-chart',
+                    presentation_id: 'test-presentation-123',
+                    labels: newLabels,
+                    values: newValues,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Show success message
+                const toast = document.createElement('div');
+                toast.innerHTML = '✅ Chart updated successfully!';
+                toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+                // Close modal
+                closeChartEditor_interactive-line-chart();
+            } else {
+                alert('Failed to save: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error saving chart data:', error);
+            alert('Failed to save chart data. Check console for details.');
+        }
+    };
+
+    // Initialize when DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initChart_interactive-line-chart);
+    } else {
+        initChart_interactive-line-chart();
+    }
+
+    // Also try on Reveal.js ready event
+    if (typeof Reveal !== 'undefined') {
+        Reveal.on('ready', initChart_interactive-line-chart);
+    }
+})();
+</script>
+
+        </div>
+    </div>
+
+    <script>
+        // Initialize Chart.js after a short delay
+        setTimeout(() => {
+            const canvas = document.getElementById('interactive-line-chart');
+            if (!canvas) {
+                console.error('Canvas not found!');
+                return;
+            }
+
+            // Parse config from HTML comment
+            const comment = canvas.childNodes[0];
+            if (!comment || comment.nodeType !== 8) {
+                console.error('Chart config not found in comment');
+                return;
+            }
+
+            const config = JSON.parse(comment.nodeValue.trim());
+
+            // Create Chart.js instance
+            new Chart(canvas, config);
+            console.log('✅ Chart initialized successfully');
+        }, 100);
+    </script>
+</body>
+</html>

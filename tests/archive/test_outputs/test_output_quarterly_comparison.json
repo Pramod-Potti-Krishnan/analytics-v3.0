@@ -1,0 +1,21 @@
+{
+  "content": {
+    "slide_title": "Sales Performance by Quarter",
+    "element_1": "Units Sold (Thousands)",
+    "element_4": "<div id=\"chart-8af5d6e4\" style=\"width: 100%; height: 600px;\"></div>\n<script src=\"https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js\"></script>\n<script>\n(function() {\n  // ApexCharts configuration\n  const options = {\n  \"chart\": {\n    \"type\": \"bar\",\n    \"height\": 600,\n    \"width\": \"100%\",\n    \"animations\": {\n      \"enabled\": true,\n      \"speed\": 800,\n      \"animateGradually\": {\n        \"enabled\": true,\n        \"delay\": 150\n      }\n    },\n    \"toolbar\": {\n      \"show\": false\n    },\n    \"fontFamily\": \"Inter, system-ui, sans-serif\"\n  },\n  \"plotOptions\": {\n    \"bar\": {\n      \"horizontal\": \"chart-2f44c34e\",\n      \"borderRadius\": 8,\n      \"dataLabels\": {\n        \"position\": \"center\"\n      },\n      \"columnWidth\": \"60%\"\n    }\n  },\n  \"dataLabels\": {\n    \"enabled\": true,\n    \"formatter\": \"(val) => val.toLocaleString()\",\n    \"offsetY\": 0,\n    \"style\": {\n      \"fontSize\": \"14px\",\n      \"fontWeight\": \"bold\",\n      \"colors\": [\n        \"#304758\"\n      ]\n    }\n  },\n  \"series\": [\n    {\n      \"name\": \"Sales Performance by Quarter\",\n      \"data\": [\n        45,\n        52,\n        48,\n        61\n      ]\n    }\n  ],\n  \"xaxis\": {\n    \"categories\": [\n      \"Q1\",\n      \"Q2\",\n      \"Q3\",\n      \"Q4\"\n    ],\n    \"labels\": {\n      \"style\": {\n        \"fontSize\": \"14px\",\n        \"fontWeight\": 500\n      }\n    }\n  },\n  \"yaxis\": {\n    \"labels\": {\n      \"style\": {\n        \"fontSize\": \"14px\"\n      },\n      \"formatter\": \"(val) => val.toLocaleString()\"\n    }\n  },\n  \"colors\": [\n    \"#3498db\"\n  ],\n  \"tooltip\": {\n    \"y\": {\n      \"formatter\": \"(val) => val.toLocaleString()\"\n    }\n  },\n  \"grid\": {\n    \"borderColor\": \"#e0e0e0\",\n    \"strokeDashArray\": 4\n  }\n};\n\n  // Initialize chart\n  const chart = new ApexCharts(document.querySelector('#chart-8af5d6e4'), options);\n\n  // Reveal.js integration - animate on slide appearance\n  if (typeof Reveal !== 'undefined') {\n    Reveal.on('slidechanged', function(event) {\n      const currentSlide = event.currentSlide;\n      if (currentSlide && currentSlide.querySelector('#chart-8af5d6e4')) {\n        // Render chart when slide becomes active\n        if (!chart.rendered) {\n          chart.render();\n          chart.rendered = true;\n        }\n      }\n    });\n\n    // Also check if chart is on initial slide\n    setTimeout(function() {\n      const currentSlide = Reveal.getCurrentSlide();\n      if (currentSlide && currentSlide.querySelector('#chart-8af5d6e4')) {\n        chart.render();\n        chart.rendered = true;\n      }\n    }, 100);\n  } else {\n    // Fallback for non-Reveal.js contexts\n    chart.render();\n  }\n})();\n</script>",
+    "element_3": "Sales performance showed a significant upward trend throughout the year, increasing from 45 in Q1 to 61 in Q4, resulting in an impressive average of 51.5. This consistent growth indicates a robust demand for our products and highlights the effectiveness of our sales strategies. As we move forward, leveraging this momentum will be crucial in capitalizing on market opportunities and enhancing our competitive position.",
+    "presentation_name": "",
+    "company_logo": "\ud83d\udcca"
+  },
+  "metadata": {
+    "analytics_type": "quarterly_comparison",
+    "layout": "L01",
+    "chart_library": "apexcharts",
+    "chart_type": "bar",
+    "model_used": "gpt-4o-mini",
+    "data_points": 4,
+    "generation_time_ms": 2224,
+    "theme": "colorful",
+    "generated_at": "2025-11-14T06:30:52.403690"
+  }
+}
