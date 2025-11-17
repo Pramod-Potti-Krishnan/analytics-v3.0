@@ -23,12 +23,12 @@ class L02LayoutAssembler:
     OBSERVATIONS_WIDTH = 540  # 30% of content area
     OBSERVATIONS_HEIGHT = 720
 
-    # Theme color palettes
+    # Theme color palettes - Layout Builder standard colors
     THEMES = {
         "professional": {
-            "bg": "#f8f9fa",
-            "heading": "#1e293b",
-            "text": "#475569",
+            "bg": "#f8f9fa",      # Layout Builder background
+            "heading": "#1f2937",  # Layout Builder heading color
+            "text": "#374151",     # Layout Builder body text color
             "border": "#e2e8f0"
         },
         "corporate": {
@@ -106,15 +106,31 @@ class L02LayoutAssembler:
             logger.warning(f"Insights text ({len(insights_text)} chars) exceeds {max_chars}, truncating...")
             insights_text = insights_text[:max_chars - 3] + "..."
 
-        # Styled observations panel with theme colors
-        html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: {self.OBSERVATIONS_HEIGHT}px; padding: 40px 32px; background: {self.colors['bg']}; overflow-y: auto; box-sizing: border-box;">
-    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 28px; font-weight: 700; color: {self.colors['heading']}; margin: 0 0 24px 0; line-height: 1.2;">
+        # Split insights into paragraphs (by double newlines or single newlines)
+        paragraphs = [p.strip() for p in insights_text.split('\n\n') if p.strip()]
+        if len(paragraphs) == 1:
+            # If no double newlines, try splitting by single newlines
+            paragraphs = [p.strip() for p in insights_text.split('\n') if p.strip()]
+        if len(paragraphs) == 1:
+            # If still single paragraph, treat entire text as one paragraph
+            paragraphs = [insights_text.strip()]
+
+        # Build paragraph HTML with proper margins (Director L02 spec)
+        paragraph_html = ""
+        for i, para in enumerate(paragraphs):
+            # Last paragraph gets margin: 0, others get margin: 0 0 12px 0
+            margin = "0" if i == len(paragraphs) - 1 else "0 0 12px 0"
+            paragraph_html += f"""    <p style="font-family: 'Inter', -apple-system, sans-serif; font-size: 16px; line-height: 1.6; color: {self.colors['text']}; margin: {margin};">
+        {para}
+    </p>
+"""
+
+        # Styled observations panel - Director L02 spec compliant
+        html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 720px; padding: 40px 32px; background: {self.colors['bg']}; border-radius: 8px; overflow-y: auto; box-sizing: border-box;">
+    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 20px; font-weight: 600; color: {self.colors['heading']}; margin: 0 0 16px 0; line-height: 1.3;">
         {title}
     </h3>
-    <div style="font-family: 'Inter', -apple-system, sans-serif; font-size: 18px; line-height: 1.7; color: {self.colors['text']}; margin: 0;">
-        {insights_text}
-    </div>
-</div>"""
+{paragraph_html}</div>"""
 
         logger.debug(f"Observations HTML length: {len(html)} characters")
         return html

@@ -13,8 +13,9 @@ from settings import settings
 from tools import chart_generator_direct, data_synthesizer_direct, theme_applier
 from storage import SupabaseStorage
 from analytics_types import get_chart_type, get_layout_dimensions
-from apexcharts_generator import ApexChartsGenerator
+from chartjs_generator import ChartJSGenerator
 from insight_generator import InsightGenerator
+from layout_assembler import L02LayoutAssembler
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ async def process_analytics_slide(
     """
     Process analytics slide generation (Text Service compatible pattern).
 
-    Generates complete slide content with ApexCharts HTML and LLM-generated insights,
+    Generates complete slide content with Chart.js HTML and LLM-generated insights,
     formatted for Layout Builder layouts (L01, L02, L03).
 
     Args:
@@ -257,15 +258,49 @@ async def process_analytics_slide(
         logger.info(f"Generating {analytics_type} as {chart_type} chart in {layout} layout")
 
         # Initialize generators
-        chart_gen = ApexChartsGenerator(theme=theme)
+        chart_gen = ChartJSGenerator(theme=theme)
         insight_gen = InsightGenerator()
 
+        # Helper function to generate chart with correct ChartJS method
+        def generate_chartjs_html(chart_type: str, data: Dict, height: int, chart_id: Optional[str] = None) -> str:
+            """Generate Chart.js HTML using appropriate method for chart type."""
+            # Map chart types to ChartJSGenerator methods
+            if chart_type == "line":
+                return chart_gen.generate_line_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "bar":
+                return chart_gen.generate_bar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["donut", "doughnut"]:
+                return chart_gen.generate_doughnut_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    output_mode="inline_script"
+                )
+            else:
+                # Default to bar chart for unknown types
+                logger.warning(f"Unknown chart type '{chart_type}', defaulting to bar chart")
+                return chart_gen.generate_bar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    output_mode="inline_script"
+                )
+
         # Generate chart HTML
-        chart_html = chart_gen.generate_chart_html(
+        chart_html = generate_chartjs_html(
             chart_type=chart_type,
             data=chart_data,
-            height=chart_height,
-            width=chart_width
+            height=chart_height
         )
 
         # Generate content based on layout
@@ -298,11 +333,18 @@ async def process_analytics_slide(
                 context=context
             )
 
+            # Use layout assembler to format observations panel with Layout Builder-compliant styling
+            layout_assembler = L02LayoutAssembler(theme=theme)
+            formatted_observations = layout_assembler.assemble_observations_html(
+                insights_text=explanation,
+                title="Key Insights"
+            )
+
             content = {
                 "slide_title": slide_title,
                 "element_1": subtitle,
-                "element_3": chart_html,
-                "element_2": explanation,
+                "element_3": chart_html,  # Chart.js inline script (already Layout Builder compliant)
+                "element_2": formatted_observations,  # Styled observations panel
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }
@@ -325,19 +367,17 @@ async def process_analytics_slide(
             }
 
             # Generate two charts
-            left_chart = chart_gen.generate_chart_html(
+            left_chart = generate_chartjs_html(
                 chart_type=chart_type,
                 data=left_data,
                 height=chart_height,
-                width=chart_width,
                 chart_id=f"chart-left-{slide_id}"
             )
 
-            right_chart = chart_gen.generate_chart_html(
+            right_chart = generate_chartjs_html(
                 chart_type=chart_type,
                 data=right_data,
                 height=chart_height,
-                width=chart_width,
                 chart_id=f"chart-right-{slide_id}"
             )
 
@@ -369,7 +409,7 @@ async def process_analytics_slide(
         metadata = {
             "analytics_type": analytics_type,
             "layout": layout,
-            "chart_library": "apexcharts",
+            "chart_library": "chartjs",
             "chart_type": chart_type,
             "model_used": "gpt-4o-mini",
             "data_points": len(data),
