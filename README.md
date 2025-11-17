@@ -1,7 +1,7 @@
 # Analytics Microservice v3
 
-**Version**: 3.1.7
-**Status**: ✅ Production Ready (100%)
+**Version**: 3.1.8
+**Status**: ✅ Production Ready (Correct Approach)
 **Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
 
 A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js and ApexCharts, providing interactive charts with AI-generated insights for presentation slides.
@@ -17,7 +17,7 @@ curl https://analytics-v30-production.up.railway.app/health
 
 ## 🚀 Director Integration Quick Start
 
-**New in v3.1.7**: Achieved **100% production readiness** by replacing scatter/bubble charts with editor-compatible alternatives (line/bar charts). All 9 analytics types now fully editable by users with no `[object Object]` labels.
+**New in v3.1.8**: Corrected approach from v3.1.7 by **restoring scatter/bubble chart types** and fixing the root cause (datalabels bug). All 9 analytics types now render with correct Chart.js types. Editor enhancement pending for full editability.
 
 **Features**: Comprehensive Director Agent integration with data validation, structured errors, and chart type discovery.
 
