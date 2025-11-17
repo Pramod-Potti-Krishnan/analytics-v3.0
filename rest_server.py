@@ -43,8 +43,84 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="Analytics Microservice v3",
-    description="REST API for chart generation with Supabase Storage",
-    version="3.0.0"
+    description="""
+## Analytics Service v3.1.2 - Director Integration Ready
+
+Generate interactive Chart.js and ApexCharts visualizations with AI-powered insights.
+
+### Key Features
+- ✅ **13+ Chart Types** (Chart.js + ApexCharts)
+- ✅ **Comprehensive Data Validation** (2-50 data points, NaN/Infinity rejection)
+- ✅ **Structured Error Responses** (retryable flags, fix suggestions)
+- ✅ **Chart Type Discovery** (complete catalog with use cases)
+- ✅ **Interactive Editor** (L02 charts)
+- ✅ **Text Service Compatible** (Director Agent integration)
+
+### Quick Start
+```python
+import requests
+
+response = requests.post(
+    "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time",
+    json={
+        "presentation_id": "pres-123",
+        "slide_id": "slide-7",
+        "slide_number": 7,
+        "narrative": "Show quarterly revenue growth",
+        "data": [
+            {"label": "Q1 2024", "value": 125000},
+            {"label": "Q2 2024", "value": 145000}
+        ]
+    }
+)
+```
+
+### Documentation
+- **Integration Guide**: [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)
+- **Chart Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
+- **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
+    """,
+    version="3.1.2",
+    contact={
+        "name": "Analytics Service Team",
+        "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT"
+    },
+    servers=[
+        {
+            "url": "https://analytics-v30-production.up.railway.app",
+            "description": "Production server on Railway"
+        },
+        {
+            "url": "http://localhost:8080",
+            "description": "Local development server"
+        }
+    ],
+    openapi_tags=[
+        {
+            "name": "Chart Discovery",
+            "description": "Discover available chart types, constraints, and compatibility"
+        },
+        {
+            "name": "Analytics Generation",
+            "description": "Generate analytics slides with charts and insights (Director integration)"
+        },
+        {
+            "name": "Interactive Editor",
+            "description": "Edit chart data interactively (L02 charts)"
+        },
+        {
+            "name": "Legacy",
+            "description": "Deprecated endpoints (use Analytics Generation instead)"
+        },
+        {
+            "name": "Health & Monitoring",
+            "description": "Service health checks and statistics"
+        }
+    ]
 )
 
 # Add CORS middleware
@@ -300,9 +376,13 @@ async def root():
     }
 
 
-@app.get("/health")
+@app.get("/health", tags=["Health & Monitoring"])
 async def health_check():
-    """Health check endpoint."""
+    """
+    Health check endpoint.
+
+    Returns service health status and job statistics.
+    """
     return {
         "status": "healthy",
         "service": "analytics_microservice_v3",
@@ -310,9 +390,13 @@ async def health_check():
     }
 
 
-@app.get("/stats")
+@app.get("/stats", tags=["Health & Monitoring"])
 async def get_stats():
-    """Get job statistics."""
+    """
+    Get job statistics.
+
+    Returns detailed job statistics and storage configuration.
+    """
     return {
         "job_stats": job_manager.get_stats(),
         "storage_bucket": settings.SUPABASE_BUCKET
@@ -323,7 +407,7 @@ async def get_stats():
 # CHART TYPE DISCOVERY ENDPOINTS
 # ========================================
 
-@app.get("/api/v1/chart-types")
+@app.get("/api/v1/chart-types", tags=["Chart Discovery"])
 async def get_all_chart_types():
     """
     Get complete chart type catalog.
@@ -344,7 +428,7 @@ async def get_all_chart_types():
     }
 
 
-@app.get("/api/v1/chart-types/chartjs")
+@app.get("/api/v1/chart-types/chartjs", tags=["Chart Discovery"])
 async def get_chartjs_chart_types():
     """
     Get Chart.js chart types (L02 layout compatible).
@@ -363,7 +447,7 @@ async def get_chartjs_chart_types():
     }
 
 
-@app.get("/api/v1/chart-types/apexcharts")
+@app.get("/api/v1/chart-types/apexcharts", tags=["Chart Discovery"])
 async def get_apexcharts_chart_types():
     """
     Get ApexCharts chart types (L01, L03 layouts).
@@ -382,7 +466,7 @@ async def get_apexcharts_chart_types():
     }
 
 
-@app.get("/api/v1/chart-types/{chart_id}")
+@app.get("/api/v1/chart-types/{chart_id}", tags=["Chart Discovery"])
 async def get_specific_chart_type(chart_id: str):
     """
     Get detailed information about a specific chart type.
@@ -408,7 +492,7 @@ async def get_specific_chart_type(chart_id: str):
     }
 
 
-@app.get("/api/v1/layouts/{layout}/chart-types")
+@app.get("/api/v1/layouts/{layout}/chart-types", tags=["Chart Discovery"])
 async def get_chart_types_for_layout(layout: str):
     """
     Get chart types compatible with a specific layout.
@@ -449,7 +533,7 @@ async def get_chart_types_for_layout(layout: str):
     }
 
 
-@app.post("/generate", response_model=JobResponse, deprecated=True)
+@app.post("/generate", tags=["Legacy"], response_model=JobResponse, deprecated=True)
 async def generate_chart(request: ChartRequest):
     """
     ⚠️ **DEPRECATED** - Submit a chart generation request.
@@ -520,7 +604,7 @@ async def generate_chart(request: ChartRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/status/{job_id}")
+@app.get("/status/{job_id}", tags=["Legacy"])
 async def get_job_status(job_id: str):
     """
     Get status and results of a chart generation job.
@@ -543,7 +627,7 @@ async def get_job_status(job_id: str):
     return status
 
 
-@app.post("/api/v1/analytics/{layout}/{analytics_type}")
+@app.post("/api/v1/analytics/{layout}/{analytics_type}", tags=["Analytics Generation"])
 async def generate_analytics_slide(
     layout: str,
     analytics_type: str,
@@ -637,7 +721,7 @@ async def generate_analytics_slide(
         )
 
 
-@app.post("/api/v1/analytics/batch")
+@app.post("/api/v1/analytics/batch", tags=["Analytics Generation"])
 async def generate_analytics_batch(request: BatchAnalyticsRequest):
     """
     Generate multiple analytics slides in batch (parallel processing).
@@ -761,7 +845,7 @@ class ChartDataUpdate(BaseModel):
         return [float(val) for val in v]
 
 
-@app.post("/api/charts/update-data")
+@app.post("/api/charts/update-data", tags=["Interactive Editor"])
 async def update_chart_data(data: ChartDataUpdate):
     """
     Save edited chart data (for interactive editor).
@@ -793,7 +877,7 @@ async def update_chart_data(data: ChartDataUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/charts/get-data/{presentation_id}")
+@app.get("/api/charts/get-data/{presentation_id}", tags=["Interactive Editor"])
 async def get_chart_data(presentation_id: str):
     """
     Get all saved chart data for a presentation.
