@@ -954,16 +954,36 @@ class ChartJSGenerator:
         # Sanitize chart_id for JavaScript
         js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
 
-        # Build inline script with IIFE wrapper
-        # This follows Layout Builder specification exactly
+        # Build inline script with IIFE wrapper and Reveal.js-aware initialization
+        # This follows Layout Builder specification with Reveal.js timing fix
         inline_script = f"""(function() {{
-      const ctx = document.getElementById('{chart_id}').getContext('2d');
-      const chartConfig = {config_json};
-      const chart = new Chart(ctx, chartConfig);
+      function initChart() {{
+        const ctx = document.getElementById('{chart_id}').getContext('2d');
+        const chartConfig = {config_json};
+        const chart = new Chart(ctx, chartConfig);
 
-      // Store reference for editor access
-      window.chartInstances = window.chartInstances || {{}};
-      window.chartInstances['{chart_id}'] = chart;
+        // Store reference for editor access
+        window.chartInstances = window.chartInstances || {{}};
+        window.chartInstances['{chart_id}'] = chart;
+      }}
+
+      // Reveal.js-aware initialization to ensure animations play
+      if (typeof Reveal !== 'undefined') {{
+        Reveal.addEventListener('slidechanged', function(event) {{
+          // Check if our chart's slide is now visible
+          if (event.currentSlide.querySelector('#{chart_id}')) {{
+            initChart();
+          }}
+        }});
+
+        // Also init if slide is already current on page load
+        if (Reveal.getCurrentSlide().querySelector('#{chart_id}')) {{
+          setTimeout(initChart, 100);  // Small delay for slide transition
+        }}
+      }} else {{
+        // No Reveal.js detected, init immediately (standalone mode)
+        initChart();
+      }}
     }})();"""
 
         # Basic chart HTML (no editor) - Director L02 spec compliant
@@ -1504,6 +1524,14 @@ class ChartJSGenerator:
         options = {
             "responsive": True,
             "maintainAspectRatio": False,
+            "animation": {
+                "duration": 1500,  # 1.5 seconds for smooth animation
+                "easing": "easeInOutQuart",  # Smooth acceleration/deceleration
+                "delay": 0,
+                "loop": False,
+                "animateRotate": True,  # For pie/doughnut charts
+                "animateScale": True    # For radar charts
+            },
             "plugins": {
                 "legend": {
                     "display": True,
