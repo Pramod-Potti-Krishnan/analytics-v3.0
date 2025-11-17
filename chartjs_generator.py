@@ -129,7 +129,8 @@ class ChartJSGenerator:
         options: Optional[Dict[str, Any]] = None,
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
-        api_base_url: str = "/api/charts"
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"  # "inline_script" (Layout Builder) or "revealchart" (legacy)
     ) -> str:
         """
         Generate Chart.js line chart.
@@ -148,6 +149,8 @@ class ChartJSGenerator:
             presentation_id: Required if enable_editor=True
             api_base_url: Base URL for chart API (default: "/api/charts" for proxy)
                          Set to full URL like "https://your-analytics.com/api/charts" for direct calls
+            output_mode: Output format - "revealchart" for legacy RevealChart plugin (default)
+                        or "inline_script" for Layout Builder inline Chart.js initialization
 
         Returns:
             HTML canvas element with Chart.js config (and optional editor)
@@ -193,7 +196,8 @@ class ChartJSGenerator:
             chart_id or f"line-chart-{id(data)}",
             enable_editor,
             presentation_id,
-            api_base_url
+            api_base_url,
+            output_mode  # Pass through output mode
         )
 
     def generate_area_chart(
@@ -258,7 +262,11 @@ class ChartJSGenerator:
         height: int = 600,
         horizontal: bool = False,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js bar chart (vertical or horizontal).
@@ -269,6 +277,10 @@ class ChartJSGenerator:
             horizontal: True for horizontal bars
             chart_id: Unique chart ID
             options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
 
         Returns:
             HTML canvas element with Chart.js config
@@ -306,17 +318,33 @@ class ChartJSGenerator:
             "options": self._build_chart_options(format_type, "bar", options, horizontal)
         }
 
-        return self._wrap_in_canvas(config, height, chart_id or f"bar-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"bar-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     def generate_horizontal_bar_chart(
         self,
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """Generate horizontal bar chart."""
-        return self.generate_bar_chart(data, height, horizontal=True, chart_id=chart_id, options=options)
+        return self.generate_bar_chart(
+            data, height, horizontal=True, chart_id=chart_id, options=options,
+            enable_editor=enable_editor, presentation_id=presentation_id,
+            api_base_url=api_base_url, output_mode=output_mode
+        )
 
     def generate_grouped_bar_chart(
         self,
@@ -370,7 +398,8 @@ class ChartJSGenerator:
         options: Optional[Dict[str, Any]] = None,
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
-        api_base_url: str = "/api/charts"
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js pie chart.
@@ -379,13 +408,14 @@ class ChartJSGenerator:
             data: Chart data with:
                 - labels: Slice labels
                 - values: Slice values
-            enable_editor: Whether to include interactive edit button
-            presentation_id: Presentation UUID for editor persistence
-            api_base_url: Base URL for chart data API
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         return self._generate_circular_chart(
             "pie", data, height, chart_id, options,
-            enable_editor, presentation_id, api_base_url
+            enable_editor, presentation_id, api_base_url, output_mode
         )
 
     def generate_doughnut_chart(
@@ -396,7 +426,8 @@ class ChartJSGenerator:
         options: Optional[Dict[str, Any]] = None,
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
-        api_base_url: str = "/api/charts"
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js doughnut chart.
@@ -405,13 +436,14 @@ class ChartJSGenerator:
             data: Chart data with:
                 - labels: Slice labels
                 - values: Slice values
-            enable_editor: Whether to include interactive edit button
-            presentation_id: Presentation UUID for editor persistence
-            api_base_url: Base URL for chart data API
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         return self._generate_circular_chart(
             "doughnut", data, height, chart_id, options,
-            enable_editor, presentation_id, api_base_url
+            enable_editor, presentation_id, api_base_url, output_mode
         )
 
     def _generate_circular_chart(
@@ -423,7 +455,8 @@ class ChartJSGenerator:
         options: Optional[Dict[str, Any]],
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
-        api_base_url: str = "/api/charts"
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """Internal method for pie/doughnut charts."""
         labels = data.get("labels", [])
@@ -461,12 +494,6 @@ class ChartJSGenerator:
                             "padding": 15
                         }
                     },
-                    "tooltip": {
-                        "enabled": True,
-                        "callbacks": {
-                            "label": "function(context) { return context.label + ': ' + context.parsed + '%'; }"
-                        }
-                    },
                     "datalabels": {
                         "display": True,
                         "color": "#fff",
@@ -488,7 +515,8 @@ class ChartJSGenerator:
             chart_id or f"{chart_type}-chart-{id(data)}",
             enable_editor,
             presentation_id,
-            api_base_url
+            api_base_url,
+            output_mode
         )
 
     # ========================================
@@ -500,7 +528,11 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js scatter plot.
@@ -508,6 +540,10 @@ class ChartJSGenerator:
         Args:
             data: Chart data with:
                 - datasets: List of {label, data: [{x, y}, ...]}
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         if "datasets" not in data:
             raise ValueError("Scatter plot requires 'datasets' in data")
@@ -521,14 +557,26 @@ class ChartJSGenerator:
             "options": self._build_chart_options(format_type, "scatter", options)
         }
 
-        return self._wrap_in_canvas(config, height, chart_id or f"scatter-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"scatter-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     def generate_bubble_chart(
         self,
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js bubble chart.
@@ -536,6 +584,10 @@ class ChartJSGenerator:
         Args:
             data: Chart data with:
                 - datasets: List of {label, data: [{x, y, r}, ...]}
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         if "datasets" not in data:
             raise ValueError("Bubble chart requires 'datasets' in data")
@@ -549,7 +601,15 @@ class ChartJSGenerator:
             "options": self._build_chart_options(format_type, "bubble", options)
         }
 
-        return self._wrap_in_canvas(config, height, chart_id or f"bubble-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"bubble-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     # ========================================
     # RADAR & POLAR CHARTS
@@ -560,7 +620,11 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js radar chart.
@@ -569,6 +633,10 @@ class ChartJSGenerator:
             data: Chart data with:
                 - labels: Axis labels
                 - datasets: List of {label, data}
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         labels = data.get("labels", [])
         format_type = data.get("format", "number")
@@ -612,19 +680,37 @@ class ChartJSGenerator:
         if options:
             config["options"] = self._merge_options(config["options"], options)
 
-        return self._wrap_in_canvas(config, height, chart_id or f"radar-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"radar-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     def generate_polar_area_chart(
         self,
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js polar area chart.
 
         Similar to pie chart but uses radial scale.
+
+        Args:
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         labels = data.get("labels", [])
         values = data.get("values", [])
@@ -669,7 +755,15 @@ class ChartJSGenerator:
         if options:
             config["options"] = self._merge_options(config["options"], options)
 
-        return self._wrap_in_canvas(config, height, chart_id or f"polar-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"polar-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     # ========================================
     # SPECIALIZED CHARTS
@@ -680,7 +774,11 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate mixed chart (e.g., line + bar).
@@ -690,6 +788,10 @@ class ChartJSGenerator:
                 - labels: X-axis labels
                 - datasets: List of {type, label, data}
                   Each dataset has its own type (line, bar, etc.)
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
         labels = data.get("labels", [])
         format_type = data.get("format", "number")
@@ -725,7 +827,15 @@ class ChartJSGenerator:
             "options": self._build_chart_options(format_type, "mixed", options)
         }
 
-        return self._wrap_in_canvas(config, height, chart_id or f"mixed-chart-{id(data)}")
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"mixed-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     # ========================================
     # HELPER METHODS
@@ -738,10 +848,15 @@ class ChartJSGenerator:
         chart_id: str,
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
-        api_base_url: str = "/api/charts"
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"  # "revealchart" or "inline_script"
     ) -> str:
         """
-        Wrap Chart.js config in canvas element for RevealChart plugin.
+        Wrap Chart.js config in canvas element.
+
+        Supports two output modes:
+        - "revealchart": Canvas with JSON comment (for RevealChart plugin) - LEGACY
+        - "inline_script": Canvas with inline Chart.js initialization (for Layout Builder) - NEW
 
         Args:
             config: Complete Chart.js configuration
@@ -750,11 +865,23 @@ class ChartJSGenerator:
             enable_editor: If True, adds interactive data editor
             presentation_id: Required if enable_editor=True
             api_base_url: Base URL for chart API endpoints
+            output_mode: Output format ("revealchart" or "inline_script")
 
         Returns:
-            HTML canvas element with JSON config in comment,
-            optionally with interactive editor
+            HTML with chart, optionally with interactive editor
         """
+        if output_mode == "inline_script":
+            # Layout Builder mode: Generate inline script with IIFE wrapper
+            return self._wrap_in_canvas_inline_script(
+                config,
+                height,
+                chart_id,
+                enable_editor,
+                presentation_id,
+                api_base_url
+            )
+
+        # Legacy RevealChart mode
         config_json = json.dumps(config, indent=2)
 
         # IMPORTANT: When editor is enabled, don't set fixed height on canvas
@@ -783,6 +910,118 @@ class ChartJSGenerator:
             )
 
         return canvas_html
+
+    def _wrap_in_canvas_inline_script(
+        self,
+        config: dict,
+        height: int,
+        chart_id: str,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts"
+    ) -> str:
+        """
+        Generate Layout Builder-compliant HTML with inline Chart.js script.
+
+        Follows exact specification from Layout Builder L02_DIRECTOR_INTEGRATION_GUIDE.md:
+        - Container div with class="l02-chart-container"
+        - Explicit dimensions: 1260px × 720px
+        - position: relative for proper rendering
+        - Canvas element (no JSON comment)
+        - Inline <script> tag with IIFE wrapper
+        - maintainAspectRatio: false
+
+        Args:
+            config: Complete Chart.js configuration
+            height: Canvas height (1260px for L02, but can be overridden)
+            chart_id: Unique chart identifier
+            enable_editor: If True, adds interactive data editor
+            presentation_id: Required if enable_editor=True
+            api_base_url: Base URL for chart API endpoints
+
+        Returns:
+            Complete HTML with chart and optional editor, Layout Builder compliant
+        """
+        # Convert config to JSON string for inline script
+        config_json = json.dumps(config)
+
+        # Sanitize chart_id for JavaScript
+        js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
+
+        # Build inline script with IIFE wrapper and Reveal.js-aware initialization
+        # This follows Layout Builder specification with Reveal.js timing fix
+        inline_script = f"""(function() {{
+      function initChart() {{
+        // Guard: Check if chart already exists (prevent double initialization)
+        if (window.chartInstances && window.chartInstances['{chart_id}']) {{
+          console.log('Chart {chart_id} already initialized, skipping');
+          return;
+        }}
+
+        const ctx = document.getElementById('{chart_id}').getContext('2d');
+        const chartConfig = {config_json};
+        const chart = new Chart(ctx, chartConfig);
+
+        // Store reference for editor access
+        window.chartInstances = window.chartInstances || {{}};
+        window.chartInstances['{chart_id}'] = chart;
+
+        console.log('✅ Chart {chart_id} initialized successfully');
+      }}
+
+      // Reveal.js-aware initialization to ensure animations play
+      if (typeof Reveal !== 'undefined') {{
+        // Wait for Reveal.js to be fully initialized before accessing methods
+        Reveal.on('ready', function() {{
+          try {{
+            const currentSlide = Reveal.getCurrentSlide();
+            if (currentSlide && currentSlide.querySelector('#{chart_id}')) {{
+              setTimeout(initChart, 100);  // Small delay for slide transition
+            }}
+          }} catch (e) {{
+            console.warn('Chart init on ready failed:', e);
+          }}
+        }});
+
+        // Also listen for slide changes
+        Reveal.on('slidechanged', function(event) {{
+          try {{
+            if (event.currentSlide && event.currentSlide.querySelector('#{chart_id}')) {{
+              initChart();
+            }}
+          }} catch (e) {{
+            console.warn('Chart init on slide change failed:', e);
+          }}
+        }});
+      }} else {{
+        // No Reveal.js detected, init immediately (standalone mode)
+        if (document.readyState === 'loading') {{
+          document.addEventListener('DOMContentLoaded', initChart);
+        }} else {{
+          initChart();
+        }}
+      }}
+    }})();"""
+
+        # Basic chart HTML (no editor) - Director L02 spec compliant
+        chart_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+  <canvas id="{chart_id}"></canvas>
+  <script>
+    {inline_script}
+  </script>
+</div>"""
+
+        # Add interactive editor if requested
+        if enable_editor and presentation_id:
+            chart_html = self._wrap_inline_script_with_editor(
+                chart_html,
+                chart_id,
+                presentation_id,
+                api_base_url,
+                inline_script
+            )
+
+        return chart_html
 
     def _wrap_with_interactive_editor(
         self,
@@ -1072,6 +1311,228 @@ class ChartJSGenerator:
 """
         return html
 
+    def _wrap_inline_script_with_editor(
+        self,
+        chart_html: str,
+        chart_id: str,
+        presentation_id: str,
+        api_base_url: str,
+        inline_script: str
+    ) -> str:
+        """
+        Add interactive editor to inline-script chart (Layout Builder mode).
+
+        Simpler than legacy editor because chart is already initialized inline.
+        Just adds editor UI and references existing chart instance.
+
+        Args:
+            chart_html: Chart HTML with inline script
+            chart_id: Unique chart identifier
+            presentation_id: Presentation UUID
+            api_base_url: Base URL for chart API
+            inline_script: The Chart.js initialization script
+
+        Returns:
+            Chart HTML with editor controls added
+        """
+        js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
+        modal_id = f"modal-{chart_id}"
+
+        # Extract just the canvas and script from chart_html
+        # chart_html structure: <div class="l02-chart-container">...canvas...script...</div>
+        # We need to add editor button inside the container
+
+        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative;">
+  <canvas id="{chart_id}"></canvas>
+
+  <!-- Edit Button (Pencil Icon) -->
+  <button class="chart-edit-btn"
+          onclick="openChartEditor_{js_safe_id}()"
+          style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 100; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap;"
+          onmouseover="this.style.width='80px'; this.style.borderRadius='20px'; this.innerHTML='✏️ <span style=\\'margin-left: 6px; font-size: 13px;\\'>edit</span>'; this.style.background='rgba(0,0,0,0.8)'"
+          onmouseout="this.style.width='36px'; this.style.borderRadius='50%'; this.innerHTML='✏️'; this.style.background='rgba(0,0,0,0.6)'">
+    ✏️
+  </button>
+
+  <script>
+    {inline_script}
+  </script>
+</div>
+
+<!-- Modal Popup for Editor -->
+<div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #e9ecef;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #667eea;">📊 Edit Chart Data</h2>
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; color: #6b7280; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px; overflow-y: auto; flex: 1; background: #f8f9fa;">
+            <table id="table-{chart_id}" style="width: 100%; border-collapse: separate; border-spacing: 0; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <thead>
+                    <tr style="background: linear-gradient(to right, #f8f9fa, #e9ecef);">
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; width: 60px;">#</th>
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Label</th>
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Value</th>
+                        <th style="padding: 16px 20px; text-align: center; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-{chart_id}"></tbody>
+            </table>
+            <button onclick="addRow_{js_safe_id}()" style="margin-top: 20px; background: white; color: #667eea; border: 2px dashed #667eea; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; width: 100%;" onmouseover="this.style.background='#f8f9ff'; this.style.borderColor='#764ba2'" onmouseout="this.style.background='white'; this.style.borderColor='#667eea'">+ Add Row</button>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 24px 32px; background: white; border-top: 1px solid #e9ecef;">
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">Cancel</button>
+            <button onclick="saveChartData_{js_safe_id}()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'">💾 Save & Update</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {{
+    window.openChartEditor_{js_safe_id} = function() {{
+        // Lazy lookup: Get chart at button click time (not script load time)
+        console.log('=== Edit Button Clicked ===');
+        console.log('Looking for chart ID: {chart_id}');
+        const chart = window.chartInstances?.['{chart_id}'];
+        console.log('window.chartInstances:', window.chartInstances);
+        console.log('Chart found:', !!chart);
+
+        if (!chart) {{
+            console.error('Chart not found in window.chartInstances');
+            alert('Chart not ready. Please wait and try again.');
+            return;
+        }}
+
+        console.log('✅ Chart found, opening editor');
+
+        // Populate table
+        const tbody = document.getElementById('tbody-{chart_id}');
+        tbody.innerHTML = '';
+
+        const labels = chart.data.labels || [];
+        const values = chart.data.datasets[0]?.data || [];
+
+        labels.forEach((label, index) => {{
+            const row = document.createElement('tr');
+            row.style.transition = 'background 0.2s';
+            row.innerHTML = `
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${{index + 1}}</td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="text" class="label-input" value="${{label}}" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                </td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="number" class="value-input" value="${{values[index]}}" step="any" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                </td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; text-align: center;">
+                    <button onclick="deleteRow_{js_safe_id}(this)" style="background: transparent; color: #ff4444; border: none; padding: 4px; cursor: pointer; font-size: 18px; transition: all 0.2s;" onmouseover="this.style.color='#cc0000'; this.style.transform='scale(1.1)'" onmouseout="this.style.color='#ff4444'; this.style.transform='scale(1)'">🗑️</button>
+                </td>
+            `;
+            row.onmouseover = () => row.style.background = '#f8f9ff';
+            row.onmouseout = () => row.style.background = 'transparent';
+            tbody.appendChild(row);
+        }});
+
+        document.getElementById('{modal_id}').style.display = 'flex';
+    }};
+
+    window.closeChartEditor_{js_safe_id} = function() {{
+        document.getElementById('{modal_id}').style.display = 'none';
+    }};
+
+    window.addRow_{js_safe_id} = function() {{
+        const tbody = document.getElementById('tbody-{chart_id}');
+        const rowCount = tbody.querySelectorAll('tr').length;
+        const row = document.createElement('tr');
+        row.style.transition = 'background 0.2s';
+        row.innerHTML = `
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${{rowCount + 1}}</td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                <input type="text" class="label-input" value="" placeholder="Enter label" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+            </td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                <input type="number" class="value-input" value="0" step="any" placeholder="Enter value" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+            </td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; text-align: center;">
+                <button onclick="deleteRow_{js_safe_id}(this)" style="background: transparent; color: #ff4444; border: none; padding: 4px; cursor: pointer; font-size: 18px; transition: all 0.2s;" onmouseover="this.style.color='#cc0000'; this.style.transform='scale(1.1)'" onmouseout="this.style.color='#ff4444'; this.style.transform='scale(1)'">🗑️</button>
+            </td>
+        `;
+        row.onmouseover = () => row.style.background = '#f8f9ff';
+        row.onmouseout = () => row.style.background = 'transparent';
+        tbody.appendChild(row);
+    }};
+
+    window.deleteRow_{js_safe_id} = function(btn) {{
+        btn.closest('tr').remove();
+    }};
+
+    window.saveChartData_{js_safe_id} = async function() {{
+        // Lazy lookup: Get chart at save time (not script load time)
+        const chart = window.chartInstances?.['{chart_id}'];
+        if (!chart) {{
+            console.error('Chart not found when saving');
+            alert('Chart not available. Please refresh and try again.');
+            return;
+        }}
+
+        const rows = document.querySelectorAll('#tbody-{chart_id} tr');
+        const newLabels = [];
+        const newValues = [];
+
+        rows.forEach(row => {{
+            const label = row.querySelector('.label-input').value;
+            const value = parseFloat(row.querySelector('.value-input').value);
+            newLabels.push(label);
+            newValues.push(value);
+        }});
+
+        // Update chart
+        chart.data.labels = newLabels;
+        chart.data.datasets[0].data = newValues;
+        chart.update();
+
+        // Save to backend
+        try {{
+            const response = await fetch('{api_base_url}/update-data', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                    chart_id: '{chart_id}',
+                    presentation_id: '{presentation_id}',
+                    labels: newLabels,
+                    values: newValues,
+                    timestamp: new Date().toISOString()
+                }})
+            }});
+
+            const result = await response.json();
+
+            if (result.success) {{
+                const toast = document.createElement('div');
+                toast.innerHTML = '✅ Chart updated successfully!';
+                toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 16px 24px; border-radius: 8px; z-index: 100001;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+                closeChartEditor_{js_safe_id}();
+            }} else {{
+                alert('Failed to save: ' + (result.error || 'Unknown error'));
+            }}
+        }} catch (error) {{
+            console.error('Error saving chart data:', error);
+            alert('Failed to save chart data.');
+        }}
+    }};
+}})();
+</script>
+"""
+
+        return editor_html
+
     def _build_chart_options(
         self,
         format_type: str,
@@ -1101,6 +1562,14 @@ class ChartJSGenerator:
         options = {
             "responsive": True,
             "maintainAspectRatio": False,
+            "animation": {
+                "duration": 1500,  # 1.5 seconds for smooth animation
+                "easing": "easeInOutQuart",  # Smooth acceleration/deceleration
+                "delay": 0,
+                "loop": False,
+                "animateRotate": True,  # For pie/doughnut charts
+                "animateScale": True    # For radar charts
+            },
             "plugins": {
                 "legend": {
                     "display": True,
@@ -1110,12 +1579,6 @@ class ChartJSGenerator:
                         "padding": 15,
                         "usePointStyle": True
                     }
-                },
-                "tooltip": {
-                    "enabled": True,
-                    "mode": "index",
-                    "intersect": False,
-                    "callbacks": self._get_tooltip_callback(format_type, chart_type)
                 },
                 "datalabels": {
                     # GUARANTEED: Always display data labels
@@ -1250,33 +1713,6 @@ class ChartJSGenerator:
             return {
                 "callback": "function(value) { return value.toLocaleString(); }"
             }
-
-    def _get_tooltip_callback(self, format_type: str, chart_type: str) -> dict:
-        """Get tooltip callback for formatting."""
-        if chart_type in ["scatter", "bubble"]:
-            # Scatter/bubble use parsed.x and parsed.y
-            if format_type == "currency":
-                return {
-                    "label": "function(context) { return '(' + context.parsed.x + ', $' + context.parsed.y.toLocaleString() + ')'; }"
-                }
-            else:
-                return {
-                    "label": "function(context) { return '(' + context.parsed.x + ', ' + context.parsed.y + ')'; }"
-                }
-        else:
-            # Standard charts use parsed.y or just parsed
-            if format_type == "currency":
-                return {
-                    "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': $' + val.toLocaleString(); }"
-                }
-            elif format_type == "percentage":
-                return {
-                    "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': ' + val.toFixed(1) + '%'; }"
-                }
-            else:
-                return {
-                    "label": "function(context) { var val = context.parsed.y !== undefined ? context.parsed.y : context.parsed; return context.dataset.label + ': ' + val.toLocaleString(); }"
-                }
 
     def _get_datalabel_formatter(self, format_type: str) -> str:
         """

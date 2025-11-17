@@ -1,6 +1,10 @@
 # Analytics Microservice v3
 
-A REST API analytics microservice that generates comprehensive charts and visualizations, storing them in Supabase Storage and returning public URLs with underlying data.
+**Version**: 3.1.2
+**Status**: ✅ Production Ready
+**Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
+
+A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js and ApexCharts, providing interactive charts with AI-generated insights for presentation slides.
 
 ## 🌐 Production URL
 
@@ -10,6 +14,72 @@ Test it now:
 ```bash
 curl https://analytics-v30-production.up.railway.app/health
 ```
+
+## 🚀 Director Integration Quick Start
+
+**New in v3.1.2**: Comprehensive Director Agent integration with data validation, structured errors, and chart type discovery.
+
+### Minimal Working Example
+
+```python
+import requests
+
+# Generate L02 analytics slide (Chart + Observations)
+response = requests.post(
+    "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time",
+    json={
+        "presentation_id": "pres-123",
+        "slide_id": "slide-7",
+        "slide_number": 7,
+        "narrative": "Show quarterly revenue growth",
+        "data": [
+            {"label": "Q1 2024", "value": 125000},
+            {"label": "Q2 2024", "value": 145000},
+            {"label": "Q3 2024", "value": 195000},
+            {"label": "Q4 2024", "value": 220000}
+        ],
+        "context": {
+            "theme": "professional",
+            "audience": "executives"
+        }
+    }
+)
+
+result = response.json()
+
+# Use in Layout Builder
+chart_html = result["content"]["element_3"]         # Chart.js chart (1260×720px)
+observations_html = result["content"]["element_2"]  # Observations panel (540×720px)
+```
+
+### Key Features (v3.1.2)
+
+- ✅ **Comprehensive Data Validation** - Prevents crashes on invalid input
+- ✅ **Structured Error Responses** - Actionable error messages with fix suggestions
+- ✅ **Chart Type Discovery** - Complete catalog via `/api/v1/chart-types`
+- ✅ **13+ Chart Types** - Chart.js (9 types) + ApexCharts (4 types)
+- ✅ **Interactive Editor** - Edit chart data directly in presentations (L02)
+- ✅ **Synchronous API** - No job polling needed for Director integration
+
+### Discover Chart Types
+
+```bash
+# Get all chart types
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types
+
+# Get Chart.js types (L02 layout)
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/chartjs
+
+# Get chart details
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
+```
+
+### Documentation
+
+- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - Complete Director integration documentation
+- **[Chart Type Catalog](docs/CHART_TYPE_CATALOG.md)** - All 13 chart types with use cases
+- **[Error Codes](docs/ERROR_CODES.md)** - Comprehensive error handling guide
+- **[OpenAPI Docs](https://analytics-v30-production.up.railway.app/docs)** - Interactive API documentation
 
 ## Features
 
