@@ -74,13 +74,10 @@ class L02LayoutAssembler:
         """
         logger.info(f"Assembling L02 chart HTML for {chart_id}")
 
-        # Container for chart with exact L02 dimensions
-        html = f"""<div class="l02-chart-container" style="width: {self.CHART_WIDTH}px; height: {self.CHART_HEIGHT}px; position: relative; background: white; padding: 20px;">
-    {canvas_html}
-</div>"""
-
-        logger.debug(f"Chart HTML length: {len(html)} characters")
-        return html
+        # v3.3.1: Return canvas_html directly - chart generator already provides the container
+        # Removed double-wrapping that was hiding grid lines and Y-axis values
+        logger.debug(f"Chart HTML length: {len(canvas_html)} characters")
+        return canvas_html
 
     def assemble_observations_html(
         self,
@@ -106,31 +103,51 @@ class L02LayoutAssembler:
             logger.warning(f"Insights text ({len(insights_text)} chars) exceeds {max_chars}, truncating...")
             insights_text = insights_text[:max_chars - 3] + "..."
 
-        # Split insights into paragraphs (by double newlines or single newlines)
-        paragraphs = [p.strip() for p in insights_text.split('\n\n') if p.strip()]
-        if len(paragraphs) == 1:
-            # If no double newlines, try splitting by single newlines
-            paragraphs = [p.strip() for p in insights_text.split('\n') if p.strip()]
-        if len(paragraphs) == 1:
-            # If still single paragraph, treat entire text as one paragraph
-            paragraphs = [insights_text.strip()]
+        # v3.3.1: Split into bullet points (by newlines or sentences)
+        # Try splitting by newlines first
+        bullets = [p.strip() for p in insights_text.split('\n') if p.strip()]
 
-        # Build paragraph HTML with proper margins (Director L02 spec)
-        paragraph_html = ""
-        for i, para in enumerate(paragraphs):
-            # Last paragraph gets margin: 0, others get margin: 0 0 14px 0 (v3.3.0: increased from 12px)
-            margin = "0" if i == len(paragraphs) - 1 else "0 0 14px 0"
-            paragraph_html += f"""    <p style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: {self.colors['text']}; margin: {margin};">
-        {para}
-    </p>
+        # If single block of text, try splitting by sentences
+        if len(bullets) == 1:
+            # Split by period + space (sentences)
+            sentences = [s.strip() + '.' for s in insights_text.split('. ') if s.strip()]
+            if len(sentences) > 1:
+                bullets = sentences
+
+        # v3.3.1: Limit to 7 bullets max, each 70-80 chars
+        bullets = bullets[:7]  # Max 7 bullets
+
+        # Truncate each bullet to ~75 chars (70-80 range)
+        truncated_bullets = []
+        for bullet in bullets:
+            if len(bullet) > 80:
+                # Find a good break point near 75 chars (at word boundary)
+                truncate_at = 75
+                # Look for last space before 75 chars
+                last_space = bullet[:truncate_at].rfind(' ')
+                if last_space > 60:  # Don't break too early
+                    truncated_bullets.append(bullet[:last_space] + '...')
+                else:
+                    truncated_bullets.append(bullet[:truncate_at] + '...')
+            else:
+                truncated_bullets.append(bullet)
+
+        # Build bullet list HTML (v3.3.1: changed from paragraphs to <ul><li>)
+        bullets_html = ""
+        for bullet in truncated_bullets:
+            bullets_html += f"""        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: {self.colors['text']}; margin: 0 0 10px 0; text-align: left;">
+            {bullet}
+        </li>
 """
 
-        # Styled observations panel - Director L02 spec compliant (v3.3.0: larger font, more content)
+        # Styled observations panel with bullet list (v3.3.1: left-aligned bullets)
         html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 720px; padding: 40px 32px; background: {self.colors['bg']}; border-radius: 8px; overflow-y: auto; box-sizing: border-box;">
-    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 22px; font-weight: 600; color: {self.colors['heading']}; margin: 0 0 18px 0; line-height: 1.3;">
+    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 22px; font-weight: 600; color: {self.colors['heading']}; margin: 0 0 18px 0; line-height: 1.3; text-align: left;">
         {title}
     </h3>
-{paragraph_html}</div>"""
+    <ul style="margin: 0; padding-left: 20px; list-style-type: disc; text-align: left;">
+{bullets_html}    </ul>
+</div>"""
 
         logger.debug(f"Observations HTML length: {len(html)} characters")
         return html
