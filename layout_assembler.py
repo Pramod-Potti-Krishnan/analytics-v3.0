@@ -83,58 +83,39 @@ class L02LayoutAssembler:
         self,
         insights_text: str,
         title: str = "Key Insights",
-        max_chars: int = 750
+        max_chars: int = 1000
     ) -> str:
         """
         Assemble observations HTML for element_2 (L02 right panel).
 
         Args:
-            insights_text: Business insights/observations text
+            insights_text: Business insights/observations text (expected to be pre-formatted bullets from LLM)
             title: Panel heading (default: "Key Insights")
-            max_chars: Maximum character limit (v3.3.0: increased to 750 from 500)
+            max_chars: Maximum character limit (v3.3.3: increased to 1000 for complete bullets)
 
         Returns:
             HTML string for element_2 field (540×720px panel)
         """
         logger.info(f"Assembling L02 observations HTML ({len(insights_text)} chars)")
 
-        # Truncate if exceeds max_chars
-        if len(insights_text) > max_chars:
-            logger.warning(f"Insights text ({len(insights_text)} chars) exceeds {max_chars}, truncating...")
-            insights_text = insights_text[:max_chars - 3] + "..."
+        # v3.3.3: LLM now generates pre-formatted bullets, just split by newlines
+        # Remove any leading bullet markers (-, •, *, etc.) and clean whitespace
+        bullets = []
+        for line in insights_text.split('\n'):
+            line = line.strip()
+            if line:
+                # Remove common bullet markers
+                if line.startswith(('-', '•', '*', '+')):
+                    line = line[1:].strip()
+                bullets.append(line)
 
-        # v3.3.1: Split into bullet points (by newlines or sentences)
-        # Try splitting by newlines first
-        bullets = [p.strip() for p in insights_text.split('\n') if p.strip()]
+        # Limit to 7 bullets max (LLM should already do this, but enforce as backup)
+        bullets = bullets[:7]
 
-        # If single block of text, try splitting by sentences
-        if len(bullets) == 1:
-            # Split by period + space (sentences)
-            sentences = [s.strip() + '.' for s in insights_text.split('. ') if s.strip()]
-            if len(sentences) > 1:
-                bullets = sentences
-
-        # v3.3.1: Limit to 7 bullets max, each 70-80 chars
-        bullets = bullets[:7]  # Max 7 bullets
-
-        # Truncate each bullet to ~75 chars (70-80 range)
-        truncated_bullets = []
-        for bullet in bullets:
-            if len(bullet) > 80:
-                # Find a good break point near 75 chars (at word boundary)
-                truncate_at = 75
-                # Look for last space before 75 chars
-                last_space = bullet[:truncate_at].rfind(' ')
-                if last_space > 60:  # Don't break too early
-                    truncated_bullets.append(bullet[:last_space] + '...')
-                else:
-                    truncated_bullets.append(bullet[:truncate_at] + '...')
-            else:
-                truncated_bullets.append(bullet)
-
-        # Build bullet list HTML (v3.3.1: changed from paragraphs to <ul><li>)
+        # v3.3.3: NO TRUNCATION - LLM generates complete bullets (100-140 chars each)
+        # Build bullet list HTML
         bullets_html = ""
-        for bullet in truncated_bullets:
+        for bullet in bullets:
             bullets_html += f"""        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: {self.colors['text']}; margin: 0 0 10px 0; text-align: left;">
             {bullet}
         </li>
@@ -193,7 +174,7 @@ class L02LayoutAssembler:
         element_2 = self.assemble_observations_html(
             insights_text=insights_text,
             title=observations_title,
-            max_chars=750  # v3.3.0: Increased from 500 for more content
+            max_chars=1000  # v3.3.3: Increased to 1000 for complete bullet points
         )
 
         result = {

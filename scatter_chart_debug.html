@@ -1,0 +1,241 @@
+<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px;">
+    <div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative;">
+  <canvas id="chart-scatter-config-check"></canvas>
+
+  <!-- Edit Button (Pencil Icon) -->
+  <button class="chart-edit-btn"
+          onclick="openChartEditor_chart_scatter_config_check()"
+          style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 100; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap;"
+          onmouseover="this.style.width='80px'; this.style.borderRadius='20px'; this.innerHTML='✏️ <span style=\'margin-left: 6px; font-size: 13px;\'>edit</span>'; this.style.background='rgba(0,0,0,0.8)'"
+          onmouseout="this.style.width='36px'; this.style.borderRadius='50%'; this.innerHTML='✏️'; this.style.background='rgba(0,0,0,0.6)'">
+    ✏️
+  </button>
+
+  <script>
+    (function() {
+      function initChart() {
+        // Guard: Check if chart already exists (prevent double initialization)
+        if (window.chartInstances && window.chartInstances['chart-scatter-config-check']) {
+          console.log('Chart chart-scatter-config-check already initialized, skipping');
+          return;
+        }
+
+        const ctx = document.getElementById('chart-scatter-config-check').getContext('2d');
+        const chartConfig = {"type": "scatter", "data": {"datasets": [{"label": "Analytics", "data": [{"x": 0, "y": 100.0, "label": "Test 1"}, {"x": 1, "y": 200.0, "label": "Test 2"}], "backgroundColor": "#FF6B6B", "borderColor": "#FF6B6B", "borderWidth": 2, "pointStyle": "cross", "pointRadius": 10, "pointBackgroundColor": "#FF6B6B", "pointBorderColor": "#fff", "pointBorderWidth": 2}]}, "options": {"responsive": true, "maintainAspectRatio": false, "animation": {"duration": 1500, "easing": "easeInOutQuart", "delay": 0, "loop": false, "animateRotate": true, "animateScale": true}, "plugins": {"legend": {"display": true, "position": "top", "labels": {"font": {"size": 14, "weight": "bold"}, "padding": 15, "usePointStyle": true}}, "datalabels": {"display": false, "color": "#fff", "font": {"size": 14, "weight": "bold"}, "formatter": "function(value) { return value.toLocaleString(); }", "anchor": "center", "align": "center", "offset": 0, "backgroundColor": "rgba(0, 0, 0, 0.7)", "borderRadius": 4, "padding": 6}}, "scales": {"x": {"display": true, "grid": {"display": true, "color": "rgba(0, 0, 0, 0.08)", "lineWidth": 1}, "ticks": {"display": true, "font": {"size": 12, "weight": "500"}, "color": "#333", "padding": 8, "autoSkip": false, "maxRotation": 45, "minRotation": 0}, "title": {"display": true, "text": "", "font": {"size": 13, "weight": "bold"}, "color": "#333"}}, "y": {"display": true, "beginAtZero": true, "grid": {"display": true, "color": "rgba(0, 0, 0, 0.08)", "lineWidth": 1}, "ticks": {"display": true, "font": {"size": 12, "weight": "500"}, "color": "#333", "padding": 8, "callback": "function(value) { return value.toLocaleString(); }"}, "title": {"display": true, "text": "Value", "font": {"size": 13, "weight": "bold"}, "color": "#333"}}}}};
+        const chart = new Chart(ctx, chartConfig);
+
+        // Store reference for editor access
+        window.chartInstances = window.chartInstances || {};
+        window.chartInstances['chart-scatter-config-check'] = chart;
+
+        console.log('✅ Chart chart-scatter-config-check initialized successfully');
+      }
+
+      // Reveal.js-aware initialization to ensure animations play
+      if (typeof Reveal !== 'undefined') {
+        // Wait for Reveal.js to be fully initialized before accessing methods
+        Reveal.on('ready', function() {
+          try {
+            const currentSlide = Reveal.getCurrentSlide();
+            if (currentSlide && currentSlide.querySelector('#chart-scatter-config-check')) {
+              setTimeout(initChart, 100);  // Small delay for slide transition
+            }
+          } catch (e) {
+            console.warn('Chart init on ready failed:', e);
+          }
+        });
+
+        // Also listen for slide changes
+        Reveal.on('slidechanged', function(event) {
+          try {
+            if (event.currentSlide && event.currentSlide.querySelector('#chart-scatter-config-check')) {
+              initChart();
+            }
+          } catch (e) {
+            console.warn('Chart init on slide change failed:', e);
+          }
+        });
+      } else {
+        // No Reveal.js detected, init immediately (standalone mode)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initChart);
+        } else {
+          initChart();
+        }
+      }
+    })();
+  </script>
+</div>
+
+<!-- Modal Popup for Editor -->
+<div id="modal-chart-scatter-config-check" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #e9ecef;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #667eea;">📊 Edit Chart Data</h2>
+            <button onclick="closeChartEditor_chart_scatter_config_check()" style="background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; color: #6b7280; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 32px; overflow-y: auto; flex: 1; background: #f8f9fa;">
+            <table id="table-chart-scatter-config-check" style="width: 100%; border-collapse: separate; border-spacing: 0; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <thead>
+                    <tr style="background: linear-gradient(to right, #f8f9fa, #e9ecef);">
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; width: 60px;">#</th>
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Label</th>
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Value</th>
+                        <th style="padding: 16px 20px; text-align: center; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-chart-scatter-config-check"></tbody>
+            </table>
+            <button onclick="addRow_chart_scatter_config_check()" style="margin-top: 20px; background: white; color: #667eea; border: 2px dashed #667eea; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; width: 100%;" onmouseover="this.style.background='#f8f9ff'; this.style.borderColor='#764ba2'" onmouseout="this.style.background='white'; this.style.borderColor='#667eea'">+ Add Row</button>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 24px 32px; background: white; border-top: 1px solid #e9ecef;">
+            <button onclick="closeChartEditor_chart_scatter_config_check()" style="background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">Cancel</button>
+            <button onclick="saveChartData_chart_scatter_config_check()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'">💾 Save & Update</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    window.openChartEditor_chart_scatter_config_check = function() {
+        // Lazy lookup: Get chart at button click time (not script load time)
+        console.log('=== Edit Button Clicked ===');
+        console.log('Looking for chart ID: chart-scatter-config-check');
+        const chart = window.chartInstances?.['chart-scatter-config-check'];
+        console.log('window.chartInstances:', window.chartInstances);
+        console.log('Chart found:', !!chart);
+
+        if (!chart) {
+            console.error('Chart not found in window.chartInstances');
+            alert('Chart not ready. Please wait and try again.');
+            return;
+        }
+
+        console.log('✅ Chart found, opening editor');
+
+        // Populate table
+        const tbody = document.getElementById('tbody-chart-scatter-config-check');
+        tbody.innerHTML = '';
+
+        const labels = chart.data.labels || [];
+        const values = chart.data.datasets[0]?.data || [];
+
+        labels.forEach((label, index) => {
+            const row = document.createElement('tr');
+            row.style.transition = 'background 0.2s';
+            row.innerHTML = `
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${index + 1}</td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="text" class="label-input" value="${label}" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                </td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="number" class="value-input" value="${values[index]}" step="any" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                </td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; text-align: center;">
+                    <button onclick="deleteRow_chart_scatter_config_check(this)" style="background: transparent; color: #ff4444; border: none; padding: 4px; cursor: pointer; font-size: 18px; transition: all 0.2s;" onmouseover="this.style.color='#cc0000'; this.style.transform='scale(1.1)'" onmouseout="this.style.color='#ff4444'; this.style.transform='scale(1)'">🗑️</button>
+                </td>
+            `;
+            row.onmouseover = () => row.style.background = '#f8f9ff';
+            row.onmouseout = () => row.style.background = 'transparent';
+            tbody.appendChild(row);
+        });
+
+        document.getElementById('modal-chart-scatter-config-check').style.display = 'flex';
+    };
+
+    window.closeChartEditor_chart_scatter_config_check = function() {
+        document.getElementById('modal-chart-scatter-config-check').style.display = 'none';
+    };
+
+    window.addRow_chart_scatter_config_check = function() {
+        const tbody = document.getElementById('tbody-chart-scatter-config-check');
+        const rowCount = tbody.querySelectorAll('tr').length;
+        const row = document.createElement('tr');
+        row.style.transition = 'background 0.2s';
+        row.innerHTML = `
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${rowCount + 1}</td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                <input type="text" class="label-input" value="" placeholder="Enter label" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+            </td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                <input type="number" class="value-input" value="0" step="any" placeholder="Enter value" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+            </td>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; text-align: center;">
+                <button onclick="deleteRow_chart_scatter_config_check(this)" style="background: transparent; color: #ff4444; border: none; padding: 4px; cursor: pointer; font-size: 18px; transition: all 0.2s;" onmouseover="this.style.color='#cc0000'; this.style.transform='scale(1.1)'" onmouseout="this.style.color='#ff4444'; this.style.transform='scale(1)'">🗑️</button>
+            </td>
+        `;
+        row.onmouseover = () => row.style.background = '#f8f9ff';
+        row.onmouseout = () => row.style.background = 'transparent';
+        tbody.appendChild(row);
+    };
+
+    window.deleteRow_chart_scatter_config_check = function(btn) {
+        btn.closest('tr').remove();
+    };
+
+    window.saveChartData_chart_scatter_config_check = async function() {
+        // Lazy lookup: Get chart at save time (not script load time)
+        const chart = window.chartInstances?.['chart-scatter-config-check'];
+        if (!chart) {
+            console.error('Chart not found when saving');
+            alert('Chart not available. Please refresh and try again.');
+            return;
+        }
+
+        const rows = document.querySelectorAll('#tbody-chart-scatter-config-check tr');
+        const newLabels = [];
+        const newValues = [];
+
+        rows.forEach(row => {
+            const label = row.querySelector('.label-input').value;
+            const value = parseFloat(row.querySelector('.value-input').value);
+            newLabels.push(label);
+            newValues.push(value);
+        });
+
+        // Update chart
+        chart.data.labels = newLabels;
+        chart.data.datasets[0].data = newValues;
+        chart.update();
+
+        // Save to backend
+        try {
+            const response = await fetch('https://analytics-v30-production.up.railway.app/api/charts/update-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chart_id: 'chart-scatter-config-check',
+                    presentation_id: 'director-sim',
+                    labels: newLabels,
+                    values: newValues,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const toast = document.createElement('div');
+                toast.innerHTML = '✅ Chart updated successfully!';
+                toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 16px 24px; border-radius: 8px; z-index: 100001;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+                closeChartEditor_chart_scatter_config_check();
+            } else {
+                alert('Failed to save: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error saving chart data:', error);
+            alert('Failed to save chart data.');
+        }
+    };
+})();
+</script>
+
+</div>

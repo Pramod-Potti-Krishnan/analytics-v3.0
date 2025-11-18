@@ -1,0 +1,64 @@
+{
+  "test_name": "Production Chart.js Type Validation v3.1.5",
+  "production_url": "https://analytics-v30-production.up.railway.app",
+  "total": 9,
+  "passed": 4,
+  "failed": 5,
+  "pass_rate": 44.44444444444444,
+  "results": [
+    {
+      "analytics_type": "revenue_over_time",
+      "expected_chartjs_type": "line",
+      "passed": true,
+      "actual_chartjs_type": "line"
+    },
+    {
+      "analytics_type": "quarterly_comparison",
+      "expected_chartjs_type": "bar",
+      "passed": true,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "market_share",
+      "expected_chartjs_type": "pie",
+      "passed": false,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "yoy_growth",
+      "expected_chartjs_type": "bar",
+      "passed": true,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "kpi_metrics",
+      "expected_chartjs_type": "doughnut",
+      "passed": false,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "category_ranking",
+      "expected_chartjs_type": "bar",
+      "passed": true,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "correlation_analysis",
+      "expected_chartjs_type": "scatter",
+      "passed": false,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "multidimensional_analysis",
+      "expected_chartjs_type": "bubble",
+      "passed": false,
+      "actual_chartjs_type": "bar"
+    },
+    {
+      "analytics_type": "multi_metric_comparison",
+      "expected_chartjs_type": "radar",
+      "passed": false,
+      "actual_chartjs_type": "bar"
+    }
+  ]
+}

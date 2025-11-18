@@ -110,18 +110,15 @@ Example: "Revenue grew steadily throughout FY 2024, achieving 42% growth from Q1
         Returns:
             4-6 sentence detailed explanation (respects max_chars from context)
         """
-        # Extract max_chars from context (default 500 for L02)
-        max_chars = 500
+        # Extract max_chars from context (default 1000 for L02 v3.3.3)
+        max_chars = 1000  # v3.3.3: Increased from 500 to 1000 for complete bullets
         if context and "max_chars" in context:
             max_chars = context["max_chars"]
 
         data_summary = self._summarize_data(data)
 
-        # Adjust prompt based on character limit
-        word_estimate = max_chars // 5  # Roughly 5 chars per word
-        sentence_count = "4-6" if max_chars >= 400 else "3-4"
-
-        prompt = f"""You are a business analyst generating detailed explanations for complex charts in presentations.
+        # v3.3.3: Request bullet-point format with 5-7 bullets
+        prompt = f"""You are a business analyst generating insights for a presentation slide's "Key Insights" panel.
 
 Chart Type: {chart_type}
 Data Summary: {data_summary}
@@ -129,20 +126,29 @@ Statistical Info: {statistical_summary or 'Not provided'}
 User Request: {narrative}
 Audience: {audience}
 
-**IMPORTANT: Your response must be {max_chars} characters or less.**
+**CRITICAL FORMATTING REQUIREMENTS:**
+- Output EXACTLY 5-7 bullet points (one per line)
+- Each bullet should be a COMPLETE sentence or statement
+- Each bullet should be 100-140 characters long (full sentences, no truncation)
+- Start each line with a dash (-) or bullet point (•)
+- Total response must be under {max_chars} characters
 
-Generate {sentence_count} sentences (approx {word_estimate} words) that:
-1. Explain what the visualization shows
-2. Highlight key statistical findings (correlations, outliers, trends)
-3. Provide interpretation and business implications
-4. Suggest actionable insights or next steps
+**Content Guidelines:**
+1. First bullet: Summarize what the visualization shows
+2. Middle bullets: Highlight key findings, trends, statistical insights (use specific numbers)
+3. Last bullets: Business implications and actionable recommendations
 
-Write professionally for {audience}. Include specific numbers when relevant.
-This will appear in a text panel next to the chart, so be concise yet insightful.
-Keep total length under {max_chars} characters.
+Write professionally for {audience}. Be concise but ensure each bullet is a COMPLETE thought.
+This will display in a bullet list next to the chart.
 
-Example: "This scatter plot reveals a strong positive correlation (R² = 0.87) between marketing spend and sales revenue. Each $1 invested in marketing generates approximately $4.20 in sales. Notable outliers in Q2 suggest seasonal variations that should be factored into budget planning. The trend line indicates diminishing returns above $50K monthly spend, suggesting an optimal investment threshold."
-"""
+Example Format:
+- The bubble chart illustrates revenue performance across regions, with bubble size representing market share
+- The average revenue is $128.8K, highlighting a downward trend from Q1 to Q4
+- APAC shows potential for growth, indicating an expanding market share in Southeast Asia
+- To capitalize on this, consider increasing investment in APAC while maintaining current European operations
+- Analyzing cost structures and competitive positioning will help identify optimization opportunities
+
+Generate {max_chars // 140}-7 complete bullet points:"""
 
         try:
             response = await self.client.chat.completions.create(
@@ -158,7 +164,7 @@ Example: "This scatter plot reveals a strong positive correlation (R² = 0.87) b
                     }
                 ],
                 temperature=0.7,
-                max_tokens=min(300, max_chars // 3)  # Limit tokens based on char limit
+                max_tokens=min(500, max_chars // 2)  # v3.3.3: Increased for complete bullets
             )
 
             explanation = response.choices[0].message.content.strip()

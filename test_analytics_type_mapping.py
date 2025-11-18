@@ -16,9 +16,9 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://analytics-v30-production.up.railway.app"
+# BASE_URL = "https://analytics-v30-production.up.railway.app"
 # For local testing:
-# BASE_URL = "http://localhost:8080"
+BASE_URL = "http://localhost:8080"
 
 class Colors:
     """ANSI color codes for terminal output."""

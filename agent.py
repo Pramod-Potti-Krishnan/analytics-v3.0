@@ -813,7 +813,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         if not chart_html:
             raise ValueError(f"Failed to generate {chart_type} chart")
 
-        # Generate observations/insights (max 500 chars for L02)
+        # Generate observations/insights (v3.3.3: increased to 1000 chars for complete bullets)
         insights_text = await insight_gen.generate_l02_explanation(
             chart_type=chart_type,
             data=chart_data,
@@ -822,7 +822,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             context={
                 **context,
                 "prior_slides": prior_slides,
-                "max_chars": 500  # L02 requirement
+                "max_chars": 1000  # v3.3.3: Increased for 5-7 complete bullet points
             }
         )
 

@@ -1,0 +1,72 @@
+{
+  "test_name": "Chart.js Type Validation",
+  "total": 9,
+  "passed": 0,
+  "failed": 9,
+  "pass_rate": 0.0,
+  "results": [
+    {
+      "analytics_type": "revenue_over_time",
+      "our_chart_type": "line",
+      "expected_chartjs_type": "line",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "quarterly_comparison",
+      "our_chart_type": "bar_vertical",
+      "expected_chartjs_type": "bar",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "market_share",
+      "our_chart_type": "pie",
+      "expected_chartjs_type": "pie",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "yoy_growth",
+      "our_chart_type": "bar_vertical",
+      "expected_chartjs_type": "bar",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "kpi_metrics",
+      "our_chart_type": "doughnut",
+      "expected_chartjs_type": "doughnut",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "category_ranking",
+      "our_chart_type": "bar_horizontal",
+      "expected_chartjs_type": "bar",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "correlation_analysis",
+      "our_chart_type": "scatter",
+      "expected_chartjs_type": "scatter",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "multidimensional_analysis",
+      "our_chart_type": "bubble",
+      "expected_chartjs_type": "bubble",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    },
+    {
+      "analytics_type": "multi_metric_comparison",
+      "our_chart_type": "radar",
+      "expected_chartjs_type": "radar",
+      "passed": false,
+      "error": "Type field not found in HTML"
+    }
+  ]
+}

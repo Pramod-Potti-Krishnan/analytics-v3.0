@@ -1363,6 +1363,7 @@ class ChartJSGenerator:
                         <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Y</th>"""
         elif chart_type == "bubble":
             header_cols = """
+                        <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Label</th>
                         <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">X</th>
                         <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Y</th>
                         <th style="padding: 16px 20px; text-align: left; font-weight: 600; color: #495057; font-size: 16.8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6;">Radius</th>"""
@@ -1375,7 +1376,7 @@ class ChartJSGenerator:
         # chart_html structure: <div class="l02-chart-container">...canvas...script...</div>
         # We need to add editor button inside the container
 
-        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative;">
+        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
   <canvas id="{chart_id}"></canvas>
 
   <!-- Edit Button (Pencil Icon) -->
@@ -1477,6 +1478,9 @@ class ChartJSGenerator:
                     row.innerHTML = `
                         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${{index + 1}}</td>
                         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                            <input type="text" class="label-input" value="${{point.label || 'Bubble ' + (index + 1)}}" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                        </td>
+                        <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
                             <input type="number" class="x-input" value="${{point.x}}" step="any" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
                         </td>
                         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
@@ -1555,6 +1559,9 @@ class ChartJSGenerator:
             row.innerHTML = `
                 <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5; color: #868e96; font-weight: 600; font-size: 16.8px;">${{rowCount + 1}}</td>
                 <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
+                    <input type="text" class="label-input" value="" placeholder="Bubble ${{rowCount + 1}}" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                </td>
+                <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
                     <input type="number" class="x-input" value="0" step="any" placeholder="Enter X" style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 14px; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
                 </td>
                 <td style="padding: 16px 20px; border-bottom: 1px solid #f1f3f5;">
@@ -1615,14 +1622,16 @@ class ChartJSGenerator:
             rows.forEach((row, index) => {{
                 const xInput = row.querySelector('.x-input');
                 const yInput = row.querySelector('.y-input');
+                const labelInput = row.querySelector('.label-input');
                 const x = parseFloat(xInput.value);
                 const y = parseFloat(yInput.value);
+                const label = labelInput ? labelInput.value || `Point ${{index + 1}}` : `Point ${{index + 1}}`;
 
                 if (chartType === 'scatter') {{
                     newDataPoints.push({{
                         x: x,
                         y: y,
-                        label: `Point ${{index + 1}}`
+                        label: label
                     }});
                 }} else {{ // bubble
                     const rInput = row.querySelector('.r-input');
@@ -1631,7 +1640,7 @@ class ChartJSGenerator:
                         x: x,
                         y: y,
                         r: r,
-                        label: `Bubble ${{index + 1}}`
+                        label: label || `Bubble ${{index + 1}}`
                     }});
                 }}
             }});
