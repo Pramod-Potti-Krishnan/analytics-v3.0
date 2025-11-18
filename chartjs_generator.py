@@ -1763,10 +1763,20 @@ class ChartJSGenerator:
         for idx, ds in enumerate(datasets):
             color = self.palette[idx % len(self.palette)]
 
+            # v3.1.9: Fix transparency for scatter/bubble visibility
+            if chart_type == "scatter":
+                bg_color = color  # Opaque for scatter points
+            elif chart_type == "bubble":
+                bg_color = self._hex_to_rgba(color, 0.7)  # 70% opacity for bubbles
+            elif chart_type == "bar":
+                bg_color = color
+            else:
+                bg_color = self._hex_to_rgba(color, 0.2)
+
             prepared_ds = {
                 "label": ds.get("label", f"Series {idx+1}"),
                 "data": ds.get("data", []),
-                "backgroundColor": color if chart_type == "bar" else self._hex_to_rgba(color, 0.2),
+                "backgroundColor": bg_color,
                 "borderColor": color,
                 "borderWidth": 3 if chart_type == "line" else 2
             }
@@ -1787,7 +1797,7 @@ class ChartJSGenerator:
                 })
             elif chart_type in ["scatter", "bubble"]:
                 prepared_ds.update({
-                    "pointRadius": 6 if chart_type == "scatter" else None,
+                    "pointRadius": 10 if chart_type == "scatter" else None,  # v3.1.9: Increased from 6 to 10
                     "pointBackgroundColor": color,
                     "pointBorderColor": "#fff",
                     "pointBorderWidth": 2

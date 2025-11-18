@@ -708,14 +708,21 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                         }
                         for i, v in enumerate(chart_data["values"])
                     ]
-                }],
-                # v3.1.8: FIX datalabels bug - disable to prevent [object Object]
-                "datalabels": {"display": False}
+                }]
+            }
+            # v3.1.9: FIX datalabels bug - pass in options parameter (not data dict!)
+            scatter_options = {
+                "plugins": {
+                    "datalabels": {
+                        "display": False  # Prevent [object Object] labels
+                    }
+                }
             }
             chart_html = chart_gen.generate_scatter_plot(
                 data=scatter_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
+                options=scatter_options,  # ✅ CORRECT LOCATION
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -724,6 +731,13 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             # Convert label-value format to bubble datasets format (x-y-r coordinates)
             # Preserve labels and vary bubble radius based on value
             # NOTE: Editor team needs to enhance editor to support object data points
+
+            # v3.1.9: Improved proportional radius scaling (8-40px range)
+            values = chart_data["values"]
+            max_val = max(values) if values else 1
+            min_val = min(values) if values else 0
+            val_range = max_val - min_val if max_val != min_val else 1
+
             bubble_data = {
                 "datasets": [{
                     "label": slide_title,
@@ -731,19 +745,27 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                         {
                             "x": i,
                             "y": v,
-                            "r": max(5, min(30, v / 5)),  # Scale radius based on value (5-30 range)
+                            # Proportional scaling: maps min→8px, max→40px
+                            "r": max(8, min(40, 8 + (v - min_val) / val_range * 32)),
                             "label": chart_data["labels"][i]  # Preserve original label
                         }
-                        for i, v in enumerate(chart_data["values"])
+                        for i, v in enumerate(values)
                     ]
-                }],
-                # v3.1.8: FIX datalabels bug - disable to prevent [object Object]
-                "datalabels": {"display": False}
+                }]
+            }
+            # v3.1.9: FIX datalabels bug - pass in options parameter (not data dict!)
+            bubble_options = {
+                "plugins": {
+                    "datalabels": {
+                        "display": False  # Prevent [object Object] labels
+                    }
+                }
             }
             chart_html = chart_gen.generate_bubble_chart(
                 data=bubble_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
+                options=bubble_options,  # ✅ CORRECT LOCATION
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
