@@ -205,31 +205,64 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js area chart (line chart with fill).
 
-        Same as line chart but with filled area under the line.
+        Args:
+            data: Chart data (same structure as line chart)
+            height: Chart height in pixels
+            chart_id: Unique chart ID
+            options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+
+        Returns:
+            HTML canvas element with Chart.js area chart configuration
         """
         # Force fill=True for all datasets
         if "datasets" in data:
             for dataset in data["datasets"]:
                 dataset["fill"] = True
 
-        return self.generate_line_chart(data, height, chart_id, options)
+        return self.generate_line_chart(
+            data, height, chart_id, options,
+            enable_editor, presentation_id, api_base_url, output_mode
+        )
 
     def generate_stacked_area_chart(
         self,
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate Chart.js stacked area chart.
 
-        Multiple series stacked on top of each other.
+        Args:
+            data: Chart data with multiple datasets
+            height: Chart height in pixels
+            chart_id: Unique chart ID
+            options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+
+        Returns:
+            HTML canvas element with stacked area chart configuration
         """
         # Add stacking options
         stack_options = {
@@ -250,7 +283,10 @@ class ChartJSGenerator:
             for dataset in data["datasets"]:
                 dataset["fill"] = True
 
-        return self.generate_line_chart(data, height, chart_id, merged_options)
+        return self.generate_line_chart(
+            data, height, chart_id, merged_options,
+            enable_editor, presentation_id, api_base_url, output_mode
+        )
 
     # ========================================
     # BAR CHARTS
@@ -385,6 +421,116 @@ class ChartJSGenerator:
 
         merged_options = self._merge_options(options or {}, stack_options)
         return self.generate_bar_chart(data, height, horizontal, chart_id, merged_options)
+
+    def generate_waterfall_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 600,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate Chart.js waterfall chart using native floating bars.
+
+        Waterfall charts show cumulative effect of sequential positive/negative values.
+        Common use cases: P&L statements, budget analysis, cash flow.
+
+        Args:
+            data: Chart data with:
+                - labels: Category labels (e.g., ["Revenue", "COGS", "Operating Expenses", "Net Profit"])
+                - values: Change values (positive or negative)
+                - start_value: Optional starting value (default: 0)
+            height: Chart height in pixels
+            chart_id: Unique chart ID
+            options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+
+        Returns:
+            HTML canvas element with waterfall chart configuration
+
+        Example data format:
+            {
+                "labels": ["Starting Balance", "Revenue", "Expenses", "Ending Balance"],
+                "values": [1000, 500, -300, None],  # None for totals
+                "start_value": 0
+            }
+        """
+        labels = data.get("labels", [])
+        values = data.get("values", [])
+        start_value = data.get("start_value", 0)
+        format_type = data.get("format", "number")
+
+        # Calculate cumulative values and create floating bars [start, end]
+        cumulative = start_value
+        floating_data = []
+        bar_colors = []
+
+        for i, value in enumerate(values):
+            if value is None:
+                # Total bar - show from 0 to current cumulative
+                floating_data.append([0, cumulative])
+                bar_colors.append(self.palette[3])  # Neutral color for totals
+            elif value >= 0:
+                # Positive change - bar goes up
+                floating_data.append([cumulative, cumulative + value])
+                bar_colors.append(self.palette[1])  # Green for positive
+                cumulative += value
+            else:
+                # Negative change - bar goes down
+                floating_data.append([cumulative + value, cumulative])
+                bar_colors.append(self.palette[4])  # Red for negative
+                cumulative += value
+
+        # Build Chart.js config with floating bars
+        config = {
+            "type": "bar",
+            "data": {
+                "labels": labels,
+                "datasets": [{
+                    "label": "Waterfall",
+                    "data": floating_data,
+                    "backgroundColor": bar_colors,
+                    "borderColor": bar_colors,
+                    "borderWidth": 2,
+                    "borderRadius": 6
+                }]
+            },
+            "options": self._build_chart_options(
+                format_type, "bar", options, horizontal=False, dataset_count=1
+            )
+        }
+
+        # Add waterfall-specific tooltip to show changes
+        if "plugins" not in config["options"]:
+            config["options"]["plugins"] = {}
+
+        config["options"]["plugins"]["tooltip"] = {
+            "callbacks": {
+                "label": """function(context) {
+                    const dataIndex = context.dataIndex;
+                    const value = context.parsed.y - context.parsed._custom;
+                    const label = context.dataset.label || '';
+                    return label + ': ' + value.toFixed(2);
+                }"""
+            }
+        }
+
+        return self._wrap_in_canvas(
+            config,
+            height,
+            chart_id or f"waterfall-chart-{id(data)}",
+            enable_editor,
+            presentation_id,
+            api_base_url,
+            output_mode
+        )
 
     # ========================================
     # CIRCULAR CHARTS (PIE & DOUGHNUT)
