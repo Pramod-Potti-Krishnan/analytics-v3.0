@@ -110,14 +110,14 @@ Example: "Revenue grew steadily throughout FY 2024, achieving 42% growth from Q1
         Returns:
             4-6 sentence detailed explanation (respects max_chars from context)
         """
-        # Extract max_chars from context (default 1000 for L02 v3.3.3)
-        max_chars = 1000  # v3.3.3: Increased from 500 to 1000 for complete bullets
+        # Extract max_chars from context (default 800 for L02 v3.3.5)
+        max_chars = 800  # v3.3.5: Reduced from 1000 to 800 to fit on one page
         if context and "max_chars" in context:
             max_chars = context["max_chars"]
 
         data_summary = self._summarize_data(data)
 
-        # v3.3.3: Request bullet-point format with 5-7 bullets
+        # v3.3.5: Request bullet-point format with 5-6 bullets (reduced from 5-7)
         prompt = f"""You are a business analyst generating insights for a presentation slide's "Key Insights" panel.
 
 Chart Type: {chart_type}
@@ -127,28 +127,28 @@ User Request: {narrative}
 Audience: {audience}
 
 **CRITICAL FORMATTING REQUIREMENTS:**
-- Output EXACTLY 5-7 bullet points (one per line)
+- Output EXACTLY 5-6 bullet points (one per line) - NO MORE THAN 6
 - Each bullet should be a COMPLETE sentence or statement
-- Each bullet should be 100-140 characters long (full sentences, no truncation)
+- Each bullet should be 95-133 characters long (5% shorter for better fit)
 - Start each line with a dash (-) or bullet point (•)
 - Total response must be under {max_chars} characters
 
 **Content Guidelines:**
 1. First bullet: Summarize what the visualization shows
 2. Middle bullets: Highlight key findings, trends, statistical insights (use specific numbers)
-3. Last bullets: Business implications and actionable recommendations
+3. Last bullet: Business implications and actionable recommendations
 
 Write professionally for {audience}. Be concise but ensure each bullet is a COMPLETE thought.
 This will display in a bullet list next to the chart.
 
 Example Format:
-- The bubble chart illustrates revenue performance across regions, with bubble size representing market share
-- The average revenue is $128.8K, highlighting a downward trend from Q1 to Q4
-- APAC shows potential for growth, indicating an expanding market share in Southeast Asia
-- To capitalize on this, consider increasing investment in APAC while maintaining current European operations
-- Analyzing cost structures and competitive positioning will help identify optimization opportunities
+- The doughnut chart shows balanced performance across key indicators with diverse growth areas
+- Revenue Growth leads at 28%, indicating strong financial performance compared to other metrics
+- Customer Growth follows at 25%, suggesting effective client acquisition strategies
+- Market Expansion stands at 25%, reflecting stable penetration amidst competition
+- Profit Margin at 22% highlights a need for improved operational efficiency
 
-Generate {max_chars // 140}-7 complete bullet points:"""
+Generate 5-6 complete bullet points (MAX 6):"""
 
         try:
             response = await self.client.chat.completions.create(

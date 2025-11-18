@@ -83,7 +83,7 @@ class L02LayoutAssembler:
         self,
         insights_text: str,
         title: str = "Key Insights",
-        max_chars: int = 1000
+        max_chars: int = 800
     ) -> str:
         """
         Assemble observations HTML for element_2 (L02 right panel).
@@ -91,7 +91,7 @@ class L02LayoutAssembler:
         Args:
             insights_text: Business insights/observations text (expected to be pre-formatted bullets from LLM)
             title: Panel heading (default: "Key Insights")
-            max_chars: Maximum character limit (v3.3.3: increased to 1000 for complete bullets)
+            max_chars: Maximum character limit (v3.3.5: reduced to 800 to fit on one page)
 
         Returns:
             HTML string for element_2 field (540×720px panel)
@@ -109,10 +109,10 @@ class L02LayoutAssembler:
                     line = line[1:].strip()
                 bullets.append(line)
 
-        # Limit to 7 bullets max (LLM should already do this, but enforce as backup)
-        bullets = bullets[:7]
+        # v3.3.5: Limit to 6 bullets max (reduced from 7 to fit on one page)
+        bullets = bullets[:6]
 
-        # v3.3.3: NO TRUNCATION - LLM generates complete bullets (100-140 chars each)
+        # v3.3.5: NO TRUNCATION - LLM generates complete bullets (95-133 chars each)
         # Build bullet list HTML
         bullets_html = ""
         for bullet in bullets:
@@ -174,7 +174,7 @@ class L02LayoutAssembler:
         element_2 = self.assemble_observations_html(
             insights_text=insights_text,
             title=observations_title,
-            max_chars=1000  # v3.3.3: Increased to 1000 for complete bullet points
+            max_chars=800  # v3.3.5: Reduced to 800 to fit 5-6 bullets on one page
         )
 
         result = {

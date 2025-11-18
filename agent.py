@@ -822,7 +822,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             context={
                 **context,
                 "prior_slides": prior_slides,
-                "max_chars": 1000  # v3.3.3: Increased for 5-7 complete bullet points
+                "max_chars": 800  # v3.3.5: Reduced to 800 for 5-6 bullets to fit on one page
             }
         )
 
