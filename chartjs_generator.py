@@ -926,6 +926,480 @@ class ChartJSGenerator:
             output_mode
         )
 
+    def generate_treemap_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 600,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate Chart.js treemap chart using chartjs-chart-treemap plugin.
+
+        Treemaps visualize hierarchical data as nested rectangles sized by value.
+        Common use cases: Portfolio composition, disk space, market cap by sector.
+
+        Args:
+            data: Chart data with:
+                - labels: Labels for each node
+                - values: Values for each node (for sizing)
+            height: Chart height in pixels
+            chart_id: Unique chart ID
+            options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+
+        Returns:
+            HTML with treemap chart and embedded plugin
+
+        Example data format:
+            {
+                "labels": ["Tech", "Finance", "Healthcare", "Energy"],
+                "values": [450, 300, 200, 50]
+            }
+        """
+        labels = data.get("labels", [])
+        values = data.get("values", [])
+        format_type = data.get("format", "number")
+
+        # Transform flat data into treemap format
+        tree_data = []
+        for i, (label, value) in enumerate(zip(labels, values)):
+            tree_data.append({
+                "label": label,
+                "value": value,
+                "color": self.palette[i % len(self.palette)]
+            })
+
+        # Build Chart.js treemap config
+        config = {
+            "type": "treemap",
+            "data": {
+                "datasets": [{
+                    "tree": tree_data,
+                    "key": "value",
+                    "groups": ["label"],
+                    "spacing": 1,
+                    "borderWidth": 2,
+                    "borderColor": "#fff",
+                    "backgroundColor": "placeholder_for_function",
+                    "labels": {
+                        "display": True,
+                        "formatter": "placeholder_for_function",
+                        "color": "#fff",
+                        "font": {"size": 14, "weight": "bold"}
+                    }
+                }]
+            },
+            "options": {
+                "responsive": True,
+                "maintainAspectRatio": False,
+                "plugins": {
+                    "legend": {"display": False},
+                    "tooltip": {
+                        "callbacks": {
+                            "title": "placeholder_title_function",
+                            "label": "placeholder_label_function"
+                        }
+                    }
+                }
+            }
+        }
+
+        # Merge custom options if provided
+        if options:
+            config["options"] = self._merge_options(config["options"], options)
+
+        # Convert config to JSON then replace placeholders with actual functions
+        config_json = json.dumps(config)
+        config_json = config_json.replace(
+            '"placeholder_for_function"',
+            'function(ctx) { return ctx.raw.color || "' + self.palette[0] + '"; }'
+        )
+        config_json = config_json.replace(
+            '"placeholder_for_function"',
+            'function(ctx) { return ctx.raw.label; }'
+        )
+        config_json = config_json.replace(
+            '"placeholder_title_function"',
+            'function(context) { return context[0].raw.label; }'
+        )
+        config_json = config_json.replace(
+            '"placeholder_label_function"',
+            f'function(context) {{ return "{format_type}: " + context.raw.value; }}'
+        )
+
+        # Build HTML with treemap plugin loaded
+        chart_id_safe = chart_id or f"treemap-{id(data)}"
+        treemap_html = f"""<!-- Treemap Chart with Chart.js Treemap Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="{chart_id_safe}"></canvas>
+    <script>
+        (function() {{
+            function initTreemap() {{
+                const ctx = document.getElementById('{chart_id_safe}').getContext('2d');
+                const config = {config_json};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = chart;
+
+                console.log('✅ Treemap {chart_id_safe} initialized');
+            }}
+
+            // Initialize after treemap plugin loads
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', initTreemap);
+            }} else {{
+                initTreemap();
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return treemap_html
+
+    def generate_heatmap_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 600,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate Chart.js heatmap/matrix chart using chartjs-chart-matrix plugin.
+
+        Heatmaps visualize data values in a 2D grid with color-coded cells.
+        Common use cases: Correlation matrices, time-based patterns, activity heatmaps.
+
+        Args:
+            data: Chart data with:
+                - x_labels: X-axis labels (columns)
+                - y_labels: Y-axis labels (rows)
+                - values: 2D array of values or flat array with x, y, v
+            height: Chart height in pixels
+            chart_id: Unique chart ID
+            options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+
+        Returns:
+            HTML with heatmap chart and embedded plugin
+
+        Example data format:
+            {
+                "x_labels": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                "y_labels": ["9am", "12pm", "3pm", "6pm"],
+                "values": [[10, 20, 30, 25, 15], [15, 25, 35, 30, 20], ...]
+            }
+        """
+        x_labels = data.get("x_labels", [])
+        y_labels = data.get("y_labels", [])
+        values = data.get("values", [])
+        format_type = data.get("format", "number")
+
+        # Transform 2D array into matrix format [{x, y, v}, ...]
+        matrix_data = []
+        if isinstance(values[0], list):
+            # 2D array format
+            for y_idx, row in enumerate(values):
+                for x_idx, value in enumerate(row):
+                    matrix_data.append({
+                        "x": x_labels[x_idx] if x_idx < len(x_labels) else f"Col{x_idx}",
+                        "y": y_labels[y_idx] if y_idx < len(y_labels) else f"Row{y_idx}",
+                        "v": value
+                    })
+        else:
+            # Flat array with x, y, v already
+            matrix_data = values
+
+        # Calculate min/max for color scale
+        all_values = [item["v"] if isinstance(item, dict) else item for item in matrix_data]
+        min_val = min(all_values) if all_values else 0
+        max_val = max(all_values) if all_values else 100
+
+        # Build Chart.js matrix config
+        config = {
+            "type": "matrix",
+            "data": {
+                "datasets": [{
+                    "label": "Heatmap",
+                    "data": matrix_data,
+                    "backgroundColor": "placeholder_bg_function",
+                    "borderWidth": 1,
+                    "borderColor": "#fff",
+                    "width": "placeholder_width_function",
+                    "height": "placeholder_height_function"
+                }]
+            },
+            "options": {
+                "responsive": True,
+                "maintainAspectRatio": False,
+                "plugins": {
+                    "legend": {"display": False},
+                    "tooltip": {
+                        "callbacks": {
+                            "title": "placeholder_title",
+                            "label": "placeholder_label"
+                        }
+                    }
+                },
+                "scales": {
+                    "x": {
+                        "type": "category",
+                        "labels": x_labels,
+                        "ticks": {"font": {"size": 12}},
+                        "grid": {"display": False}
+                    },
+                    "y": {
+                        "type": "category",
+                        "labels": y_labels,
+                        "offset": True,
+                        "ticks": {"font": {"size": 12}},
+                        "grid": {"display": False}
+                    }
+                }
+            }
+        }
+
+        # Merge custom options
+        if options:
+            config["options"] = self._merge_options(config["options"], options)
+
+        # Convert to JSON and inject functions
+        config_json = json.dumps(config)
+
+        # Color scale function (gradient from blue to red)
+        config_json = config_json.replace(
+            '"placeholder_bg_function"',
+            f"""function(ctx) {{
+                const value = ctx.dataset.data[ctx.dataIndex].v;
+                const normalized = (value - {min_val}) / ({max_val} - {min_val});
+                const r = Math.round(normalized * 255);
+                const b = Math.round((1 - normalized) * 255);
+                return `rgba(${{r}}, 100, ${{b}}, 0.8)`;
+            }}"""
+        )
+
+        # Width and height functions
+        config_json = config_json.replace(
+            '"placeholder_width_function"',
+            'function(ctx) { return (ctx.chart.chartArea || {}).width / ' + str(len(x_labels) if x_labels else 5) + ' - 1; }'
+        )
+        config_json = config_json.replace(
+            '"placeholder_height_function"',
+            'function(ctx) { return (ctx.chart.chartArea || {}).height / ' + str(len(y_labels) if y_labels else 4) + ' - 1; }'
+        )
+
+        # Tooltip functions
+        config_json = config_json.replace(
+            '"placeholder_title"',
+            'function(ctx) { return ctx[0].raw.y + " - " + ctx[0].raw.x; }'
+        )
+        config_json = config_json.replace(
+            '"placeholder_label"',
+            f'function(ctx) {{ return "{format_type}: " + ctx.raw.v; }}'
+        )
+
+        # Build HTML with matrix plugin
+        chart_id_safe = chart_id or f"heatmap-{id(data)}"
+        heatmap_html = f"""<!-- Heatmap/Matrix Chart with Chart.js Matrix Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@3.0.0/dist/chartjs-chart-matrix.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="{chart_id_safe}"></canvas>
+    <script>
+        (function() {{
+            function initHeatmap() {{
+                const ctx = document.getElementById('{chart_id_safe}').getContext('2d');
+                const config = {config_json};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = chart;
+
+                console.log('✅ Heatmap {chart_id_safe} initialized');
+            }}
+
+            // Initialize after matrix plugin loads
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', initHeatmap);
+            }} else {{
+                initHeatmap();
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return heatmap_html
+
+    def generate_boxplot_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 600,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate Chart.js boxplot chart using chartjs-chart-boxplot plugin.
+
+        Boxplots show statistical distribution with min, Q1, median, Q3, max, and outliers.
+        Common use cases: Salary distributions, performance metrics, A/B test results.
+
+        Args:
+            data: Chart data with:
+                - labels: Category labels
+                - datasets: List of {label, data: [[min, q1, median, q3, max], ...]}
+                  OR raw data arrays that will be auto-calculated
+            height: Chart height in pixels
+            chart_id: Unique chart ID
+            options: Custom Chart.js options
+            enable_editor: Whether to add interactive chart editor
+            presentation_id: Presentation ID for editor persistence
+            api_base_url: Base URL for chart API endpoints
+            output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+
+        Returns:
+            HTML with boxplot chart and embedded plugin
+
+        Example data format:
+            {
+                "labels": ["Q1", "Q2", "Q3", "Q4"],
+                "datasets": [{
+                    "label": "Sales Distribution",
+                    "data": [[100, 250, 350, 450, 600], [120, 270, 380, 480, 650], ...]
+                }]
+            }
+        """
+        labels = data.get("labels", [])
+        datasets = data.get("datasets", [])
+        format_type = data.get("format", "number")
+
+        # Prepare datasets with colors
+        prepared_datasets = []
+        for i, dataset in enumerate(datasets):
+            color = self.palette[i % len(self.palette)]
+            prepared_datasets.append({
+                "label": dataset.get("label", f"Series {i+1}"),
+                "data": dataset.get("data", []),
+                "backgroundColor": color.replace(')', ', 0.5)').replace('rgb', 'rgba'),
+                "borderColor": color,
+                "borderWidth": 2,
+                "outlierBackgroundColor": self.palette[(i+1) % len(self.palette)],
+                "outlierRadius": 3
+            })
+
+        # Build Chart.js boxplot config
+        config = {
+            "type": "boxplot",
+            "data": {
+                "labels": labels,
+                "datasets": prepared_datasets
+            },
+            "options": {
+                "responsive": True,
+                "maintainAspectRatio": False,
+                "plugins": {
+                    "legend": {
+                        "display": len(datasets) > 1,
+                        "position": "top"
+                    },
+                    "tooltip": {
+                        "callbacks": {
+                            "label": "placeholder_label"
+                        }
+                    }
+                },
+                "scales": {
+                    "y": {
+                        "beginAtZero": False,
+                        "ticks": {"font": {"size": 12}},
+                        "grid": {"color": "rgba(0, 0, 0, 0.1)"}
+                    },
+                    "x": {
+                        "ticks": {"font": {"size": 12}},
+                        "grid": {"display": False}
+                    }
+                }
+            }
+        }
+
+        # Merge custom options
+        if options:
+            config["options"] = self._merge_options(config["options"], options)
+
+        # Convert to JSON and inject tooltip function
+        config_json = json.dumps(config)
+        config_json = config_json.replace(
+            '"placeholder_label"',
+            f"""function(ctx) {{
+                const data = ctx.parsed;
+                return [
+                    '{format_type} - Max: ' + data.max,
+                    'Q3: ' + data.q3,
+                    'Median: ' + data.median,
+                    'Q1: ' + data.q1,
+                    'Min: ' + data.min
+                ];
+            }}"""
+        )
+
+        # Build HTML with boxplot plugin
+        chart_id_safe = chart_id or f"boxplot-{id(data)}"
+        boxplot_html = f"""<!-- Boxplot Chart with Chart.js Boxplot Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.4.5/build/index.umd.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="{chart_id_safe}"></canvas>
+    <script>
+        (function() {{
+            function initBoxplot() {{
+                const ctx = document.getElementById('{chart_id_safe}').getContext('2d');
+                const config = {config_json};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = chart;
+
+                console.log('✅ Boxplot {chart_id_safe} initialized');
+            }}
+
+            // Initialize after boxplot plugin loads
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', initBoxplot);
+            }} else {{
+                initBoxplot();
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return boxplot_html
+
     # ========================================
     # SPECIALIZED CHARTS
     # ========================================
