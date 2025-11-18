@@ -5,7 +5,7 @@ A Pydantic AI-powered analytics microservice that generates comprehensive
 charts and visualizations through a WebSocket API with real-time progress streaming.
 """
 
-__version__ = "3.3.3"
+__version__ = "3.3.4"
 
 from agent import process_analytics_request
 from dependencies import AnalyticsDependencies

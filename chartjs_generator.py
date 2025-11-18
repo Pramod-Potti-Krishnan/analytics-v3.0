@@ -964,13 +964,15 @@ class ChartJSGenerator:
         js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
 
         # Build inline script with IIFE wrapper and Reveal.js-aware initialization
+        # v3.3.4: Destroy and recreate chart on every slide visit to replay animations
         # This follows Layout Builder specification with Reveal.js timing fix
         inline_script = f"""(function() {{
       function initChart() {{
-        // Guard: Check if chart already exists (prevent double initialization)
+        // v3.3.4: Destroy existing chart instance to force animation replay
         if (window.chartInstances && window.chartInstances['{chart_id}']) {{
-          console.log('Chart {chart_id} already initialized, skipping');
-          return;
+          console.log('Chart {chart_id} exists, destroying to replay animation...');
+          window.chartInstances['{chart_id}'].destroy();
+          delete window.chartInstances['{chart_id}'];
         }}
 
         const ctx = document.getElementById('{chart_id}').getContext('2d');
@@ -998,11 +1000,11 @@ class ChartJSGenerator:
           }}
         }});
 
-        // Also listen for slide changes
+        // v3.3.4: Always reinitialize on slide change to replay animation
         Reveal.on('slidechanged', function(event) {{
           try {{
             if (event.currentSlide && event.currentSlide.querySelector('#{chart_id}')) {{
-              initChart();
+              initChart();  // This now destroys old chart and creates new one
             }}
           }} catch (e) {{
             console.warn('Chart init on slide change failed:', e);
