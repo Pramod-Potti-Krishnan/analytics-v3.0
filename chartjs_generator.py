@@ -1588,6 +1588,10 @@ class ChartJSGenerator:
         const chartType = chart.config.type;
         const rows = document.querySelectorAll('#tbody-{chart_id} tr');
 
+        // v3.2.1 FIX: Declare variables outside blocks so they're available for backend save
+        let newLabels = [];
+        let newValues = [];
+
         // v3.2.1: Rebuild data structures based on chart type
         if (chartType === 'scatter' || chartType === 'bubble') {{
             // Scatter/bubble: rebuild object array
@@ -1620,11 +1624,13 @@ class ChartJSGenerator:
             // Update chart data (NO labels array for scatter/bubble)
             chart.data.datasets[0].data = newDataPoints;
             console.log('Updated scatter/bubble data:', newDataPoints);
+
+            // v3.2.1 FIX: For backend compatibility, convert to labels/values format
+            // Backend expects labels + values even for scatter/bubble
+            newLabels = newDataPoints.map(p => p.label || '');
+            newValues = newDataPoints.map(p => chartType === 'scatter' ? p.y : p.r);
         }} else {{
             // Other charts: rebuild labels + values arrays
-            const newLabels = [];
-            const newValues = [];
-
             rows.forEach(row => {{
                 const label = row.querySelector('.label-input').value;
                 const value = parseFloat(row.querySelector('.value-input').value);
