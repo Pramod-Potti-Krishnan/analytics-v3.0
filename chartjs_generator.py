@@ -1400,6 +1400,409 @@ class ChartJSGenerator:
 
         return boxplot_html
 
+    def generate_candlestick_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 600,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate Chart.js candlestick/financial chart using chartjs-chart-financial plugin.
+
+        Args:
+            data: Chart data with:
+                - labels: Time labels (dates/timestamps)
+                - datasets: List of {label, data: [{x, o, h, l, c}, ...]}
+                  where o=open, h=high, l=low, c=close
+            height: Canvas height in pixels
+            chart_id: Unique identifier for the chart
+            options: Additional Chart.js options to override defaults
+            enable_editor: Include interactive edit button
+            presentation_id: Presentation ID for editor
+            api_base_url: Base URL for chart API
+            output_mode: Output format ("inline_script" for Layout Builder)
+
+        Returns:
+            HTML string with candlestick chart and chartjs-chart-financial plugin loaded
+        """
+        labels = data.get("labels", [])
+        datasets = data.get("datasets", [])
+        format_type = data.get("format", "currency")
+
+        # Prepare candlestick datasets
+        prepared_datasets = []
+        for i, dataset in enumerate(datasets):
+            # Transform data to candlestick format if needed
+            candlestick_data = []
+            raw_data = dataset.get("data", [])
+
+            for j, item in enumerate(raw_data):
+                if isinstance(item, dict):
+                    # Already in {x, o, h, l, c} format
+                    candlestick_data.append(item)
+                elif isinstance(item, (list, tuple)) and len(item) >= 4:
+                    # [open, high, low, close] format
+                    candlestick_data.append({
+                        "x": labels[j] if j < len(labels) else j,
+                        "o": item[0],  # open
+                        "h": item[1],  # high
+                        "l": item[2],  # low
+                        "c": item[3]   # close
+                    })
+
+            prepared_datasets.append({
+                "label": dataset.get("label", f"Series {i+1}"),
+                "data": candlestick_data,
+                "color": {
+                    "up": self.palette[1],    # Green for price up
+                    "down": self.palette[4],  # Red for price down
+                    "unchanged": self.palette[3]  # Neutral for unchanged
+                },
+                "borderColor": {
+                    "up": self.palette[1],
+                    "down": self.palette[4],
+                    "unchanged": self.palette[3]
+                }
+            })
+
+        # Build Chart.js candlestick config
+        config = {
+            "type": "candlestick",
+            "data": {
+                "datasets": prepared_datasets
+            },
+            "options": {
+                "responsive": True,
+                "maintainAspectRatio": False,
+                "plugins": {
+                    "legend": {
+                        "display": len(datasets) > 1,
+                        "position": "top",
+                        "labels": {"font": {"size": 14}}
+                    },
+                    "tooltip": {
+                        "mode": "index",
+                        "intersect": False,
+                        "callbacks": {
+                            "label": "placeholder_label_function"
+                        }
+                    },
+                    "title": {
+                        "display": False
+                    }
+                },
+                "scales": {
+                    "x": {
+                        "type": "time",
+                        "time": {
+                            "unit": "day",
+                            "displayFormats": {
+                                "day": "MMM d"
+                            }
+                        },
+                        "ticks": {"font": {"size": 12}},
+                        "grid": {"display": False}
+                    },
+                    "y": {
+                        "beginAtZero": False,
+                        "ticks": {
+                            "font": {"size": 12},
+                            "callback": "placeholder_y_callback"
+                        },
+                        "grid": {"color": "rgba(0, 0, 0, 0.1)"}
+                    }
+                }
+            }
+        }
+
+        # Merge with user options if provided
+        if options:
+            self._deep_merge(config["options"], options)
+
+        # Convert to JSON and inject functions
+        config_json = json.dumps(config)
+
+        # Tooltip function showing OHLC values
+        if format_type == "currency":
+            label_format = """function(ctx) {
+                const data = ctx.parsed;
+                return [
+                    'Open: $' + data.o.toFixed(2),
+                    'High: $' + data.h.toFixed(2),
+                    'Low: $' + data.l.toFixed(2),
+                    'Close: $' + data.c.toFixed(2)
+                ];
+            }"""
+            y_callback = "function(value) { return '$' + value.toFixed(2); }"
+        else:
+            label_format = """function(ctx) {
+                const data = ctx.parsed;
+                return [
+                    'Open: ' + data.o.toFixed(2),
+                    'High: ' + data.h.toFixed(2),
+                    'Low: ' + data.l.toFixed(2),
+                    'Close: ' + data.c.toFixed(2)
+                ];
+            }"""
+            y_callback = "function(value) { return value.toFixed(2); }"
+
+        config_json = config_json.replace('"placeholder_label_function"', label_format)
+        config_json = config_json.replace('"placeholder_y_callback"', y_callback)
+
+        # Generate unique chart ID
+        chart_id_safe = chart_id or f"candlestick-{id(data)}"
+
+        # Build HTML with financial plugin and Chart.js date adapter
+        candlestick_html = f"""<!-- Candlestick/Financial Chart with Chart.js Financial Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="{chart_id_safe}"></canvas>
+    <script>
+        (function() {{
+            function initCandlestick() {{
+                // v3.3.4: Destroy existing chart to replay animation
+                if (window.chartInstances && window.chartInstances['{chart_id_safe}']) {{
+                    console.log('Chart {chart_id_safe} exists, destroying to replay animation...');
+                    window.chartInstances['{chart_id_safe}'].destroy();
+                    delete window.chartInstances['{chart_id_safe}'];
+                }}
+
+                const ctx = document.getElementById('{chart_id_safe}').getContext('2d');
+                const config = {config_json};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = chart;
+
+                console.log('✅ Candlestick {chart_id_safe} initialized');
+            }}
+
+            // Initialize after financial plugin loads
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', initCandlestick);
+            }} else {{
+                initCandlestick();
+            }}
+
+            // v3.3.4: Reinitialize on slide change for animation replay
+            if (typeof Reveal !== 'undefined') {{
+                Reveal.on('slidechanged', function(event) {{
+                    try {{
+                        if (event.currentSlide && event.currentSlide.querySelector('#{chart_id_safe}')) {{
+                            initCandlestick();
+                        }}
+                    }} catch (e) {{
+                        console.warn('Candlestick init on slide change failed:', e);
+                    }}
+                }});
+            }}
+        }})();
+    </script>
+</div>"""
+
+        logger.info(f"Generated candlestick chart {chart_id_safe}")
+        return candlestick_html
+
+    def generate_sankey_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 600,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate Chart.js sankey diagram using chartjs-chart-sankey plugin.
+
+        Args:
+            data: Chart data with:
+                - nodes: List of node labels (or {id, label} objects)
+                - flows: List of {from, to, value} flow connections
+            height: Canvas height in pixels
+            chart_id: Unique identifier for the chart
+            options: Additional Chart.js options to override defaults
+            enable_editor: Include interactive edit button
+            presentation_id: Presentation ID for editor
+            api_base_url: Base URL for chart API
+            output_mode: Output format ("inline_script" for Layout Builder)
+
+        Returns:
+            HTML string with sankey diagram and chartjs-chart-sankey plugin loaded
+        """
+        nodes = data.get("nodes", [])
+        flows = data.get("flows", [])
+        format_type = data.get("format", "number")
+
+        # Transform nodes to sankey format
+        sankey_nodes = []
+        if nodes and isinstance(nodes[0], str):
+            # Simple string array - convert to {id, label} format
+            sankey_nodes = [{"id": node, "label": node} for node in nodes]
+        else:
+            # Already in object format
+            sankey_nodes = nodes
+
+        # Assign colors to nodes using palette
+        for i, node in enumerate(sankey_nodes):
+            if "color" not in node:
+                node["color"] = self.palette[i % len(self.palette)]
+
+        # Transform flows to sankey format
+        sankey_flows = []
+        for flow in flows:
+            sankey_flows.append({
+                "from": flow.get("from"),
+                "to": flow.get("to"),
+                "flow": flow.get("value", flow.get("flow", 0))
+            })
+
+        # Build Chart.js sankey config
+        config = {
+            "type": "sankey",
+            "data": {
+                "datasets": [{
+                    "data": sankey_flows,
+                    "colorFrom": "placeholder_color_from",
+                    "colorTo": "placeholder_color_to",
+                    "colorMode": "gradient",
+                    "labels": {
+                        "display": True,
+                        "font": {"size": 12, "weight": "bold"},
+                        "color": "#333"
+                    },
+                    "size": "max",
+                    "borderWidth": 0
+                }]
+            },
+            "options": {
+                "responsive": True,
+                "maintainAspectRatio": False,
+                "plugins": {
+                    "legend": {"display": False},
+                    "tooltip": {
+                        "callbacks": {
+                            "label": "placeholder_label_function"
+                        }
+                    },
+                    "title": {
+                        "display": False
+                    }
+                }
+            }
+        }
+
+        # Merge with user options if provided
+        if options:
+            self._deep_merge(config["options"], options)
+
+        # Convert to JSON and inject functions
+        config_json = json.dumps(config)
+
+        # Create node color mapping for flows
+        node_colors_json = json.dumps({node["id"]: node["color"] for node in sankey_nodes})
+
+        # Color functions using node colors
+        color_from_func = f"""function(ctx) {{
+            const nodeColors = {node_colors_json};
+            return nodeColors[ctx.dataset.data[ctx.dataIndex].from] || '{self.palette[0]}';
+        }}"""
+
+        color_to_func = f"""function(ctx) {{
+            const nodeColors = {node_colors_json};
+            return nodeColors[ctx.dataset.data[ctx.dataIndex].to] || '{self.palette[1]}';
+        }}"""
+
+        # Tooltip function
+        if format_type == "currency":
+            label_func = """function(ctx) {
+                const flow = ctx.dataset.data[ctx.dataIndex];
+                return flow.from + ' → ' + flow.to + ': $' + flow.flow.toLocaleString();
+            }"""
+        elif format_type == "percentage":
+            label_func = """function(ctx) {
+                const flow = ctx.dataset.data[ctx.dataIndex];
+                return flow.from + ' → ' + flow.to + ': ' + flow.flow.toFixed(1) + '%';
+            }"""
+        else:
+            label_func = """function(ctx) {
+                const flow = ctx.dataset.data[ctx.dataIndex];
+                return flow.from + ' → ' + flow.to + ': ' + flow.flow.toLocaleString();
+            }"""
+
+        config_json = config_json.replace('"placeholder_color_from"', color_from_func)
+        config_json = config_json.replace('"placeholder_color_to"', color_to_func)
+        config_json = config_json.replace('"placeholder_label_function"', label_func)
+
+        # Generate unique chart ID
+        chart_id_safe = chart_id or f"sankey-{id(data)}"
+
+        # Build HTML with sankey plugin
+        sankey_html = f"""<!-- Sankey Diagram with Chart.js Sankey Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@0.12.0/dist/chartjs-chart-sankey.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="{chart_id_safe}"></canvas>
+    <script>
+        (function() {{
+            function initSankey() {{
+                // v3.3.4: Destroy existing chart to replay animation
+                if (window.chartInstances && window.chartInstances['{chart_id_safe}']) {{
+                    console.log('Chart {chart_id_safe} exists, destroying to replay animation...');
+                    window.chartInstances['{chart_id_safe}'].destroy();
+                    delete window.chartInstances['{chart_id_safe}'];
+                }}
+
+                const ctx = document.getElementById('{chart_id_safe}').getContext('2d');
+                const config = {config_json};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = chart;
+
+                console.log('✅ Sankey {chart_id_safe} initialized');
+            }}
+
+            // Initialize after sankey plugin loads
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', initSankey);
+            }} else {{
+                initSankey();
+            }}
+
+            // v3.3.4: Reinitialize on slide change for animation replay
+            if (typeof Reveal !== 'undefined') {{
+                Reveal.on('slidechanged', function(event) {{
+                    try {{
+                        if (event.currentSlide && event.currentSlide.querySelector('#{chart_id_safe}')) {{
+                            initSankey();
+                        }}
+                    }} catch (e) {{
+                        console.warn('Sankey init on slide change failed:', e);
+                    }}
+                }});
+            }}
+        }})();
+    </script>
+</div>"""
+
+        logger.info(f"Generated sankey diagram {chart_id_safe}")
+        return sankey_html
+
     # ========================================
     # SPECIALIZED CHARTS
     # ========================================
