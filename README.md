@@ -1,10 +1,10 @@
 # Analytics Microservice v3
 
-**Version**: 3.1.8
-**Status**: ✅ Production Ready (Correct Approach)
+**Version**: 3.4.3
+**Status**: ✅ Production Ready - Chart Type Expansion Complete
 **Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
 
-A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js and ApexCharts, providing interactive charts with AI-generated insights for presentation slides.
+A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js 4.4.0 and official plugins, providing interactive charts with AI-generated insights for presentation slides. Now supports 20+ chart types including advanced visualizations like treemaps, heatmaps, boxplots, candlestick charts, and sankey diagrams.
 
 ## 🌐 Production URL
 
@@ -87,13 +87,16 @@ curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
 ## Features
 
 - 🚀 **REST API** with async job processing and polling
-- 📊 **20+ Chart Types** including bar, line, pie, scatter, heatmap, violin plots and more
-- 🤖 **LLM-Enhanced Data Synthesis** using OpenAI GPT-4o-mini
-- 🎨 **Theme Customization** with 5 pre-defined themes
+- 📊 **20+ Chart Types** including native Chart.js types + advanced plugins (treemap, heatmap, boxplot, candlestick, sankey)
+- 🎨 **Chart.js 4.4.0** with official plugin ecosystem for extended visualizations
+- 🔌 **Self-Contained HTML** - Each chart includes its own CDN scripts (no global dependencies needed)
+- 🤖 **LLM-Enhanced Data Synthesis** using OpenAI GPT-4o-mini for business insights
+- 🎨 **Theme Customization** with 5 pre-defined themes (professional, dark, colorful, minimal, default)
 - ☁️ **Supabase Storage** for chart hosting with public URLs
 - 📈 **Job Progress Tracking** with optional polling endpoint
 - 🔄 **Concurrent Job Processing** with automatic cleanup
 - 🚂 **Railway Deployed** and production-ready
+- ✨ **Animation Replay** - Charts animate every time slide is visited (v3.3.4)
 
 ## Quick Start
 
@@ -321,28 +324,51 @@ Service information.
 }
 ```
 
-## Available Chart Types
+## Available Chart Types (v3.4.3)
 
-- `bar_vertical` - Vertical bar chart
-- `bar_horizontal` - Horizontal bar chart
-- `bar_grouped` - Grouped bar chart
-- `bar_stacked` - Stacked bar chart
-- `line` - Line chart
-- `line_multi` - Multi-line chart
-- `area` - Area chart
-- `area_stacked` - Stacked area chart
-- `pie` - Pie chart
-- `donut` - Donut chart
-- `scatter` - Scatter plot
-- `bubble` - Bubble chart
-- `heatmap` - Heatmap
-- `radar` - Radar chart
-- `box` - Box plot
-- `violin` - Violin plot
-- `histogram` - Histogram
-- `funnel` - Funnel chart
-- `treemap` - Treemap
-- `sankey` - Sankey diagram
+### Native Chart.js Types
+- `bar_vertical` - Vertical bar chart for categorical comparisons
+- `bar_horizontal` - Horizontal bar chart for ranking/comparison
+- `bar_grouped` - Grouped bar chart for multi-series comparison
+- `bar_stacked` - Stacked bar chart for part-to-whole relationships
+- `line` - Line chart for trends over time
+- `line_multi` - Multi-line chart for comparing multiple time series
+- `area` - Area chart (line chart with filled area)
+- `area_stacked` - Stacked area chart for cumulative trends
+- `pie` - Pie chart for proportional data
+- `donut` - Donut chart (pie with center cutout)
+- `scatter` - Scatter plot for correlation analysis
+- `bubble` - Bubble chart for 3-variable relationships
+- `radar` - Radar/spider chart for multivariate data
+- `polar_area` - Polar area chart for cyclical data
+- `waterfall` - Waterfall chart for incremental changes (NEW in v3.4.0)
+
+### Chart.js Plugin-Based Types (NEW in v3.4.x)
+- `treemap` - Treemap for hierarchical data visualization (v3.4.1)
+  - Plugin: chartjs-chart-treemap@3.1.0
+  - Use case: Budget breakdown, disk usage, organizational hierarchy
+
+- `heatmap` / `matrix` - Heatmap/matrix chart for 2D correlation data (v3.4.2)
+  - Plugin: chartjs-chart-matrix@3.0.0
+  - Use case: Correlation matrices, calendar heatmaps, time-based patterns
+
+- `boxplot` - Box plot for statistical distribution (v3.4.2)
+  - Plugin: @sgratzl/chartjs-chart-boxplot@4.4.5
+  - Use case: Statistical analysis, outlier detection, quartile visualization
+
+- `candlestick` / `financial` - Candlestick chart for financial OHLC data (v3.4.3)
+  - Plugin: chartjs-chart-financial@0.2.1
+  - Requires: luxon@3.3.0, chartjs-adapter-luxon@1.3.1
+  - Use case: Stock prices, forex data, financial market analysis
+
+- `sankey` - Sankey diagram for flow visualization (v3.4.3)
+  - Plugin: chartjs-chart-sankey@0.12.0
+  - Use case: Resource flows, user journeys, budget allocation, energy flow
+
+### Specialized Chart Types
+- `mixed` - Mixed/combo chart (combines multiple chart types)
+- `histogram` - Histogram for distribution analysis
+- `violin` - Violin plot for distribution comparison (ApexCharts)
 
 ## Available Themes
 
