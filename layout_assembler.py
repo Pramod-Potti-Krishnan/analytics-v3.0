@@ -86,7 +86,7 @@ class L02LayoutAssembler:
         self,
         insights_text: str,
         title: str = "Key Insights",
-        max_chars: int = 500
+        max_chars: int = 750
     ) -> str:
         """
         Assemble observations HTML for element_2 (L02 right panel).
@@ -94,7 +94,7 @@ class L02LayoutAssembler:
         Args:
             insights_text: Business insights/observations text
             title: Panel heading (default: "Key Insights")
-            max_chars: Maximum character limit (default: 500)
+            max_chars: Maximum character limit (v3.3.0: increased to 750 from 500)
 
         Returns:
             HTML string for element_2 field (540×720px panel)
@@ -118,16 +118,16 @@ class L02LayoutAssembler:
         # Build paragraph HTML with proper margins (Director L02 spec)
         paragraph_html = ""
         for i, para in enumerate(paragraphs):
-            # Last paragraph gets margin: 0, others get margin: 0 0 12px 0
-            margin = "0" if i == len(paragraphs) - 1 else "0 0 12px 0"
-            paragraph_html += f"""    <p style="font-family: 'Inter', -apple-system, sans-serif; font-size: 16px; line-height: 1.6; color: {self.colors['text']}; margin: {margin};">
+            # Last paragraph gets margin: 0, others get margin: 0 0 14px 0 (v3.3.0: increased from 12px)
+            margin = "0" if i == len(paragraphs) - 1 else "0 0 14px 0"
+            paragraph_html += f"""    <p style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: {self.colors['text']}; margin: {margin};">
         {para}
     </p>
 """
 
-        # Styled observations panel - Director L02 spec compliant
+        # Styled observations panel - Director L02 spec compliant (v3.3.0: larger font, more content)
         html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 720px; padding: 40px 32px; background: {self.colors['bg']}; border-radius: 8px; overflow-y: auto; box-sizing: border-box;">
-    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 20px; font-weight: 600; color: {self.colors['heading']}; margin: 0 0 16px 0; line-height: 1.3;">
+    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 22px; font-weight: 600; color: {self.colors['heading']}; margin: 0 0 18px 0; line-height: 1.3;">
         {title}
     </h3>
 {paragraph_html}</div>"""
@@ -176,7 +176,7 @@ class L02LayoutAssembler:
         element_2 = self.assemble_observations_html(
             insights_text=insights_text,
             title=observations_title,
-            max_chars=500  # Director team requirement
+            max_chars=750  # v3.3.0: Increased from 500 for more content
         )
 
         result = {

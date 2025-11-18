@@ -187,7 +187,7 @@ class ChartJSGenerator:
                 "labels": labels,
                 "datasets": datasets
             },
-            "options": self._build_chart_options(format_type, "line", options)
+            "options": self._build_chart_options(format_type, "line", options, dataset_count=len(datasets))
         }
 
         return self._wrap_in_canvas(
@@ -315,7 +315,7 @@ class ChartJSGenerator:
                 "labels": labels,
                 "datasets": datasets
             },
-            "options": self._build_chart_options(format_type, "bar", options, horizontal)
+            "options": self._build_chart_options(format_type, "bar", options, horizontal, dataset_count=len(datasets))
         }
 
         return self._wrap_in_canvas(
@@ -554,7 +554,7 @@ class ChartJSGenerator:
         config = {
             "type": "scatter",
             "data": {"datasets": datasets},
-            "options": self._build_chart_options(format_type, "scatter", options)
+            "options": self._build_chart_options(format_type, "scatter", options, dataset_count=len(datasets))
         }
 
         return self._wrap_in_canvas(
@@ -595,10 +595,25 @@ class ChartJSGenerator:
         format_type = data.get("format", "number")
         datasets = self._prepare_datasets(data["datasets"], "bubble", format_type)
 
+        # v3.3.0: Add custom tooltip to show bubble labels instead of "Analytics"
+        bubble_tooltip_options = {
+            "plugins": {
+                "tooltip": {
+                    "callbacks": {
+                        "title": "function(context) { return context[0].raw.label || 'Bubble ' + (context[0].dataIndex + 1); }",
+                        "label": "function(context) { const raw = context.raw; return [`X: ${raw.x}`, `Y: ${raw.y}`, `Size: ${raw.r}`]; }"
+                    }
+                }
+            }
+        }
+
+        # Merge bubble tooltip options with any user-provided options
+        merged_options = self._merge_options(bubble_tooltip_options, options or {})
+
         config = {
             "type": "bubble",
             "data": {"datasets": datasets},
-            "options": self._build_chart_options(format_type, "bubble", options)
+            "options": self._build_chart_options(format_type, "bubble", merged_options, dataset_count=len(datasets))
         }
 
         return self._wrap_in_canvas(
@@ -824,7 +839,7 @@ class ChartJSGenerator:
                 "labels": labels,
                 "datasets": datasets
             },
-            "options": self._build_chart_options(format_type, "mixed", options)
+            "options": self._build_chart_options(format_type, "mixed", options, dataset_count=len(datasets))
         }
 
         return self._wrap_in_canvas(
@@ -1688,7 +1703,8 @@ class ChartJSGenerator:
         format_type: str,
         chart_type: str,
         custom_options: Optional[Dict[str, Any]] = None,
-        horizontal: bool = False
+        horizontal: bool = False,
+        dataset_count: int = 1
     ) -> dict:
         """
         Build Chart.js options with GUARANTEED visible axes, labels, and formatters.
@@ -1705,10 +1721,14 @@ class ChartJSGenerator:
             chart_type: Type of chart ("line", "bar", etc.)
             custom_options: Custom options to merge
             horizontal: For horizontal bar charts
+            dataset_count: Number of datasets (for legend display logic)
 
         Returns:
             Complete options dictionary with guaranteed visibility
         """
+        # v3.3.0: Hide legend for single-dataset charts, show for multiple datasets
+        show_legend = dataset_count > 1 or chart_type in ["pie", "doughnut", "polarArea"]
+
         options = {
             "responsive": True,
             "maintainAspectRatio": False,
@@ -1722,7 +1742,7 @@ class ChartJSGenerator:
             },
             "plugins": {
                 "legend": {
-                    "display": True,
+                    "display": show_legend,  # v3.3.0: Only show for multiple datasets
                     "position": "top",
                     "labels": {
                         "font": {"size": 14, "weight": "bold"},
@@ -1743,6 +1763,12 @@ class ChartJSGenerator:
                     "backgroundColor": "rgba(0, 0, 0, 0.7)",
                     "borderRadius": 4,
                     "padding": 6
+                },
+                "tooltip": {
+                    "enabled": True,
+                    "mode": "nearest",
+                    "intersect": True
+                    # v3.3.0: Bubble charts will get custom callbacks added via custom_options
                 }
             }
         }
@@ -1949,8 +1975,8 @@ class ChartJSGenerator:
                 })
             elif chart_type in ["scatter", "bubble"]:
                 prepared_ds.update({
-                    "pointStyle": "cross" if chart_type == "scatter" else "circle",  # v3.2.0: X marks for scatter
-                    "pointRadius": 10 if chart_type == "scatter" else None,  # v3.1.9: Increased from 6 to 10
+                    "pointStyle": "circle",  # v3.3.0: Circle for both scatter and bubble (better visibility)
+                    "pointRadius": 8 if chart_type == "scatter" else None,  # v3.3.0: Reduced from 10 to 8 for circles
                     "pointBackgroundColor": color,
                     "pointBorderColor": "#fff",
                     "pointBorderWidth": 2
