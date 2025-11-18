@@ -1673,8 +1673,10 @@ class ChartJSGenerator:
             options = self._merge_options(options, custom_options)
 
             # ENFORCE: Re-apply critical settings that must not be disabled
+            # v3.2.0: EXCEPTION - Allow scatter/bubble to disable datalabels (prevents [object Object])
             if "plugins" in options and "datalabels" in options["plugins"]:
-                options["plugins"]["datalabels"]["display"] = True
+                if chart_type not in ["scatter", "bubble"]:
+                    options["plugins"]["datalabels"]["display"] = True
             if "scales" in options:
                 for axis in options["scales"]:
                     options["scales"][axis]["display"] = True
@@ -1797,6 +1799,7 @@ class ChartJSGenerator:
                 })
             elif chart_type in ["scatter", "bubble"]:
                 prepared_ds.update({
+                    "pointStyle": "cross" if chart_type == "scatter" else "circle",  # v3.2.0: X marks for scatter
                     "pointRadius": 10 if chart_type == "scatter" else None,  # v3.1.9: Increased from 6 to 10
                     "pointBackgroundColor": color,
                     "pointBorderColor": "#fff",

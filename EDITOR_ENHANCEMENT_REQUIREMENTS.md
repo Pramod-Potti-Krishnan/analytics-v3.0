@@ -1,9 +1,41 @@
 # Editor Enhancement Requirements for Scatter/Bubble Chart Support
 
-**Date**: November 17, 2025
+**Date**: November 17, 2025 (Updated for v3.2.0)
 **Target**: Layout Service Data Editor
 **Priority**: 🟡 MEDIUM (Charts work, editor shows blank - not blocking rendering)
 **Status**: ⏳ PENDING EDITOR TEAM IMPLEMENTATION
+
+---
+
+## v3.2.0 User Requirements - Column Specifications
+
+**CRITICAL: User has specified exact column headers for scatter/bubble editors:**
+
+### Scatter Chart Editor Requirements
+**Columns to Display**:
+1. **X** - X coordinate value (numeric, editable)
+2. **Y** - Y coordinate value (numeric, editable)
+
+**Do NOT show**:
+- ❌ Label column (labels should not appear in scatter editor)
+- ❌ [object Object] text anywhere
+
+**Visual Appearance**:
+- Points should display as **X (cross) marks**, not circles
+
+### Bubble Chart Editor Requirements
+**Columns to Display**:
+1. **X** - X coordinate value (numeric, editable)
+2. **Y** - Y coordinate value (numeric, editable)
+3. **Value (size)** - Bubble radius/size (numeric, editable)
+
+**Do NOT show**:
+- ❌ Label column (labels should not appear in bubble editor)
+- ❌ [object Object] text anywhere
+
+**Visual Appearance**:
+- Bubbles should vary in size based on value
+- Bubbles should be clearly visible (70% opacity)
 
 ---
 
@@ -11,8 +43,8 @@
 
 The Analytics Service uses **scatter** and **bubble** charts with object-based data points (`{x, y, label}` and `{x, y, r, label}`). These chart types render perfectly and display correctly, but the data editor shows blank fields because it only supports primitive value arrays.
 
-**Current Workaround** (v3.1.8): Disabled datalabels to prevent `[object Object]` display
-**Long-term Solution**: Enhance editor to parse and display object data points
+**Current Fix** (v3.2.0): Fixed enforcement bug, scatter shows X marks, datalabels disabled
+**Long-term Solution**: Enhance editor to parse and display object data points with correct column headers
 
 ---
 
@@ -94,28 +126,26 @@ function detectDataFormat(chartData) {
 }
 ```
 
-**Scatter Chart Editor**:
+**Scatter Chart Editor** (v3.2.0 Updated):
 ```javascript
 function renderScatterEditor(data) {
   // Extract data from objects
   const points = data.datasets[0].data;
 
-  // Display as table with columns: Label | X-Value | Y-Value
+  // v3.2.0: Display ONLY X and Y columns (NO LABEL COLUMN)
   return (
     <table>
       <thead>
         <tr>
-          <th>Label</th>
-          <th>X-Value (Index)</th>
-          <th>Y-Value</th>
+          <th>X</th>
+          <th>Y</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {points.map((point, i) => (
           <tr key={i}>
-            <td><input value={point.label} onChange={(e) => updateLabel(i, e.target.value)} /></td>
-            <td><input value={point.x} disabled /></td>  {/* X is auto-generated index */}
+            <td><input value={point.x} onChange={(e) => updateXValue(i, e.target.value)} /></td>
             <td><input value={point.y} onChange={(e) => updateYValue(i, e.target.value)} /></td>
             <td><button onClick={() => deletePoint(i)}>Delete</button></td>
           </tr>
@@ -126,29 +156,27 @@ function renderScatterEditor(data) {
 }
 ```
 
-**Bubble Chart Editor**:
+**Bubble Chart Editor** (v3.2.0 Updated):
 ```javascript
 function renderBubbleEditor(data) {
   // Extract data from objects
   const points = data.datasets[0].data;
 
-  // Display as table with columns: Label | X-Value | Y-Value | Radius
+  // v3.2.0: Display X, Y, and Value (size) columns (NO LABEL COLUMN)
   return (
     <table>
       <thead>
         <tr>
-          <th>Label</th>
-          <th>X-Value (Index)</th>
-          <th>Y-Value</th>
-          <th>Radius</th>
+          <th>X</th>
+          <th>Y</th>
+          <th>Value (size)</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {points.map((point, i) => (
           <tr key={i}>
-            <td><input value={point.label} onChange={(e) => updateLabel(i, e.target.value)} /></td>
-            <td><input value={point.x} disabled /></td>  {/* X is auto-generated index */}
+            <td><input value={point.x} onChange={(e) => updateXValue(i, e.target.value)} /></td>
             <td><input value={point.y} onChange={(e) => updateYValue(i, e.target.value)} /></td>
             <td><input value={point.r} onChange={(e) => updateRadius(i, e.target.value)} /></td>
             <td><button onClick={() => deletePoint(i)}>Delete</button></td>
