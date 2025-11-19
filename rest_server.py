@@ -30,7 +30,6 @@ from error_codes import (
 from chart_catalog import (
     get_chart_catalog,
     get_chartjs_types,
-    get_apexcharts_types,
     get_chart_types_by_layout,
     get_chart_type_by_id,
     get_chart_type_summary,
@@ -44,12 +43,12 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Analytics Microservice v3",
     description="""
-## Analytics Service v3.1.4 - Hotfix: Analytics Type Routing (9 Analytics Types)
+## Analytics Service v3.4.3 - Complete Chart.js Suite (20+ Chart Types)
 
-Generate interactive Chart.js and ApexCharts visualizations with AI-powered insights.
+Generate interactive Chart.js visualizations with comprehensive charting capabilities.
 
 ### Key Features
-- ✅ **13+ Chart Types** (Chart.js + ApexCharts)
+- ✅ **20+ Chart Types** (Chart.js with native types and plugins)
 - ✅ **Comprehensive Data Validation** (2-50 data points, NaN/Infinity rejection)
 - ✅ **Structured Error Responses** (retryable flags, fix suggestions)
 - ✅ **Chart Type Discovery** (complete catalog with use cases)
@@ -442,25 +441,6 @@ async def get_chartjs_chart_types():
         "success": True,
         "library": ChartLibrary.CHARTJS.value,
         "layouts": [SupportedLayout.L02.value],
-        "count": len(charts),
-        "chart_types": [ct.dict() for ct in charts]
-    }
-
-
-@app.get("/api/v1/chart-types/apexcharts", tags=["Chart Discovery"])
-async def get_apexcharts_chart_types():
-    """
-    Get ApexCharts chart types (L01, L03 layouts).
-
-    Returns:
-        ApexCharts-based chart types for legacy layouts
-    """
-    charts = get_apexcharts_types()
-
-    return {
-        "success": True,
-        "library": ChartLibrary.APEXCHARTS.value,
-        "layouts": [SupportedLayout.L01.value, SupportedLayout.L03.value],
         "count": len(charts),
         "chart_types": [ct.dict() for ct in charts]
     }
