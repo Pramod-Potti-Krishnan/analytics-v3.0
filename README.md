@@ -66,9 +66,595 @@ Test it now:
 curl https://analytics-v30-production.up.railway.app/health
 ```
 
-## 🚀 Director Integration Quick Start
+## 📊 Analytics Endpoint Documentation
 
-**New in v3.1.8**: Corrected approach from v3.1.7 by **restoring scatter/bubble chart types** and fixing the root cause (datalabels bug). All 9 analytics types now render with correct Chart.js types. Editor enhancement pending for full editability.
+### Endpoint Overview
+
+The Analytics Microservice provides a REST API for generating interactive Chart.js visualizations with AI-powered insights. All charts are synchronous - no job polling required.
+
+### Base Endpoint Pattern
+
+```
+POST /api/v1/analytics/{layout}/{analytics_type}
+```
+
+**Production URL**: `https://analytics-v30-production.up.railway.app/api/v1/analytics/{layout}/{analytics_type}`
+
+### Quick Reference
+
+| Component | Description | Examples |
+|-----------|-------------|----------|
+| `{layout}` | Slide layout type | `L01`, `L02`, `L03` |
+| `{analytics_type}` | Type of analytics | `revenue_over_time`, `quarterly_comparison`, `market_share` |
+
+### Layout Types
+
+| Layout | Description | Chart Size | Additional Elements |
+|--------|-------------|-----------|-------------------|
+| **L01** | Centered chart with insight | 1800×600px | AI-generated insight below chart |
+| **L02** | Chart + Observations | 1260×720px chart (left) | 540×720px observations panel (right) |
+| **L03** | Side-by-side comparison | 840×540px each | Two charts with descriptions |
+
+### Supported Chart Types (22 Total)
+
+#### Original Chart.js Types (9)
+- `line` - Line chart for trends over time
+- `bar_vertical` - Vertical bar chart
+- `bar_horizontal` - Horizontal bar chart
+- `pie` - Pie chart
+- `doughnut` - Doughnut chart
+- `scatter` - Scatter plot
+- `bubble` - Bubble chart
+- `radar` - Radar/spider chart
+- `polar_area` - Polar area chart
+
+#### New Native Chart.js Types (5)
+- `area` - Area chart (filled line chart)
+- `area_stacked` - Stacked area chart
+- `bar_grouped` - Grouped bar chart
+- `bar_stacked` - Stacked bar chart
+- `waterfall` - Waterfall chart
+
+#### Chart.js Plugin Types (8)
+- `treemap` - Hierarchical data visualization
+- `heatmap` - 2D correlation data
+- `matrix` - Matrix chart (alias for heatmap)
+- `boxplot` - Statistical distribution
+- `candlestick` - Financial OHLC data
+- `financial` - Financial chart (alias for candlestick)
+- `sankey` - Flow visualization
+- `mixed` - Mixed/combo chart
+
+### Request Format
+
+#### Required Parameters
+
+```json
+{
+  "presentation_id": "string",    // Unique presentation identifier
+  "slide_id": "string",          // Unique slide identifier
+  "slide_number": 1,             // Slide position in presentation
+  "narrative": "string",         // Description of what to visualize
+  "data": [                      // Chart data points
+    {"label": "Q1 2024", "value": 125000},
+    {"label": "Q2 2024", "value": 145000}
+  ]
+}
+```
+
+#### Optional Parameters
+
+```json
+{
+  "chart_type": "line",          // Override default chart type
+  "context": {                   // Presentation context
+    "theme": "professional",     // Color theme
+    "audience": "executives",    // Target audience
+    "slide_title": "Revenue",    // Slide title
+    "subtitle": "Q1-Q4 2024",   // Subtitle
+    "presentation_name": "Board Review"
+  },
+  "constraints": {               // Layout constraints
+    "max_data_points": 12,
+    "chart_height": 600
+  }
+}
+```
+
+#### Parameter Descriptions
+
+| Parameter | Type | Required | Description | Default |
+|-----------|------|----------|-------------|---------|
+| `presentation_id` | string | ✅ Yes | Unique ID for the presentation | - |
+| `slide_id` | string | ✅ Yes | Unique ID for the slide | - |
+| `slide_number` | integer | ✅ Yes | Position of slide (1-based) | - |
+| `narrative` | string | ✅ Yes | User's description of what to show | - |
+| `data` | array | ✅ Yes | Chart data (2-50 points) | - |
+| `chart_type` | string | ❌ No | Override chart type | Based on analytics_type |
+| `context.theme` | string | ❌ No | Color theme | `"professional"` |
+| `context.audience` | string | ❌ No | Target audience | - |
+| `context.slide_title` | string | ❌ No | Title for the slide | Auto-generated |
+| `context.subtitle` | string | ❌ No | Subtitle text | - |
+| `context.presentation_name` | string | ❌ No | Presentation name | - |
+| `constraints.max_data_points` | integer | ❌ No | Maximum data points | 50 |
+| `constraints.chart_height` | integer | ❌ No | Chart height in pixels | Layout default |
+
+### Response Format
+
+#### Success Response (L02 Layout)
+
+```json
+{
+  "content": {
+    "slide_title": "Quarterly Revenue Growth",
+    "element_1": "FY 2024 Performance",
+    "element_3": "<div id=\"chart-abc123\" style=\"width:100%; height:720px\">...</div><script>/* Chart.js code */</script>",
+    "element_2": "<div class=\"observations\">• Revenue increased 42.4% from Q1 to Q4\n• Strongest growth in Q3-Q4 period\n• Consistent upward trajectory</div>",
+    "presentation_name": "Board Review Q4 2024",
+    "company_logo": "📊"
+  },
+  "metadata": {
+    "analytics_type": "revenue_over_time",
+    "layout": "L02",
+    "chart_library": "chartjs",
+    "chart_type": "line",
+    "data_points": 4,
+    "generation_time_ms": 1247,
+    "theme": "professional",
+    "generated_at": "2025-11-19T05:30:24.598338"
+  }
+}
+```
+
+#### Response Structure by Layout
+
+**L01 (Centered Chart with Insight)**
+```json
+{
+  "content": {
+    "slide_title": "Title",
+    "element_1": "Subtitle",
+    "element_4": "Chart HTML (1800×600px)",
+    "element_3": "AI-generated insight text",
+    "presentation_name": "Presentation Name",
+    "company_logo": "📊"
+  },
+  "metadata": { ... }
+}
+```
+
+**L02 (Chart + Observations)**
+```json
+{
+  "content": {
+    "slide_title": "Title",
+    "element_1": "Subtitle",
+    "element_3": "Chart HTML (1260×720px)",
+    "element_2": "Observations panel HTML (540×720px)",
+    "presentation_name": "Presentation Name",
+    "company_logo": "📊"
+  },
+  "metadata": { ... }
+}
+```
+
+**L03 (Side-by-Side)**
+```json
+{
+  "content": {
+    "slide_title": "Title",
+    "element_1": "Subtitle",
+    "element_4": "Left chart HTML (840×540px)",
+    "element_2": "Right chart HTML (840×540px)",
+    "element_3": "Left chart description",
+    "element_5": "Right chart description",
+    "presentation_name": "Presentation Name",
+    "company_logo": "📊"
+  },
+  "metadata": { ... }
+}
+```
+
+### Complete Examples
+
+#### Example 1: Simple Line Chart (L02 Layout)
+
+**Request:**
+```bash
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "pres-123",
+    "slide_id": "slide-7",
+    "slide_number": 7,
+    "narrative": "Show quarterly revenue growth",
+    "data": [
+      {"label": "Q1 2024", "value": 125000},
+      {"label": "Q2 2024", "value": 145000},
+      {"label": "Q3 2024", "value": 195000},
+      {"label": "Q4 2024", "value": 220000}
+    ],
+    "context": {
+      "theme": "professional",
+      "audience": "executives",
+      "slide_title": "Quarterly Revenue",
+      "subtitle": "FY 2024 Performance"
+    }
+  }'
+```
+
+**Response:**
+```json
+{
+  "content": {
+    "slide_title": "Quarterly Revenue",
+    "element_1": "FY 2024 Performance",
+    "element_3": "<div id=\"chart-slide-7\" style=\"width:100%; height:720px\"><canvas id=\"chartCanvas-slide-7\"></canvas></div><script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0\"></script><script>/* Chart configuration */</script>",
+    "element_2": "<div class=\"observations\"><h3>Key Observations</h3>• Revenue grew 76% from Q1 ($125K) to Q4 ($220K)\n• Strongest growth in Q2-Q3 period (+34.5%)\n• Consistent upward trajectory across all quarters</div>",
+    "presentation_name": "Board Review",
+    "company_logo": "📊"
+  },
+  "metadata": {
+    "analytics_type": "revenue_over_time",
+    "layout": "L02",
+    "chart_library": "chartjs",
+    "chart_type": "line",
+    "data_points": 4,
+    "generation_time_ms": 1247,
+    "theme": "professional",
+    "generated_at": "2025-11-19T05:30:24.598338"
+  }
+}
+```
+
+#### Example 2: Treemap Chart with Custom Type
+
+**Request:**
+```bash
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "pres-456",
+    "slide_id": "slide-12",
+    "slide_number": 12,
+    "narrative": "Show budget allocation across departments",
+    "chart_type": "treemap",
+    "data": [
+      {"label": "Engineering", "value": 450000},
+      {"label": "Sales", "value": 320000},
+      {"label": "Marketing", "value": 180000},
+      {"label": "Operations", "value": 120000}
+    ],
+    "context": {
+      "theme": "colorful",
+      "slide_title": "Budget Allocation",
+      "subtitle": "FY 2024"
+    }
+  }'
+```
+
+**Response:**
+```json
+{
+  "content": {
+    "slide_title": "Budget Allocation",
+    "element_1": "FY 2024",
+    "element_3": "<div id=\"chart-slide-12\">/* Treemap HTML */</div>",
+    "element_2": "<div class=\"observations\">• Engineering receives 41.3% of total budget\n• Sales and Marketing combined: 45.9%\n• Operations optimized at 11%</div>",
+    "presentation_name": "",
+    "company_logo": "📊"
+  },
+  "metadata": {
+    "analytics_type": "market_share",
+    "layout": "L02",
+    "chart_library": "chartjs",
+    "chart_type": "treemap",
+    "data_points": 4,
+    "generation_time_ms": 1523,
+    "theme": "colorful",
+    "generated_at": "2025-11-19T05:32:10.123456"
+  }
+}
+```
+
+#### Example 3: Waterfall Chart
+
+**Request:**
+```bash
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "pres-789",
+    "slide_id": "slide-5",
+    "slide_number": 5,
+    "narrative": "Show revenue changes quarter by quarter",
+    "chart_type": "waterfall",
+    "data": [
+      {"label": "Q1 Starting", "value": 100000},
+      {"label": "Q1 Change", "value": 25000},
+      {"label": "Q2 Change", "value": 20000},
+      {"label": "Q3 Change", "value": 50000},
+      {"label": "Q4 Change", "value": 25000},
+      {"label": "Q4 Ending", "value": 220000}
+    ]
+  }'
+```
+
+### Error Responses
+
+#### Validation Error (400)
+
+```json
+{
+  "error": "validation_error",
+  "message": "Invalid data: must have between 2 and 50 data points",
+  "details": {
+    "field": "data",
+    "provided": 1,
+    "required": "2-50"
+  },
+  "retryable": true,
+  "fix_suggestion": "Provide at least 2 data points in the format: [{\"label\": \"...\", \"value\": ...}]"
+}
+```
+
+#### Invalid Chart Type (400)
+
+```json
+{
+  "error": "validation_error",
+  "message": "Invalid chart type: 'invalid_type'",
+  "details": {
+    "provided": "invalid_type",
+    "valid_types": ["line", "bar_vertical", "pie", "treemap", ...]
+  },
+  "retryable": true,
+  "fix_suggestion": "Use /api/v1/chart-types to see all available chart types"
+}
+```
+
+#### Server Error (500)
+
+```json
+{
+  "error": "processing_error",
+  "message": "Chart generation failed",
+  "details": {
+    "stage": "chart_rendering",
+    "error": "Internal error message"
+  },
+  "retryable": true,
+  "fix_suggestion": "Retry the request or contact support if issue persists"
+}
+```
+
+### Discovery Endpoints
+
+#### Get All Chart Types
+
+```bash
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "summary": {
+    "total_chart_types": 22,
+    "chartjs_types": 22,
+    "l02_compatible": 22,
+    "chart_libraries": ["Chart.js"],
+    "supported_layouts": ["L01", "L02", "L03"]
+  },
+  "chart_types": [
+    {
+      "id": "line",
+      "name": "Line Chart",
+      "description": "Displays trends and changes over time",
+      "library": "Chart.js",
+      "supported_layouts": ["L02"],
+      "use_cases": ["Revenue trends", "Performance tracking", "Time series"]
+    },
+    // ... 21 more chart types
+  ]
+}
+```
+
+#### Get Chart.js Types Only
+
+```bash
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/chartjs
+```
+
+#### Get Specific Chart Type Details
+
+```bash
+curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/treemap
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "chart_type": {
+    "id": "treemap",
+    "name": "Treemap Chart",
+    "description": "Hierarchical data visualization using nested rectangles",
+    "library": "Chart.js",
+    "supported_layouts": ["L02"],
+    "min_data_points": 3,
+    "max_data_points": 50,
+    "optimal_data_points": "5-20 points",
+    "use_cases": [
+      "Budget breakdown by department",
+      "Disk usage visualization",
+      "Market share distribution",
+      "Organizational hierarchy"
+    ],
+    "examples": [
+      "Department budget allocation",
+      "Product revenue contribution",
+      "Resource utilization"
+    ],
+    "data_requirements": {
+      "fields": ["label", "value"],
+      "label_format": "Category names",
+      "value_format": "Positive numeric values"
+    }
+  }
+}
+```
+
+### Integration Examples
+
+#### Python
+
+```python
+import requests
+
+# Production endpoint
+url = "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time"
+
+# Request payload
+payload = {
+    "presentation_id": "pres-123",
+    "slide_id": "slide-7",
+    "slide_number": 7,
+    "narrative": "Show quarterly revenue growth",
+    "data": [
+        {"label": "Q1 2024", "value": 125000},
+        {"label": "Q2 2024", "value": 145000},
+        {"label": "Q3 2024", "value": 195000},
+        {"label": "Q4 2024", "value": 220000}
+    ],
+    "context": {
+        "theme": "professional",
+        "slide_title": "Revenue Growth"
+    }
+}
+
+# Make request
+response = requests.post(url, json=payload, timeout=30)
+response.raise_for_status()
+
+# Get result (synchronous - no polling needed!)
+result = response.json()
+
+# Access generated content
+chart_html = result["content"]["element_3"]
+observations = result["content"]["element_2"]
+slide_title = result["content"]["slide_title"]
+
+print(f"Generated chart for: {slide_title}")
+print(f"Chart type: {result['metadata']['chart_type']}")
+print(f"Generation time: {result['metadata']['generation_time_ms']}ms")
+```
+
+#### JavaScript/TypeScript
+
+```javascript
+const url = 'https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time';
+
+const payload = {
+  presentation_id: 'pres-123',
+  slide_id: 'slide-7',
+  slide_number: 7,
+  narrative: 'Show quarterly revenue growth',
+  data: [
+    { label: 'Q1 2024', value: 125000 },
+    { label: 'Q2 2024', value: 145000 },
+    { label: 'Q3 2024', value: 195000 },
+    { label: 'Q4 2024', value: 220000 }
+  ],
+  context: {
+    theme: 'professional',
+    slide_title: 'Revenue Growth'
+  }
+};
+
+// Fetch with async/await
+const response = await fetch(url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
+
+const result = await response.json();
+
+// Access content
+const chartHtml = result.content.element_3;
+const observations = result.content.element_2;
+console.log('Chart generated:', result.metadata.chart_type);
+```
+
+#### cURL
+
+```bash
+# Basic request
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "pres-123",
+    "slide_id": "slide-7",
+    "slide_number": 7,
+    "narrative": "Show revenue",
+    "data": [
+      {"label": "Q1", "value": 100},
+      {"label": "Q2", "value": 150}
+    ]
+  }'
+
+# With all optional parameters
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "pres-456",
+    "slide_id": "slide-10",
+    "slide_number": 10,
+    "narrative": "Show market distribution",
+    "chart_type": "treemap",
+    "data": [
+      {"label": "Product A", "value": 450},
+      {"label": "Product B", "value": 320},
+      {"label": "Product C", "value": 180}
+    ],
+    "context": {
+      "theme": "colorful",
+      "audience": "Board of Directors",
+      "slide_title": "Market Share",
+      "subtitle": "Q4 2024",
+      "presentation_name": "Annual Review"
+    },
+    "constraints": {
+      "max_data_points": 10,
+      "chart_height": 720
+    }
+  }'
+```
+
+### Best Practices
+
+1. **Data Validation**: Ensure 2-50 data points per chart
+2. **Theme Consistency**: Use the same theme across presentation
+3. **Timeout Handling**: Set 30-60 second timeout for requests
+4. **Error Handling**: Check for validation errors and retry if `retryable: true`
+5. **Chart Type Selection**: Use `/api/v1/chart-types` to discover available types
+6. **Layout Choice**:
+   - Use L02 for most analytics (chart + observations)
+   - Use L01 for simple insights
+   - Use L03 for comparisons
+
+### Performance
+
+- **Response Time**: Typically 1-3 seconds
+- **Synchronous**: No job polling required
+- **Concurrent Requests**: Supports multiple parallel requests
+- **Rate Limits**: No hard limits (production tier)
+
+---
+
+## 🚀 Director Integration Quick Start
 
 **Features**: Comprehensive Director Agent integration with data validation, structured errors, and chart type discovery.
 
