@@ -14,7 +14,11 @@ Version: 1.0.0
 """
 
 import json
+import logging
 from typing import Dict, Any, List, Optional, Union
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 class ChartJSGenerator:
@@ -387,7 +391,11 @@ class ChartJSGenerator:
         data: Dict[str, Any],
         height: int = 600,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate grouped bar chart (multiple series side-by-side).
@@ -397,7 +405,11 @@ class ChartJSGenerator:
         if "datasets" not in data:
             raise ValueError("Grouped bar chart requires 'datasets' in data")
 
-        return self.generate_bar_chart(data, height, horizontal=False, chart_id=chart_id, options=options)
+        return self.generate_bar_chart(
+            data, height, horizontal=False, chart_id=chart_id, options=options,
+            enable_editor=enable_editor, presentation_id=presentation_id,
+            api_base_url=api_base_url, output_mode=output_mode
+        )
 
     def generate_stacked_bar_chart(
         self,
@@ -405,7 +417,11 @@ class ChartJSGenerator:
         height: int = 600,
         horizontal: bool = False,
         chart_id: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
     ) -> str:
         """
         Generate stacked bar chart.
@@ -420,7 +436,11 @@ class ChartJSGenerator:
         }
 
         merged_options = self._merge_options(options or {}, stack_options)
-        return self.generate_bar_chart(data, height, horizontal, chart_id, merged_options)
+        return self.generate_bar_chart(
+            data, height, horizontal, chart_id, merged_options,
+            enable_editor=enable_editor, presentation_id=presentation_id,
+            api_base_url=api_base_url, output_mode=output_mode
+        )
 
     def generate_waterfall_chart(
         self,
