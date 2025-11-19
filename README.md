@@ -23,6 +23,7 @@ A REST API analytics microservice that generates comprehensive charts and visual
   - [`docs/ANALYTICS_TEAM_ACTION_REQUIRED.md`](docs/ANALYTICS_TEAM_ACTION_REQUIRED.md) - Current action items
 
 - **Integration & API**
+  - **[`DATA_FORMATS_REFERENCE.md`](DATA_FORMATS_REFERENCE.md) - Data format specifications for all 22 chart types** ⭐
   - [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) - Director Agent integration
   - [`docs/DIRECTOR_INTEGRATION_SUMMARY.md`](docs/DIRECTOR_INTEGRATION_SUMMARY.md) - Integration overview
   - [`docs/CHART_TYPE_CATALOG.md`](docs/CHART_TYPE_CATALOG.md) - All 20+ chart types
@@ -124,6 +125,95 @@ POST /api/v1/analytics/{layout}/{analytics_type}
 - `financial` - Financial chart (alias for candlestick)
 - `sankey` - Flow visualization
 - `mixed` - Mixed/combo chart
+
+### 📋 Data Format Reference
+
+**IMPORTANT**: Different chart types require different data formats!
+
+For complete data format specifications for all 22 chart types, see:
+**[DATA_FORMATS_REFERENCE.md](DATA_FORMATS_REFERENCE.md)** - Comprehensive guide with examples for every chart type
+
+#### Quick Reference
+
+**Simple Format** (9 charts): `line`, `bar_vertical`, `bar_horizontal`, `pie`, `doughnut`, `scatter`, `radar`, `polar_area`, `area`
+```json
+{
+  "data": [
+    {"label": "Q1", "value": 100},
+    {"label": "Q2", "value": 150}
+  ]
+}
+```
+
+**Multi-Series Format** (5 charts): `bar_grouped`, `bar_stacked`, `area_stacked`, `mixed`, `bubble`
+```json
+{
+  "data": [{
+    "labels": ["Q1", "Q2"],
+    "datasets": [
+      {"label": "2023", "data": [100, 120]},
+      {"label": "2024", "data": [150, 180]}
+    ]
+  }]
+}
+```
+
+**Heatmap Format**: `heatmap`, `matrix`
+```json
+{
+  "data": [{
+    "x_labels": ["Q1", "Q2"],
+    "y_labels": ["North", "South"],
+    "values": [[100, 150], [120, 160]]
+  }]
+}
+```
+
+**Boxplot Format**: `boxplot` (statistical - `[min, q1, median, q3, max]`)
+```json
+{
+  "data": [{
+    "labels": ["Q1", "Q2"],
+    "datasets": [{
+      "label": "Sales",
+      "data": [[100, 250, 350, 450, 600], [120, 270, 380, 480, 650]]
+    }]
+  }]
+}
+```
+
+**Candlestick Format**: `candlestick`, `financial` (OHLC data)
+```json
+{
+  "data": [{
+    "labels": ["Day 1", "Day 2"],
+    "datasets": [{
+      "label": "Stock Price",
+      "data": [
+        {"o": 100, "h": 110, "l": 95, "c": 105},
+        {"o": 105, "h": 115, "l": 100, "c": 112}
+      ]
+    }]
+  }]
+}
+```
+
+**Sankey Format**: `sankey` (flow diagram)
+```json
+{
+  "data": [{
+    "nodes": [{"id": "A"}, {"id": "B"}],
+    "links": [{"source": "A", "target": "B", "value": 100}]
+  }]
+}
+```
+
+**See [DATA_FORMATS_REFERENCE.md](DATA_FORMATS_REFERENCE.md) for:**
+- Detailed format for each of 22 chart types
+- Complete request examples
+- Validation rules
+- Common errors and solutions
+- Testing scripts
 
 ### Request Format
 
