@@ -366,6 +366,118 @@ async def process_analytics_slide(
                     api_base_url=api_base_url,
                     output_mode="inline_script"
                 )
+            # NEW CHART TYPES (v3.4.0+)
+            elif chart_type == "area":
+                return chart_gen.generate_area_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["area_stacked", "stacked_area"]:
+                return chart_gen.generate_stacked_area_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["bar_grouped", "grouped_bar"]:
+                return chart_gen.generate_grouped_bar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["bar_stacked", "stacked_bar"]:
+                return chart_gen.generate_stacked_bar_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "waterfall":
+                return chart_gen.generate_waterfall_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            # CHART.JS PLUGIN TYPES (v3.4.1+)
+            elif chart_type == "treemap":
+                return chart_gen.generate_treemap_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["heatmap", "matrix"]:
+                return chart_gen.generate_heatmap_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "boxplot":
+                return chart_gen.generate_boxplot_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["candlestick", "financial"]:
+                return chart_gen.generate_candlestick_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "sankey":
+                return chart_gen.generate_sankey_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "mixed":
+                return chart_gen.generate_mixed_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
             else:
                 # Default to bar chart for truly unknown types
                 logger.warning(f"Unknown chart type '{chart_type}', defaulting to bar chart")
@@ -791,6 +903,107 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             )
         elif chart_type == "polar_area" or chart_type == "polarArea":
             chart_html = chart_gen.generate_polar_area_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        # NEW CHART TYPES (v3.4.0+)
+        elif chart_type == "area":
+            chart_html = chart_gen.generate_area_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type in ["area_stacked", "stacked_area"]:
+            chart_html = chart_gen.generate_stacked_area_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type in ["bar_grouped", "grouped_bar"]:
+            chart_html = chart_gen.generate_grouped_bar_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type in ["bar_stacked", "stacked_bar"]:
+            chart_html = chart_gen.generate_stacked_bar_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "waterfall":
+            chart_html = chart_gen.generate_waterfall_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        # CHART.JS PLUGIN TYPES (v3.4.1+)
+        elif chart_type == "treemap":
+            chart_html = chart_gen.generate_treemap_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type in ["heatmap", "matrix"]:
+            chart_html = chart_gen.generate_heatmap_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "boxplot":
+            chart_html = chart_gen.generate_boxplot_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type in ["candlestick", "financial"]:
+            chart_html = chart_gen.generate_candlestick_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "sankey":
+            chart_html = chart_gen.generate_sankey_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "mixed":
+            chart_html = chart_gen.generate_mixed_chart(
                 data=chart_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",

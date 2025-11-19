@@ -1,264 +1,112 @@
 # Analytics Microservice v3 - Test Suite
 
-This directory contains comprehensive tests for the Analytics Microservice v3 agent, validating all requirements from INITIAL.md and ensuring production readiness.
+This directory contains all test files organized by test type and purpose.
 
-## Test Structure
+## 📁 Test Organization
 
-```
-tests/
-├── __init__.py                 # Test package init
-├── conftest.py                 # Pytest configuration and fixtures
-├── test_agent.py              # Core agent functionality tests
-├── test_tools.py              # Tool validation tests
-├── test_websocket.py          # WebSocket communication tests
-├── test_integration.py        # Integration and error handling tests
-├── test_requirements.py       # Requirements compliance validation
-├── VALIDATION_REPORT.md       # Comprehensive validation report
-└── README.md                  # This file
-```
+### 🔬 Unit Tests (`unit/`)
+Core functionality and component-level tests.
 
-## Test Categories
+- `test_all_9_types.py` - All 9 native Chart.js types validation
+- `test_analytics_type_mapping.py` - Analytics type to chart type mapping
+- `test_chartjs_type_validation.py` - Chart.js type validation
+- `test_v319_local.py` - Local v3.1.9 tests
+- `test_v320_local.py` - Local v3.2.0 tests
 
-### 1. Core Agent Tests (`test_agent.py`)
-- **Agent initialization and configuration**
-- **Tool integration and calling patterns**
-- **Progress update mechanisms**
-- **Dependency cleanup and management**
-- **Error handling and retry mechanisms**
+**Run unit tests:**
+\`\`\`bash
+cd /path/to/analytics_microservice_v3
+python -m pytest tests/unit/ -v
+\`\`\`
 
-**Key Tests:**
-- `test_agent_basic_response()` - Basic agent functionality
-- `test_agent_with_chart_request()` - Chart generation flow
-- `test_agent_tool_integration()` - Tool calling patterns
-- `test_agent_progress_updates()` - Progress streaming
-- `test_agent_multiple_tool_calls()` - Complex workflows
+### 🔗 Integration Tests (`integration/`)
+API endpoint and service integration tests.
 
-### 2. Tool Validation Tests (`test_tools.py`)
-- **Chart generation for all 20+ chart types**
-- **Data synthesis using OpenAI integration**
-- **Theme application and customization**
-- **Progress streaming functionality**
+- `test_director_simulation.py` - Director Agent integration simulation
+- `test_editor_v321.py` - Chart editor v3.2.1 tests
+- `test_scatter_chart_fix.py` - Scatter chart bug fix validation
+- `test_v316_data_transformation_fixes.py` - v3.1.6 data transformation
+- `test_v317_editor_compatibility.py` - v3.1.7 editor compatibility
 
-**Key Tests:**
-- `test_chart_generator_*()` - Tests for each chart type
-- `test_data_synthesizer_success()` - LLM data generation
-- `test_theme_applier_*()` - Theme application tests
-- `test_progress_streamer_*()` - Progress update tests
+**Run integration tests:**
+\`\`\`bash
+python -m pytest tests/integration/ -v
+\`\`\`
 
-### 3. WebSocket Communication Tests (`test_websocket.py`)
-- **Connection establishment and management**
-- **Message protocol handling**
-- **Concurrent connection support**
-- **Error handling and cleanup**
+### 🚀 Production Tests (`production/`)
+Production environment validation and version-specific tests.
 
-**Key Tests:**
-- `test_websocket_connection_establishment()` - Connection flow
-- `test_analytics_request_processing()` - Request handling
-- `test_concurrent_connections()` - Concurrent support
-- `test_full_analytics_flow()` - End-to-end communication
+- `test_production_v316.py` - Production validation v3.1.6
+- `test_production_v317.py` - Production validation v3.1.7
+- `test_production_v318.py` - Production validation v3.1.8
+- `test_production_v319.py` - Production validation v3.1.9
+- `test_production_v320.py` - Production validation v3.2.0
+- `test_production_chartjs_types.py` - Chart.js types production test
 
-### 4. Integration Tests (`test_integration.py`)
-- **Complete end-to-end workflows**
-- **Error handling scenarios**
-- **Performance and scaling tests**
-- **Resource management validation**
+**Run production tests:**
+\`\`\`bash
+python -m pytest tests/production/ -v
+\`\`\`
 
-**Key Tests:**
-- `test_complete_chart_generation_flow()` - Full pipeline
-- `test_concurrent_requests_handling()` - Concurrent processing
-- `test_memory_management_large_requests()` - Resource handling
-- `test_error_handling_scenarios()` - Comprehensive error tests
+## 🎯 Quick Test Commands
 
-### 5. Requirements Compliance Tests (`test_requirements.py`)
-- **Validation against all INITIAL.md requirements**
-- **Success criteria verification**
-- **Assumptions validation**
-- **Technical specification compliance**
+### Run All Tests
+\`\`\`bash
+python -m pytest tests/ -v
+\`\`\`
 
-**Key Tests:**
-- `test_req_*()` - Individual requirement validation
-- `test_success_criteria_*()` - Success criteria checks
-- `test_assumption_*()` - Assumption validation
+### Run Specific Test File
+\`\`\`bash
+python tests/unit/test_all_9_types.py
+\`\`\`
 
-## Running Tests
+### Run with Coverage
+\`\`\`bash
+python -m pytest tests/ --cov=. --cov-report=html
+\`\`\`
 
-### Prerequisites
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio pytest-mock
+### Run Tests Matching Pattern
+\`\`\`bash
+python -m pytest tests/ -k "scatter" -v
+\`\`\`
 
-# Set test environment variables
-export OPENAI_API_KEY="test_key"
-export RAILWAY_ENVIRONMENT="test"
-```
+## 📊 Test Coverage
 
-### Execute Tests
-```bash
-# Run all tests with verbose output
-pytest agents/analytics_microservice_v3/tests/ -v
+The test suite covers:
+- ✅ All 9 native Chart.js chart types
+- ✅ Advanced chart types (treemap, heatmap, boxplot, candlestick, sankey)
+- ✅ Analytics type to chart type mapping
+- ✅ Director Agent integration API
+- ✅ Chart editor functionality
+- ✅ Data transformation and validation
+- ✅ Error handling and edge cases
+- ✅ Production environment compatibility
 
-# Run specific test categories
-pytest agents/analytics_microservice_v3/tests/test_agent.py -v
-pytest agents/analytics_microservice_v3/tests/test_tools.py -v
-pytest agents/analytics_microservice_v3/tests/test_websocket.py -v
-pytest agents/analytics_microservice_v3/tests/test_integration.py -v
-pytest agents/analytics_microservice_v3/tests/test_requirements.py -v
+## 🐛 Debugging Failed Tests
 
-# Run with coverage reporting
-pytest agents/analytics_microservice_v3/tests/ \
-  --cov=analytics_microservice_v3 \
-  --cov-report=html \
-  --cov-report=term-missing
+If tests fail:
+1. Check [\`../docs/ANALYTICS_TEAM_ACTION_REQUIRED.md\`](../docs/ANALYTICS_TEAM_ACTION_REQUIRED.md) for known issues
+2. Review relevant version documentation in [\`../docs/\`](../docs/)
+3. Check production deployment status
+4. Verify environment variables in \`.env\`
 
-# Run performance tests only
-pytest -m "performance" agents/analytics_microservice_v3/tests/
+## 📝 Adding New Tests
 
-# Run async tests only
-pytest -k "async" agents/analytics_microservice_v3/tests/
-```
+When adding new tests:
+1. Place in appropriate directory (\`unit/\`, \`integration/\`, or \`production/\`)
+2. Follow naming convention: \`test_<feature>_<version>.py\`
+3. Include docstrings explaining test purpose
+4. Update this README with test description
 
-## Testing Patterns
+## 🔍 Test Data
 
-### TestModel Usage
-Fast testing without API calls:
-```python
-@pytest.mark.asyncio
-async def test_with_testmodel(test_agent, mock_dependencies):
-    result = await test_agent.run("Generate chart", deps=mock_dependencies)
-    assert result.data is not None
-```
+Test data files are archived in:
+- [\`../archive/test-results/\`](../archive/test-results/) - Historical test outputs
+- Individual test files may include inline test data
 
-### FunctionModel Usage
-Custom behavior simulation:
-```python
-def create_chart_function():
-    async def chart_function(messages, tools):
-        return {"chart_generator": {"chart_type": "bar", "data": {...}}}
-    return FunctionModel(chart_function)
-```
+## 📚 Related Documentation
 
-### Mock Integration
-Comprehensive external service mocking:
-```python
-@patch('analytics_microservice_v3.tools.get_openai_client')
-async def test_with_mocked_openai(mock_client, ...):
-    # Test implementation
-```
-
-## Test Configuration
-
-### Fixtures (`conftest.py`)
-- **test_model**: TestModel for basic testing
-- **test_agent**: Agent with TestModel override
-- **mock_dependencies**: Mock AnalyticsDependencies
-- **sample_chart_data**: Test data for charts
-- **mock_openai_client**: Mocked OpenAI API client
-- **chart_function_model**: FunctionModel for chart generation
-- **websocket_mock**: Mock WebSocket connections
-
-### Environment Variables
-```bash
-OPENAI_API_KEY=test_key          # For OpenAI integration tests
-RAILWAY_ENVIRONMENT=test         # For deployment tests  
-WEBSOCKET_PORT=8888             # For WebSocket tests
-MAX_CONCURRENT_CONNECTIONS=5     # For concurrency tests
-CHART_GENERATION_TIMEOUT=30      # For timeout tests
-```
-
-## Test Results Summary
-
-### Validation Status: ✅ **READY FOR DEPLOYMENT**
-
-| Component | Tests | Coverage | Status |
-|-----------|-------|----------|---------|
-| **Agent Core** | 15 | 95% | ✅ PASS |
-| **Tools** | 25 | 98% | ✅ PASS |
-| **WebSocket** | 12 | 92% | ✅ PASS |
-| **Integration** | 18 | 94% | ✅ PASS |
-| **Requirements** | 22 | 100% | ✅ PASS |
-| **TOTAL** | **92** | **96%** | ✅ **PASS** |
-
-### Key Achievements
-- ✅ **All requirements validated** against INITIAL.md
-- ✅ **20+ chart types** working correctly
-- ✅ **WebSocket communication** fully functional
-- ✅ **Real-time progress streaming** implemented
-- ✅ **Robust error handling** throughout
-- ✅ **Production-ready** code quality
-
-## Debugging Tests
-
-### Common Issues
-1. **Import Errors**: Ensure `PYTHONPATH` includes project root
-2. **Async Issues**: Use `pytest-asyncio` for async tests
-3. **Mock Failures**: Verify mock paths match actual imports
-4. **Environment**: Set required environment variables
-
-### Debug Commands
-```bash
-# Run with debug output
-pytest -v -s agents/analytics_microservice_v3/tests/
-
-# Run specific test with debugging
-pytest -v -s agents/analytics_microservice_v3/tests/test_agent.py::TestAnalyticsAgent::test_agent_basic_response
-
-# Show test collection
-pytest --collect-only agents/analytics_microservice_v3/tests/
-```
-
-## Continuous Integration
-
-### GitHub Actions Example
-```yaml
-name: Test Analytics Microservice v3
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
-        with:
-          python-version: '3.11'
-      - run: pip install -r requirements.txt
-      - run: pytest agents/analytics_microservice_v3/tests/ --cov=analytics_microservice_v3
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-```
-
-## Performance Benchmarks
-
-### Expected Performance
-- **Chart Generation**: < 2.5s average
-- **Data Synthesis**: < 1.8s average
-- **WebSocket Connection**: < 100ms
-- **Progress Updates**: < 50ms latency
-
-### Load Testing
-```bash
-# Concurrent request simulation
-pytest agents/analytics_microservice_v3/tests/test_integration.py::TestPerformanceAndScaling::test_concurrent_requests_handling -v
-```
-
-## Security Testing
-
-### Security Validations
-- ✅ **API Key Protection**: Environment variable isolation
-- ✅ **Input Validation**: Pydantic model validation  
-- ✅ **Error Sanitization**: No sensitive data in errors
-- ✅ **Resource Limits**: Connection and memory limits
-- ✅ **WebSocket Security**: Proper connection management
-
-## Next Steps
-
-1. **Deploy to staging** environment for integration testing
-2. **Monitor performance** with real workloads
-3. **Set up alerting** for production deployment
-4. **Consider additional tests** for specific use cases
-5. **Document deployment** procedures and monitoring
-
----
-
-**Test Suite Validated:** 2025-09-01  
-**Total Coverage:** 96%  
-**Deployment Status:** ✅ READY
+- [Main README](../README.md) - Project overview
+- [Integration Guide](../docs/INTEGRATION_GUIDE.md) - API integration
+- [Chart Type Catalog](../docs/CHART_TYPE_CATALOG.md) - Chart types reference
+- [Error Codes](../docs/ERROR_CODES.md) - Error handling

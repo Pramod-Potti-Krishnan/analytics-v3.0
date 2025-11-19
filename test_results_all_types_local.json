@@ -1,0 +1,142 @@
+{
+  "summary": {
+    "total": 22,
+    "passed": 22,
+    "warned": 0,
+    "failed": 0
+  },
+  "results": [
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "line",
+      "error": null,
+      "html_size": 17466
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "bar_vertical",
+      "error": null,
+      "html_size": 17730
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "bar_horizontal",
+      "error": null,
+      "html_size": 17796
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "pie",
+      "error": null,
+      "html_size": 17433
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "doughnut",
+      "error": null,
+      "html_size": 17598
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "scatter",
+      "error": null,
+      "html_size": 17565
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "bubble",
+      "error": null,
+      "html_size": 17532
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "radar",
+      "error": null,
+      "html_size": 17499
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "polar_area",
+      "error": null,
+      "html_size": 17664
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "area",
+      "error": null,
+      "html_size": 17466
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "area_stacked",
+      "error": null,
+      "html_size": 17730
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "bar_grouped",
+      "error": null,
+      "html_size": 17697
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "bar_stacked",
+      "error": null,
+      "html_size": 17697
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "waterfall",
+      "error": null,
+      "html_size": 17631
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "treemap",
+      "error": null,
+      "html_size": 17565
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "heatmap",
+      "error": null,
+      "html_size": 17565
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "matrix",
+      "error": null,
+      "html_size": 17532
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "boxplot",
+      "error": null,
+      "html_size": 17565
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "candlestick",
+      "error": null,
+      "html_size": 17697
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "financial",
+      "error": null,
+      "html_size": 17631
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "sankey",
+      "error": null,
+      "html_size": 17532
+    },
+    {
+      "status": "\u2705 PASS",
+      "chart_type": "mixed",
+      "error": null,
+      "html_size": 17499
+    }
+  ]
+}

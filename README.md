@@ -6,6 +6,57 @@
 
 A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js 4.4.0 and official plugins, providing interactive charts with AI-generated insights for presentation slides. Now supports 20+ chart types including advanced visualizations like treemaps, heatmaps, boxplots, candlestick charts, and sankey diagrams.
 
+---
+
+## 📚 Navigation
+
+### 🚀 Getting Started
+- [Quick Start](#-director-integration-quick-start) - Minimal working example
+- [Production URL](#-production-url) - Live API endpoint
+- [Installation](#installation) - Local development setup
+
+### 📖 Documentation
+- **Essential Guides**
+  - [`docs/CODEBASE_SUMMARY_V3.4.3.md`](docs/CODEBASE_SUMMARY_V3.4.3.md) - Complete technical reference
+  - [`docs/EXPLORATION_INDEX.md`](docs/EXPLORATION_INDEX.md) - Documentation navigation guide
+  - [`docs/ANALYTICS_TEAM_QUICK_START.md`](docs/ANALYTICS_TEAM_QUICK_START.md) - Team onboarding guide
+  - [`docs/ANALYTICS_TEAM_ACTION_REQUIRED.md`](docs/ANALYTICS_TEAM_ACTION_REQUIRED.md) - Current action items
+
+- **Integration & API**
+  - [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) - Director Agent integration
+  - [`docs/DIRECTOR_INTEGRATION_SUMMARY.md`](docs/DIRECTOR_INTEGRATION_SUMMARY.md) - Integration overview
+  - [`docs/CHART_TYPE_CATALOG.md`](docs/CHART_TYPE_CATALOG.md) - All 20+ chart types
+  - [`docs/ERROR_CODES.md`](docs/ERROR_CODES.md) - Error handling reference
+
+- **Version History**
+  - [`docs/ANALYTICS_V3.1.4_REGRESSION_FIX_SUMMARY.md`](docs/ANALYTICS_V3.1.4_REGRESSION_FIX_SUMMARY.md) - v3.1.4 fixes
+  - [`docs/ANALYTICS_V3.2.1_EDITOR_FIX_COMPLETE.md`](docs/ANALYTICS_V3.2.1_EDITOR_FIX_COMPLETE.md) - v3.2.1 editor fixes
+  - See [`docs/`](docs/) for complete version history (v3.1.4 → v3.4.3)
+
+### 🧪 Testing
+- **Unit Tests**: [`tests/unit/`](tests/unit/) - Core functionality tests
+- **Integration Tests**: [`tests/integration/`](tests/integration/) - API and editor tests
+- **Production Tests**: [`tests/production/`](tests/production/) - Production validation
+- See [`tests/README.md`](tests/README.md) for testing guide
+
+### 🏗️ Core Application Files
+```
+agent.py              - Main orchestration agent
+chartjs_generator.py  - Chart generation (133KB, 3,076 lines)
+insight_generator.py  - AI-powered insights
+layout_assembler.py   - Layout assembly (L01, L02, L03)
+rest_server.py        - FastAPI REST endpoints
+chart_catalog.py      - Chart type registry
+analytics_types.py    - Type definitions
+```
+
+### 📦 Archive
+- **Debug Scripts**: [`archive/debug-scripts/`](archive/debug-scripts/) - Historical debugging tools
+- **Test Results**: [`archive/test-results/`](archive/test-results/) - Previous test outputs
+- **HTML Demos**: [`archive/html-demos/`](archive/html-demos/) - Interactive demos
+
+---
+
 ## 🌐 Production URL
 
 **Live API**: `https://analytics-v30-production.up.railway.app`
