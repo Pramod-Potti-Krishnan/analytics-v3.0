@@ -5,7 +5,7 @@ FastAPI-based REST endpoints replacing WebSocket implementation.
 
 import logging
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -232,7 +232,7 @@ class AnalyticsRequest(BaseModel):
     slide_id: str = Field(..., min_length=1, description="Slide identifier")
     slide_number: int = Field(..., ge=1, description="Slide position in deck (1-indexed)")
     narrative: str = Field(..., min_length=1, max_length=2000, description="User's description of analytics needed")
-    data: List[ChartDataPoint] = Field(..., min_items=2, max_items=50, description="Chart data points (2-50 points)")
+    data: List[Union[ChartDataPoint, dict]] = Field(..., min_items=1, max_items=50, description="Chart data: simple points [{label, value}] or complex structures (heatmap, boxplot, mixed)")
     context: dict = Field(default_factory=dict, description="Presentation context (theme, audience, etc.)")
     constraints: dict = Field(default_factory=dict, description="Layout constraints (dimensions, etc.)")
     chart_type: Optional[str] = Field(None, description="Optional chart type override (e.g., 'area', 'treemap', 'waterfall')")
@@ -253,16 +253,19 @@ class AnalyticsRequest(BaseModel):
 
     @validator('data')
     def validate_data_consistency(cls, v):
-        """Validate data array consistency."""
-        if not v or len(v) < 2:
-            raise ValueError("At least 2 data points required for meaningful charts")
+        """Validate data array consistency - supports both simple and complex formats."""
+        if not v or len(v) < 1:
+            raise ValueError("At least 1 data point required")
         if len(v) > 50:
             raise ValueError("Maximum 50 data points allowed to prevent performance issues")
 
-        # Check for duplicate labels
-        labels = [point.label for point in v]
-        if len(labels) != len(set(labels)):
-            raise ValueError("Duplicate labels found. Each data point must have a unique label")
+        # For simple ChartDataPoint format, check for duplicate labels
+        # For complex formats (dicts), skip validation as structure varies by chart type
+        chartdata_points = [point for point in v if isinstance(point, ChartDataPoint)]
+        if chartdata_points:
+            labels = [point.label for point in chartdata_points]
+            if len(labels) != len(set(labels)):
+                raise ValueError("Duplicate labels found. Each data point must have a unique label")
 
         return v
 
