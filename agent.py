@@ -737,13 +737,53 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Determine chart type: use explicit chart_type parameter if provided, otherwise use default (v3.4.3 fix)
         chart_type = request_data.get('chart_type') or get_chart_type(analytics_type)
 
-        # Convert data format for Chart.js
-        chart_data = {
-            "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
-            "values": [d.get("value", 0) for d in data],
-            "series_name": slide_title,
-            "format": _detect_data_format(data)
-        }
+        # Multi-series chart types that need original data structure preserved
+        multi_series_chart_types = [
+            "bar_grouped", "grouped_bar", "bar_stacked", "stacked_bar",
+            "area_stacked", "stacked_area", "heatmap", "matrix",
+            "boxplot", "mixed", "candlestick", "financial", "sankey"
+        ]
+
+        # Convert data format for Chart.js (v3.4.3 fix: preserve structure for multi-series charts)
+        if chart_type in multi_series_chart_types:
+            # Pass data directly for multi-series charts (they handle their own format)
+            chart_data = data
+            # But create simple format for insight generator
+            if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+                if "labels" in data[0]:
+                    # Multi-series: use labels from first dataset
+                    insight_data = {
+                        "labels": data[0].get("labels", []),
+                        "values": data[0].get("datasets", [{}])[0].get("data", []) if data[0].get("datasets") else [],
+                        "series_name": slide_title,
+                        "format": _detect_data_format(data)
+                    }
+                else:
+                    # Treemap/simple format: convert directly
+                    insight_data = {
+                        "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
+                        "values": [d.get("value", 0) for d in data],
+                        "series_name": slide_title,
+                        "format": _detect_data_format(data)
+                    }
+            else:
+                # Fallback
+                insight_data = {
+                    "labels": ["Data"],
+                    "values": [0],
+                    "series_name": slide_title,
+                    "format": "simple"
+                }
+        else:
+            # Simple charts: convert to {labels, values} format
+            chart_data = {
+                "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
+                "values": [d.get("value", 0) for d in data],
+                "series_name": slide_title,
+                "format": _detect_data_format(data)
+            }
+            # Use same format for insights
+            insight_data = chart_data
 
         logger.info(
             f"Generating L02 analytics: {analytics_type} ({chart_type}) "
@@ -1029,7 +1069,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Generate observations/insights (v3.3.3: increased to 1000 chars for complete bullets)
         insights_text = await insight_gen.generate_l02_explanation(
             chart_type=chart_type,
-            data=chart_data,
+            data=insight_data,  # v3.4.3 fix: use insight_data (simple format) instead of chart_data
             narrative=narrative,
             audience=audience,
             context={

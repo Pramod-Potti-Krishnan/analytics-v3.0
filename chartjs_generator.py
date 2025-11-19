@@ -268,6 +268,12 @@ class ChartJSGenerator:
         Returns:
             HTML canvas element with stacked area chart configuration
         """
+        # Extract chart data from array format if needed (v3.4.3 fix)
+        if isinstance(data, list) and len(data) > 0:
+            chart_data = data[0]
+        else:
+            chart_data = data
+
         # Add stacking options
         stack_options = {
             "scales": {
@@ -283,12 +289,12 @@ class ChartJSGenerator:
         merged_options = self._merge_options(options or {}, stack_options)
 
         # Force fill=True for all datasets
-        if "datasets" in data:
-            for dataset in data["datasets"]:
+        if "datasets" in chart_data:
+            for dataset in chart_data["datasets"]:
                 dataset["fill"] = True
 
         return self.generate_line_chart(
-            data, height, chart_id, merged_options,
+            chart_data, height, chart_id, merged_options,
             enable_editor, presentation_id, api_base_url, output_mode
         )
 
@@ -402,11 +408,17 @@ class ChartJSGenerator:
 
         Requires data["datasets"] with multiple series.
         """
-        if "datasets" not in data:
+        # Extract chart data from array format if needed (v3.4.3 fix)
+        if isinstance(data, list) and len(data) > 0:
+            chart_data = data[0]
+        else:
+            chart_data = data
+
+        if "datasets" not in chart_data:
             raise ValueError("Grouped bar chart requires 'datasets' in data")
 
         return self.generate_bar_chart(
-            data, height, horizontal=False, chart_id=chart_id, options=options,
+            chart_data, height, horizontal=False, chart_id=chart_id, options=options,
             enable_editor=enable_editor, presentation_id=presentation_id,
             api_base_url=api_base_url, output_mode=output_mode
         )
@@ -428,6 +440,12 @@ class ChartJSGenerator:
 
         Bars stacked on top of each other.
         """
+        # Extract chart data from array format if needed (v3.4.3 fix)
+        if isinstance(data, list) and len(data) > 0:
+            chart_data = data[0]
+        else:
+            chart_data = data
+
         stack_options = {
             "scales": {
                 "x": {"stacked": True},
@@ -437,7 +455,7 @@ class ChartJSGenerator:
 
         merged_options = self._merge_options(options or {}, stack_options)
         return self.generate_bar_chart(
-            data, height, horizontal, chart_id, merged_options,
+            chart_data, height, horizontal, chart_id, merged_options,
             enable_editor=enable_editor, presentation_id=presentation_id,
             api_base_url=api_base_url, output_mode=output_mode
         )
@@ -1008,10 +1026,10 @@ class ChartJSGenerator:
                     "spacing": 1,
                     "borderWidth": 2,
                     "borderColor": "#fff",
-                    "backgroundColor": "placeholder_for_function",
+                    "backgroundColor": "placeholder_for_background_color",
                     "labels": {
                         "display": True,
-                        "formatter": "placeholder_for_function",
+                        "formatter": "placeholder_for_label_formatter",
                         "color": "#fff",
                         "font": {"size": 14, "weight": "bold"}
                     }
@@ -1039,11 +1057,11 @@ class ChartJSGenerator:
         # Convert config to JSON then replace placeholders with actual functions
         config_json = json.dumps(config)
         config_json = config_json.replace(
-            '"placeholder_for_function"',
+            '"placeholder_for_background_color"',
             'function(ctx) { return ctx.raw.color || "' + self.palette[0] + '"; }'
         )
         config_json = config_json.replace(
-            '"placeholder_for_function"',
+            '"placeholder_for_label_formatter"',
             'function(ctx) { return ctx.raw.label; }'
         )
         config_json = config_json.replace(
