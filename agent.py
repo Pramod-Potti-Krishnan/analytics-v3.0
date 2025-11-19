@@ -244,8 +244,8 @@ async def process_analytics_slide(
         chart_height = dimensions.get("chart_height", 600)
         chart_width = dimensions.get("chart_width", 1800)
 
-        # Get chart type for this analytics type
-        chart_type = get_chart_type(analytics_type)
+        # Get chart type: use explicit chart_type parameter if provided, otherwise use default (v3.4.3 fix)
+        chart_type = request_data.get('chart_type') or get_chart_type(analytics_type)
 
         # Convert data format
         chart_data = {
@@ -734,8 +734,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Determine analytics type: use explicit parameter if provided, otherwise infer (v3.1.4 hotfix)
         analytics_type = request_data.get('analytics_type') or _infer_analytics_type(narrative, topics, data)
 
-        # Determine chart type
-        chart_type = get_chart_type(analytics_type)
+        # Determine chart type: use explicit chart_type parameter if provided, otherwise use default (v3.4.3 fix)
+        chart_type = request_data.get('chart_type') or get_chart_type(analytics_type)
 
         # Convert data format for Chart.js
         chart_data = {

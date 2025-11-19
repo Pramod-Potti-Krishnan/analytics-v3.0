@@ -235,6 +235,7 @@ class AnalyticsRequest(BaseModel):
     data: List[ChartDataPoint] = Field(..., min_items=2, max_items=50, description="Chart data points (2-50 points)")
     context: dict = Field(default_factory=dict, description="Presentation context (theme, audience, etc.)")
     constraints: dict = Field(default_factory=dict, description="Layout constraints (dimensions, etc.)")
+    chart_type: Optional[str] = Field(None, description="Optional chart type override (e.g., 'area', 'treemap', 'waterfall')")
 
     @validator('presentation_id', 'slide_id')
     def validate_ids(cls, v):
