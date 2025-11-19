@@ -738,10 +738,11 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         chart_type = request_data.get('chart_type') or get_chart_type(analytics_type)
 
         # Multi-series chart types that need original data structure preserved
+        # Only Chart.js native multi-series types - plugin charts use different formats
         multi_series_chart_types = [
-            "bar_grouped", "grouped_bar", "bar_stacked", "stacked_bar",
-            "area_stacked", "stacked_area", "heatmap", "matrix",
-            "boxplot", "mixed", "candlestick", "financial", "sankey"
+            "bar_grouped", "grouped_bar",
+            "bar_stacked", "stacked_bar",
+            "area_stacked", "stacked_area"
         ]
 
         # Convert data format for Chart.js (v3.4.3 fix: preserve structure for multi-series charts)
