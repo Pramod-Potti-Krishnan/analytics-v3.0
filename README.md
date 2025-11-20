@@ -4,7 +4,7 @@
 **Status**: ✅ Production Ready - Chart Type Expansion Complete
 **Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
 
-A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js 4.4.0 and official plugins, providing interactive charts with AI-generated insights for presentation slides. Now supports 20+ chart types including advanced visualizations like treemaps, heatmaps, boxplots, candlestick charts, and sankey diagrams.
+A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js 4.4.0, providing interactive charts with AI-generated insights for presentation slides. Supports 14 chart types using native Chart.js capabilities for reliable, consistent rendering.
 
 ---
 
@@ -23,10 +23,10 @@ A REST API analytics microservice that generates comprehensive charts and visual
   - [`docs/ANALYTICS_TEAM_ACTION_REQUIRED.md`](docs/ANALYTICS_TEAM_ACTION_REQUIRED.md) - Current action items
 
 - **Integration & API**
-  - **[`DATA_FORMATS_REFERENCE.md`](DATA_FORMATS_REFERENCE.md) - Data format specifications for all 22 chart types** ⭐
+  - **[`DATA_FORMATS_REFERENCE.md`](DATA_FORMATS_REFERENCE.md) - Data format specifications for all 14 chart types** ⭐
   - [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) - Director Agent integration
   - [`docs/DIRECTOR_INTEGRATION_SUMMARY.md`](docs/DIRECTOR_INTEGRATION_SUMMARY.md) - Integration overview
-  - [`docs/CHART_TYPE_CATALOG.md`](docs/CHART_TYPE_CATALOG.md) - All 20+ chart types
+  - [`docs/CHART_TYPE_CATALOG.md`](docs/CHART_TYPE_CATALOG.md) - All 14 chart types
   - [`docs/ERROR_CODES.md`](docs/ERROR_CODES.md) - Error handling reference
 
 - **Version History**
@@ -71,7 +71,7 @@ curl https://analytics-v30-production.up.railway.app/health
 
 ### Endpoint Overview
 
-The Analytics Microservice provides a REST API for generating interactive Chart.js visualizations with AI-powered insights. All charts are synchronous - no job polling required.
+The Analytics Microservice provides a REST API for generating interactive Chart.js visualizations with AI-powered insights. Supports 14 chart types using native Chart.js for reliable rendering. All charts are synchronous - no job polling required.
 
 ### Base Endpoint Pattern
 
@@ -96,7 +96,7 @@ POST /api/v1/analytics/{layout}/{analytics_type}
 | **L02** | Chart + Observations | 1260×720px chart (left) | 540×720px observations panel (right) |
 | **L03** | Side-by-side comparison | 840×540px each | Two charts with descriptions |
 
-### Supported Chart Types (22 Total)
+### Supported Chart Types (14 Total)
 
 #### Original Chart.js Types (9)
 - `line` - Line chart for trends over time
@@ -116,21 +116,17 @@ POST /api/v1/analytics/{layout}/{analytics_type}
 - `bar_stacked` - Stacked bar chart
 - `waterfall` - Waterfall chart
 
-#### Chart.js Plugin Types (8)
-- `treemap` - Hierarchical data visualization
-- `heatmap` - 2D correlation data
-- `matrix` - Matrix chart (alias for heatmap)
-- `boxplot` - Statistical distribution
-- `candlestick` - Financial OHLC data
-- `financial` - Financial chart (alias for candlestick)
-- `sankey` - Flow visualization
-- `mixed` - Mixed/combo chart
+#### Chart.js Plugin Types - REMOVED (v3.4.3)
+The following 8 plugin-based chart types were removed due to rendering issues:
+- `treemap`, `heatmap`, `matrix`, `boxplot`, `candlestick`, `financial`, `sankey`, `mixed`
+
+Keeping **14 total chart types**: 9 original + 5 new native Chart.js types
 
 ### 📋 Data Format Reference
 
 **IMPORTANT**: Different chart types require different data formats!
 
-For complete data format specifications for all 22 chart types, see:
+For complete data format specifications for all 14 chart types, see:
 **[DATA_FORMATS_REFERENCE.md](DATA_FORMATS_REFERENCE.md)** - Comprehensive guide with examples for every chart type
 
 #### Quick Reference
@@ -209,7 +205,7 @@ For complete data format specifications for all 22 chart types, see:
 ```
 
 **See [DATA_FORMATS_REFERENCE.md](DATA_FORMATS_REFERENCE.md) for:**
-- Detailed format for each of 22 chart types
+- Detailed format for each of 14 chart types
 - Complete request examples
 - Validation rules
 - Common errors and solutions
@@ -531,9 +527,9 @@ curl https://analytics-v30-production.up.railway.app/api/v1/chart-types
 {
   "success": true,
   "summary": {
-    "total_chart_types": 22,
-    "chartjs_types": 22,
-    "l02_compatible": 22,
+    "total_chart_types": 14,
+    "chartjs_types": 14,
+    "l02_compatible": 14,
     "chart_libraries": ["Chart.js"],
     "supported_layouts": ["L01", "L02", "L03"]
   },
@@ -814,8 +810,8 @@ curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
 ## Features
 
 - 🚀 **REST API** with async job processing and polling
-- 📊 **20+ Chart Types** including native Chart.js types + advanced plugins (treemap, heatmap, boxplot, candlestick, sankey)
-- 🎨 **Chart.js 4.4.0** with official plugin ecosystem for extended visualizations
+- 📊 **14 Chart Types** using native Chart.js for reliable, consistent rendering
+- 🎨 **Chart.js 4.4.0** with native charting capabilities
 - 🔌 **Self-Contained HTML** - Each chart includes its own CDN scripts (no global dependencies needed)
 - 🤖 **LLM-Enhanced Data Synthesis** using OpenAI GPT-4o-mini for business insights
 - 🎨 **Theme Customization** with 5 pre-defined themes (professional, dark, colorful, minimal, default)
@@ -1053,49 +1049,29 @@ Service information.
 
 ## Available Chart Types (v3.4.3)
 
-### Native Chart.js Types
+### Original Chart.js Types (9)
+- `line` - Line chart for trends over time
 - `bar_vertical` - Vertical bar chart for categorical comparisons
 - `bar_horizontal` - Horizontal bar chart for ranking/comparison
-- `bar_grouped` - Grouped bar chart for multi-series comparison
-- `bar_stacked` - Stacked bar chart for part-to-whole relationships
-- `line` - Line chart for trends over time
-- `line_multi` - Multi-line chart for comparing multiple time series
-- `area` - Area chart (line chart with filled area)
-- `area_stacked` - Stacked area chart for cumulative trends
 - `pie` - Pie chart for proportional data
-- `donut` - Donut chart (pie with center cutout)
+- `doughnut` - Donut chart (pie with center cutout)
 - `scatter` - Scatter plot for correlation analysis
 - `bubble` - Bubble chart for 3-variable relationships
 - `radar` - Radar/spider chart for multivariate data
 - `polar_area` - Polar area chart for cyclical data
-- `waterfall` - Waterfall chart for incremental changes (NEW in v3.4.0)
 
-### Chart.js Plugin-Based Types (NEW in v3.4.x)
-- `treemap` - Treemap for hierarchical data visualization (v3.4.1)
-  - Plugin: chartjs-chart-treemap@3.1.0
-  - Use case: Budget breakdown, disk usage, organizational hierarchy
+### New Native Chart.js Types (5) - Added in v3.4.0
+- `area` - Area chart (line chart with filled area)
+- `area_stacked` - Stacked area chart for cumulative trends
+- `bar_grouped` - Grouped bar chart for multi-series comparison
+- `bar_stacked` - Stacked bar chart for part-to-whole relationships
+- `waterfall` - Waterfall chart for incremental changes
 
-- `heatmap` / `matrix` - Heatmap/matrix chart for 2D correlation data (v3.4.2)
-  - Plugin: chartjs-chart-matrix@3.0.0
-  - Use case: Correlation matrices, calendar heatmaps, time-based patterns
+### Plugin Chart Types - REMOVED (v3.4.3)
+The following 8 plugin-based chart types were removed due to rendering issues:
+- `treemap`, `heatmap`, `matrix`, `boxplot`, `candlestick`, `financial`, `sankey`, `mixed`
 
-- `boxplot` - Box plot for statistical distribution (v3.4.2)
-  - Plugin: @sgratzl/chartjs-chart-boxplot@4.4.5
-  - Use case: Statistical analysis, outlier detection, quartile visualization
-
-- `candlestick` / `financial` - Candlestick chart for financial OHLC data (v3.4.3)
-  - Plugin: chartjs-chart-financial@0.2.1
-  - Requires: luxon@3.3.0, chartjs-adapter-luxon@1.3.1
-  - Use case: Stock prices, forex data, financial market analysis
-
-- `sankey` - Sankey diagram for flow visualization (v3.4.3)
-  - Plugin: chartjs-chart-sankey@0.12.0
-  - Use case: Resource flows, user journeys, budget allocation, energy flow
-
-### Specialized Chart Types
-- `mixed` - Mixed/combo chart (combines multiple chart types)
-- `histogram` - Histogram for distribution analysis
-- `violin` - Violin plot for distribution comparison (ApexCharts)
+**Total: 14 working chart types** (9 original + 5 new native Chart.js types)
 
 ## Available Themes
 

@@ -417,67 +417,10 @@ async def process_analytics_slide(
                     api_base_url=api_base_url,
                     output_mode="inline_script"
                 )
-            # CHART.JS PLUGIN TYPES (v3.4.1+)
-            elif chart_type == "treemap":
-                return chart_gen.generate_treemap_chart(
-                    data=data,
-                    height=height,
-                    chart_id=chart_id,
-                    enable_editor=enable_editor,
-                    presentation_id=presentation_id,
-                    api_base_url=api_base_url,
-                    output_mode="inline_script"
-                )
-            elif chart_type in ["heatmap", "matrix"]:
-                return chart_gen.generate_heatmap_chart(
-                    data=data,
-                    height=height,
-                    chart_id=chart_id,
-                    enable_editor=enable_editor,
-                    presentation_id=presentation_id,
-                    api_base_url=api_base_url,
-                    output_mode="inline_script"
-                )
-            elif chart_type == "boxplot":
-                return chart_gen.generate_boxplot_chart(
-                    data=data,
-                    height=height,
-                    chart_id=chart_id,
-                    enable_editor=enable_editor,
-                    presentation_id=presentation_id,
-                    api_base_url=api_base_url,
-                    output_mode="inline_script"
-                )
-            elif chart_type in ["candlestick", "financial"]:
-                return chart_gen.generate_candlestick_chart(
-                    data=data,
-                    height=height,
-                    chart_id=chart_id,
-                    enable_editor=enable_editor,
-                    presentation_id=presentation_id,
-                    api_base_url=api_base_url,
-                    output_mode="inline_script"
-                )
-            elif chart_type == "sankey":
-                return chart_gen.generate_sankey_chart(
-                    data=data,
-                    height=height,
-                    chart_id=chart_id,
-                    enable_editor=enable_editor,
-                    presentation_id=presentation_id,
-                    api_base_url=api_base_url,
-                    output_mode="inline_script"
-                )
-            elif chart_type == "mixed":
-                return chart_gen.generate_mixed_chart(
-                    data=data,
-                    height=height,
-                    chart_id=chart_id,
-                    enable_editor=enable_editor,
-                    presentation_id=presentation_id,
-                    api_base_url=api_base_url,
-                    output_mode="inline_script"
-                )
+            # CHART.JS PLUGIN TYPES - REMOVED (v3.4.3 - non-functional)
+            # Removed: treemap, heatmap, matrix, boxplot, candlestick, financial, sankey, mixed
+            # These plugin-based charts were not rendering correctly and have been removed.
+            # Keeping 14 total chart types: 9 original + 5 new native Chart.js types
             else:
                 # Default to bar chart for truly unknown types
                 logger.warning(f"Unknown chart type '{chart_type}', defaulting to bar chart")
