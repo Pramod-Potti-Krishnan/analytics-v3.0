@@ -4,7 +4,7 @@
 **Status**: ✅ Production Ready - Chart Type Expansion Complete
 **Railway**: [https://analytics-v30-production.up.railway.app](https://analytics-v30-production.up.railway.app)
 
-A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js 4.4.0, providing interactive charts with AI-generated insights for presentation slides. Supports 14 chart types using native Chart.js capabilities for reliable, consistent rendering.
+A REST API analytics microservice that generates comprehensive charts and visualizations with Chart.js 4.4.0 and D3.js v7, providing interactive charts with AI-generated insights for presentation slides. Supports 15 chart types using native Chart.js capabilities and D3.js for advanced visualizations.
 
 ---
 
@@ -23,10 +23,10 @@ A REST API analytics microservice that generates comprehensive charts and visual
   - [`docs/ANALYTICS_TEAM_ACTION_REQUIRED.md`](docs/ANALYTICS_TEAM_ACTION_REQUIRED.md) - Current action items
 
 - **Integration & API**
-  - **[`DATA_FORMATS_REFERENCE.md`](DATA_FORMATS_REFERENCE.md) - Data format specifications for all 14 chart types** ⭐
+  - **[`DATA_FORMATS_REFERENCE.md`](DATA_FORMATS_REFERENCE.md) - Data format specifications for all 15 chart types** ⭐
   - [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) - Director Agent integration
   - [`docs/DIRECTOR_INTEGRATION_SUMMARY.md`](docs/DIRECTOR_INTEGRATION_SUMMARY.md) - Integration overview
-  - [`docs/CHART_TYPE_CATALOG.md`](docs/CHART_TYPE_CATALOG.md) - All 14 chart types
+  - [`docs/CHART_TYPE_CATALOG.md`](docs/CHART_TYPE_CATALOG.md) - All 15 chart types
   - [`docs/ERROR_CODES.md`](docs/ERROR_CODES.md) - Error handling reference
 
 - **Version History**
@@ -71,7 +71,7 @@ curl https://analytics-v30-production.up.railway.app/health
 
 ### Endpoint Overview
 
-The Analytics Microservice provides a REST API for generating interactive Chart.js visualizations with AI-powered insights. Supports 14 chart types using native Chart.js for reliable rendering. All charts are synchronous - no job polling required.
+The Analytics Microservice provides a REST API for generating interactive Chart.js and D3.js visualizations with AI-powered insights. Supports 15 chart types using native Chart.js and D3.js for reliable rendering. All charts are synchronous - no job polling required.
 
 ### Base Endpoint Pattern
 
@@ -116,11 +116,14 @@ POST /api/v1/analytics/{layout}/{analytics_type}
 - `bar_stacked` - Stacked bar chart
 - `waterfall` - Waterfall chart
 
+#### D3.js Chart Types (1) - NEW in v3.4.4
+- `d3_treemap` - Hierarchical treemap visualization using D3.js v7
+
 #### Chart.js Plugin Types - REMOVED (v3.4.3)
 The following 8 plugin-based chart types were removed due to rendering issues:
 - `treemap`, `heatmap`, `matrix`, `boxplot`, `candlestick`, `financial`, `sankey`, `mixed`
 
-Keeping **14 total chart types**: 9 original + 5 new native Chart.js types
+Keeping **15 total chart types**: 9 original + 5 new native Chart.js types + 1 D3.js type
 
 ### 📋 Data Format Reference
 
@@ -810,8 +813,8 @@ curl https://analytics-v30-production.up.railway.app/api/v1/chart-types/line
 ## Features
 
 - 🚀 **REST API** with async job processing and polling
-- 📊 **14 Chart Types** using native Chart.js for reliable, consistent rendering
-- 🎨 **Chart.js 4.4.0** with native charting capabilities
+- 📊 **15 Chart Types** using native Chart.js and D3.js for reliable, consistent rendering
+- 🎨 **Chart.js 4.4.0** and **D3.js v7** with native charting capabilities
 - 🔌 **Self-Contained HTML** - Each chart includes its own CDN scripts (no global dependencies needed)
 - 🤖 **LLM-Enhanced Data Synthesis** using OpenAI GPT-4o-mini for business insights
 - 🎨 **Theme Customization** with 5 pre-defined themes (professional, dark, colorful, minimal, default)
@@ -1067,11 +1070,14 @@ Service information.
 - `bar_stacked` - Stacked bar chart for part-to-whole relationships
 - `waterfall` - Waterfall chart for incremental changes
 
+### D3.js Chart Types (1) - Added in v3.4.4
+- `d3_treemap` - Hierarchical treemap visualization using D3.js v7 for advanced data representation
+
 ### Plugin Chart Types - REMOVED (v3.4.3)
 The following 8 plugin-based chart types were removed due to rendering issues:
 - `treemap`, `heatmap`, `matrix`, `boxplot`, `candlestick`, `financial`, `sankey`, `mixed`
 
-**Total: 14 working chart types** (9 original + 5 new native Chart.js types)
+**Total: 15 working chart types** (9 original + 5 new native Chart.js types + 1 D3.js type)
 
 ## Available Themes
 

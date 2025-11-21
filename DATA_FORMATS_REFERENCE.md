@@ -1,6 +1,6 @@
-# Data Format Reference - Analytics Microservice v3.4.3
+# Data Format Reference - Analytics Microservice v3.4.4
 
-**Complete reference for data formats expected by all 22 chart types**
+**Complete reference for data formats expected by all 15 chart types**
 
 ---
 
@@ -421,11 +421,84 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 
 ---
 
-## 4. Plugin Charts - Complex Formats (7 types)
+## 4. D3.js Charts (1 type)
 
-These charts require specialized data structures:
+These charts use D3.js v7 for advanced visualizations with SVG rendering:
 
-### 4.1 Treemap Chart (`treemap`)
+### 4.1 D3 Treemap Chart (`d3_treemap`)
+
+**Use Case**: Hierarchical data visualization, budget breakdown, disk usage, market share distribution
+
+**Library**: D3.js v7 (SVG-based, not canvas)
+
+**Data Format**: Simple label-value format (internally transformed to hierarchical D3 structure)
+```json
+{
+  "data": [
+    {"label": "Engineering", "value": 450000},
+    {"label": "Sales", "value": 320000},
+    {"label": "Marketing", "value": 180000},
+    {"label": "Operations", "value": 120000}
+  ]
+}
+```
+
+**Example Request**:
+```bash
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "pres-005",
+    "slide_id": "slide-5",
+    "slide_number": 5,
+    "narrative": "Show budget allocation by department",
+    "chart_type": "d3_treemap",
+    "data": [
+      {"label": "Engineering", "value": 450000},
+      {"label": "Sales", "value": 320000},
+      {"label": "Marketing", "value": 180000},
+      {"label": "Operations", "value": 120000}
+    ],
+    "context": {
+      "theme": "professional",
+      "slide_title": "Budget Allocation",
+      "subtitle": "FY 2024"
+    }
+  }'
+```
+
+**Key Features**:
+- SVG-based rendering with D3.js v7
+- Hierarchical layout with automatic sizing
+- Interactive hover effects (opacity changes on mouseover)
+- Conditional label rendering (only shows labels if cell is large enough)
+- Theme color palette integration
+- Reveal.js integration for slide animations
+- Responsive design (adapts to 1260×720px L02 container)
+
+**Visual Characteristics**:
+- Nested rectangles sized proportionally to value
+- Rounded corners (3px border-radius)
+- White stroke separating cells
+- Labels and values shown in white text
+- Hover effect increases opacity to 100%
+
+**Technical Implementation**:
+- Uses D3.js v7 CDN: `https://cdn.jsdelivr.net/npm/d3@7`
+- Transforms simple `{labels, values}` to D3 hierarchy format
+- Implements `d3.hierarchy()` and `d3.treemap()` layouts
+- Self-contained HTML with inline script and IIFE pattern
+- Integrates with Reveal.js via `slidechanged` events
+
+---
+
+## 5. Plugin Charts - Complex Formats (REMOVED in v3.4.3)
+
+**NOTE**: The following Chart.js plugin-based charts were removed due to rendering issues. The D3.js treemap (section 4.1) replaces the removed Chart.js plugin treemap.
+
+These charts required specialized data structures:
+
+### 5.1 Treemap Chart (`treemap`) - REMOVED
 
 **Use Case**: Hierarchical data, budget breakdown, disk usage, market share
 
@@ -462,7 +535,7 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 
 ---
 
-### 4.2 Heatmap Chart (`heatmap` or `matrix`)
+### 5.2 Heatmap Chart (`heatmap` or `matrix`) - REMOVED
 
 **Use Case**: Correlation matrices, calendar patterns, 2D data relationships
 
@@ -509,7 +582,7 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 
 ---
 
-### 4.3 Boxplot Chart (`boxplot`)
+### 5.3 Boxplot Chart (`boxplot`) - REMOVED
 
 **Use Case**: Statistical distribution, outlier detection, quartile analysis
 
@@ -560,7 +633,7 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 
 ---
 
-### 4.4 Candlestick Chart (`candlestick` or `financial`)
+### 5.4 Candlestick Chart (`candlestick` or `financial`) - REMOVED
 
 **Use Case**: Financial OHLC data, stock prices, forex analysis
 
@@ -613,7 +686,7 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 
 ---
 
-### 4.5 Sankey Diagram (`sankey`)
+### 5.5 Sankey Diagram (`sankey`) - REMOVED
 
 **Use Case**: Flow visualization, resource allocation, user journeys, budget flows
 
@@ -666,7 +739,7 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 
 ---
 
-## 5. Summary Table
+## 6. Summary Table
 
 | Chart Type | Category | Data Format | Example |
 |------------|----------|-------------|---------|
@@ -685,20 +758,21 @@ curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L0
 | `mixed` | Multi-Series | `[{labels, datasets}]` | Combined chart types |
 | `bubble` | Multi-Series | `[{labels, datasets}]` | 3-variable relationships |
 | `waterfall` | Special | `[{label, value}]` | Incremental changes |
-| `treemap` | Plugin | `[{label, value}]` | Hierarchical data |
-| `heatmap` | Plugin | `[{x_labels, y_labels, values}]` | 2D correlation |
-| `matrix` | Plugin | `[{x_labels, y_labels, values}]` | Same as heatmap |
-| `boxplot` | Plugin | `[{labels, datasets}]` | Statistical distribution |
-| `candlestick` | Plugin | `[{labels, datasets}]` | Financial OHLC |
-| `financial` | Plugin | `[{labels, datasets}]` | Same as candlestick |
-| `sankey` | Plugin | `[{nodes, links}]` | Flow visualization |
+| `d3_treemap` | D3.js | `[{label, value}]` | Hierarchical data (SVG) |
+| `treemap` | Plugin (REMOVED) | `[{label, value}]` | Hierarchical data |
+| `heatmap` | Plugin (REMOVED) | `[{x_labels, y_labels, values}]` | 2D correlation |
+| `matrix` | Plugin (REMOVED) | `[{x_labels, y_labels, values}]` | Same as heatmap |
+| `boxplot` | Plugin (REMOVED) | `[{labels, datasets}]` | Statistical distribution |
+| `candlestick` | Plugin (REMOVED) | `[{labels, datasets}]` | Financial OHLC |
+| `financial` | Plugin (REMOVED) | `[{labels, datasets}]` | Same as candlestick |
+| `sankey` | Plugin (REMOVED) | `[{nodes, links}]` | Flow visualization |
 
 ---
 
-## 6. Common Patterns
+## 7. Common Patterns
 
 ### Pattern 1: Simple Single-Series
-**Charts**: line, bar_vertical, bar_horizontal, pie, doughnut, scatter, radar, polar_area, area, waterfall, treemap
+**Charts**: line, bar_vertical, bar_horizontal, pie, doughnut, scatter, radar, polar_area, area, waterfall, d3_treemap
 
 ```json
 {

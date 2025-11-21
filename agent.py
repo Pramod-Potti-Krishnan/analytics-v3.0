@@ -275,6 +275,7 @@ async def process_analytics_slide(
             api_base_url: str = "/api/charts"
         ) -> str:
             """Generate Chart.js HTML using appropriate method for chart type."""
+            logger.info(f"🔍 generate_chartjs_html called with chart_type={repr(chart_type)}")
             # Map chart types to ChartJSGenerator methods
             if chart_type == "line":
                 return chart_gen.generate_line_chart(
@@ -413,6 +414,17 @@ async def process_analytics_slide(
                     height=height,
                     chart_id=chart_id,
                     enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "d3_treemap":
+                logger.info(f"✅ D3 TREEMAP ROUTING TRIGGERED - chart_type={chart_type}")
+                return chart_gen.generate_d3_treemap_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=False,  # Deferred for POC
                     presentation_id=presentation_id,
                     api_base_url=api_base_url,
                     output_mode="inline_script"
@@ -937,6 +949,15 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 height=720,
                 chart_id=f"chart-{slide_id}",
                 enable_editor=enable_editor,
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "d3_treemap":
+            chart_html = chart_gen.generate_d3_treemap_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=False,  # Deferred for POC
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )

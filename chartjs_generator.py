@@ -3065,6 +3065,199 @@ class ChartJSGenerator:
 
         return prepared
 
+    def generate_d3_treemap_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 720,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate D3.js treemap chart (POC - alternative to Chart.js plugin).
+
+        This is a proof of concept demonstrating D3.js integration for advanced
+        visualizations. Uses D3.js v7 for full control over treemap rendering.
+
+        Args:
+            data: Chart data with labels and values:
+                  {"labels": ["Cat1", "Cat2"], "values": [100, 200]}
+            height: Chart height in pixels (default: 720)
+            chart_id: Unique chart ID
+            options: Custom D3 options (reserved for future use)
+            enable_editor: Deferred for POC (not implemented)
+            presentation_id: For future editor integration
+            api_base_url: API endpoint base
+            output_mode: Always "inline_script" for D3 charts
+
+        Returns:
+            HTML with D3 treemap SVG and embedded D3.js library
+        """
+        # Extract labels and values
+        labels = data.get("labels", [])
+        values = data.get("values", [])
+
+        if not labels or not values:
+            return "<div style='color: red; padding: 20px;'>Error: D3 treemap requires labels and values</div>"
+
+        # Transform to D3 hierarchical format
+        hierarchical_data = {
+            "name": "root",
+            "children": [
+                {"name": str(label), "value": float(value)}
+                for label, value in zip(labels, values)
+            ]
+        }
+
+        # Get theme colors
+        colors = self.palette
+
+        # Safe chart ID
+        chart_id_safe = chart_id or f"d3-treemap-{id(data)}"
+
+        # Dimensions
+        container_width = 1260
+        container_height = height
+        svg_width = container_width - 40  # Account for padding
+        svg_height = container_height - 40
+
+        # Build D3 treemap HTML
+        d3_html = f"""<!-- D3.js Treemap Chart (POC) -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <div id="{chart_id_safe}"></div>
+    <script>
+        (function() {{
+            function initD3Treemap() {{
+                // Data
+                const data = {json.dumps(hierarchical_data)};
+                const colors = {json.dumps(colors)};
+
+                // Dimensions
+                const width = {svg_width};
+                const height = {svg_height};
+
+                // Create treemap layout
+                const treemap = d3.treemap()
+                    .size([width, height])
+                    .padding(2)
+                    .round(true);
+
+                // Create hierarchy and sum values
+                const root = d3.hierarchy(data)
+                    .sum(d => d.value)
+                    .sort((a, b) => b.value - a.value);
+
+                // Generate treemap layout
+                treemap(root);
+
+                // Clear existing SVG (for Reveal.js re-rendering)
+                d3.select('#{chart_id_safe}').selectAll('*').remove();
+
+                // Create SVG
+                const svg = d3.select('#{chart_id_safe}')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('font', '14px Arial, sans-serif');
+
+                // Create cells
+                const cell = svg.selectAll('g')
+                    .data(root.leaves())
+                    .enter().append('g')
+                    .attr('transform', d => `translate(${{d.x0}},${{d.y0}})`);
+
+                // Add rectangles
+                cell.append('rect')
+                    .attr('width', d => d.x1 - d.x0)
+                    .attr('height', d => d.y1 - d.y0)
+                    .attr('fill', (d, i) => colors[i % colors.length])
+                    .attr('fill-opacity', 0.85)
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2)
+                    .attr('rx', 3)
+                    .attr('ry', 3)
+                    .on('mouseover', function(event, d) {{
+                        d3.select(this).attr('fill-opacity', 1);
+                    }})
+                    .on('mouseout', function(event, d) {{
+                        d3.select(this).attr('fill-opacity', 0.85);
+                    }});
+
+                // Add labels (only if cell is large enough)
+                cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
+                    .append('text')
+                    .attr('x', 5)
+                    .attr('y', 20)
+                    .text(d => d.data.name)
+                    .attr('fill', '#fff')
+                    .attr('font-size', '14px')
+                    .attr('font-weight', 'bold')
+                    .style('pointer-events', 'none');
+
+                // Add value labels (only if cell is large enough)
+                cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 60)
+                    .append('text')
+                    .attr('x', 5)
+                    .attr('y', 40)
+                    .text(d => d.value.toLocaleString())
+                    .attr('fill', '#fff')
+                    .attr('font-size', '12px')
+                    .style('pointer-events', 'none');
+
+                // Store chart instance
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = {{
+                    type: 'd3_treemap',
+                    data: data,
+                    destroy: function() {{
+                        d3.select('#{chart_id_safe}').selectAll('*').remove();
+                    }}
+                }};
+
+                console.log('✅ D3 Treemap {chart_id_safe} initialized');
+            }}
+
+            // Reveal.js-aware initialization (matches Chart.js pattern)
+            if (typeof Reveal !== 'undefined') {{
+                Reveal.on('ready', function() {{
+                    try {{
+                        const currentSlide = Reveal.getCurrentSlide();
+                        if (currentSlide && currentSlide.querySelector('#{chart_id_safe}')) {{
+                            setTimeout(initD3Treemap, 100);
+                        }}
+                    }} catch (e) {{
+                        console.warn('D3 treemap init on ready failed:', e);
+                    }}
+                }});
+
+                Reveal.on('slidechanged', function(event) {{
+                    try {{
+                        if (event.currentSlide && event.currentSlide.querySelector('#{chart_id_safe}')) {{
+                            initD3Treemap();
+                        }}
+                    }} catch (e) {{
+                        console.warn('D3 treemap init on slide change failed:', e);
+                    }}
+                }});
+            }} else {{
+                // Standalone mode (no Reveal.js)
+                if (document.readyState === 'loading') {{
+                    document.addEventListener('DOMContentLoaded', initD3Treemap);
+                }} else {{
+                    initD3Treemap();
+                }}
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return d3_html
+
     def _merge_options(self, base: dict, override: dict) -> dict:
         """Deep merge two option dictionaries."""
         result = base.copy()
