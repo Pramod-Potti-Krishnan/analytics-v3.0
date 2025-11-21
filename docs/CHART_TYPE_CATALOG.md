@@ -1,17 +1,19 @@
 # Chart Type Catalog - Analytics Service v3
 
-**Version**: 3.1.2
-**Date**: November 16, 2025
-**Total Chart Types**: 13
-**Chart Libraries**: Chart.js (9 types), ApexCharts (4 types)
+**Version**: 3.5.0
+**Date**: November 21, 2025
+**Total Chart Types**: 15
+**Chart Libraries**: Chart.js (9 types), D3.js (1 type), ApexCharts (4 types), Chart.js Plugins (1 type)
 
 ---
 
 ## 📊 Overview
 
-Analytics Service v3 supports 13 chart types across two rendering libraries:
+Analytics Service v3 supports 15 chart types across three rendering libraries:
 
 - **Chart.js** (9 types) - Used for L02 layout (Director integration)
+- **D3.js** (1 type) - SVG-based advanced visualizations for L02 layout
+- **Chart.js Plugins** (1 type) - Plugin-based charts (waterfall) for L02 layout
 - **ApexCharts** (4 types) - Used for L01 and L03 layouts (legacy)
 
 ---
@@ -553,9 +555,92 @@ Like pie chart but shows values as radius from center. Combines angular and radi
 
 ---
 
+## 🔷 D3.js Types (L02 Layout)
+
+### 10. D3 Treemap
+
+**ID**: `d3_treemap`
+**Library**: D3.js v7
+**Supported Layouts**: L02
+
+#### Description
+SVG-based hierarchical treemap visualization using D3.js. Displays proportional data as nested rectangles with hover effects and smooth rendering. Ideal for budget allocation, market share, and hierarchical breakdowns.
+
+#### Data Constraints
+- **Minimum data points**: 2
+- **Maximum data points**: 50
+- **Optimal range**: 4-15 rectangles
+
+#### Use Cases
+- Budget allocation by department
+- Market share distribution
+- Resource allocation visualization
+- Portfolio composition
+- Hierarchical data breakdowns
+
+#### Examples
+- Department budget allocation
+- Revenue by product category
+- Storage usage by folder
+- Investment portfolio breakdown
+
+#### Data Requirements
+```json
+{
+  "fields": ["label", "value"],
+  "label_format": "Category names",
+  "value_format": "Positive numeric values",
+  "note": "Automatically converted to D3 hierarchical format"
+}
+```
+
+#### Visual Properties
+- **Rendering**: SVG-based (not Canvas)
+- **Animations**: None (immediate render)
+- **Colors**: Vibrant 8-color palette with 0.85 opacity
+- **Hover**: Opacity changes to 1.0 on hover
+- **Labels**: White text with category name and value
+- **Size**: Area proportional to value
+
+#### Interactive Features
+- ✅ Hover effects (opacity highlight)
+- ✅ Reveal.js slide integration
+- ⏳ Edit chart data (deferred for POC)
+
+#### When to Use
+- ✅ Part-to-whole relationships with many categories
+- ✅ Budget or resource allocation
+- ✅ Hierarchical data visualization
+- ✅ When SVG output is preferred over Canvas
+
+#### When NOT to Use
+- ❌ Time series data (use line chart)
+- ❌ Comparing exact values (use bar chart)
+- ❌ Need advanced interactivity (use Chart.js types)
+
+#### API Example
+```bash
+curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
+  -H "Content-Type: application/json" \
+  -d '{
+    "presentation_id": "test",
+    "slide_id": "s1",
+    "slide_number": 1,
+    "narrative": "Show budget allocation",
+    "chart_type": "d3_treemap",
+    "data": [
+      {"label": "Engineering", "value": 450000},
+      {"label": "Sales", "value": 320000},
+      {"label": "Marketing", "value": 180000}
+    ]
+  }'
+```
+
+---
+
 ## 📈 ApexCharts Types (L01, L03 Layouts)
 
-### 10. Area Chart
+### 11. Area Chart
 
 **ID**: `area`
 **Library**: ApexCharts
@@ -592,7 +677,7 @@ Line chart with filled area below the line. Emphasizes volume and cumulative tre
 
 ---
 
-### 11. Heatmap
+### 12. Heatmap
 
 **ID**: `heatmap`
 **Library**: ApexCharts
@@ -628,7 +713,7 @@ Matrix visualization with color-coded cells. Shows patterns in two-dimensional d
 
 ---
 
-### 12. Treemap
+### 13. Treemap (ApexCharts)
 
 **ID**: `treemap`
 **Library**: ApexCharts
@@ -665,7 +750,7 @@ Hierarchical data as nested rectangles. Size represents value magnitude.
 
 ---
 
-### 13. Waterfall Chart
+### 14. Waterfall Chart
 
 **ID**: `waterfall`
 **Library**: ApexCharts
@@ -712,7 +797,7 @@ Shows cumulative effect of sequential positive/negative values. Visualizes step-
 | Proportions | Pie, Doughnut |
 | Correlation | Scatter, Bubble |
 | Multi-dimensional | Radar, Polar Area |
-| Hierarchical | Treemap |
+| Hierarchical | D3 Treemap, Treemap |
 | Sequential changes | Waterfall |
 | Density/patterns | Heatmap |
 
@@ -730,6 +815,7 @@ Shows cumulative effect of sequential positive/negative values. Visualizes step-
 | Layout | Library | Chart Types | Count |
 |--------|---------|-------------|-------|
 | L02 | Chart.js | line, bar_vertical, bar_horizontal, pie, doughnut, scatter, bubble, radar, polar_area | 9 |
+| L02 | D3.js | d3_treemap | 1 |
 | L01 | ApexCharts | area, heatmap, treemap, waterfall | 4 |
 | L03 | ApexCharts | area, heatmap, treemap, waterfall | 4 |
 
@@ -776,6 +862,7 @@ curl https://analytics-v30-production.up.railway.app/api/v1/layouts/L02/chart-ty
 | bubble | 3 | 50 | 5-20 | L02 | Chart.js |
 | radar | 3 | 12 | 4-8 | L02 | Chart.js |
 | polar_area | 3 | 12 | 4-8 | L02 | Chart.js |
+| **d3_treemap** | 2 | 50 | 4-15 | L02 | **D3.js** |
 | area | 3 | 50 | 5-30 | L01, L03 | ApexCharts |
 | heatmap | 9 | 500 | 20-100 | L01 | ApexCharts |
 | treemap | 4 | 50 | 8-25 | L01 | ApexCharts |
@@ -786,12 +873,13 @@ curl https://analytics-v30-production.up.railway.app/api/v1/layouts/L02/chart-ty
 ## 📝 Notes
 
 - **Chart.js charts** (L02) include interactive editing features
+- **D3.js charts** (L02) use SVG rendering for advanced visualizations
 - **ApexCharts charts** (L01, L03) are for legacy layouts
 - All charts enforce data point constraints via validation
 - Optimal ranges provide best visual clarity and performance
 
 ---
 
-**Last Updated**: November 16, 2025
-**Version**: 3.1.2
-**Related Documentation**: [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md), [ERROR_CODES.md](./ERROR_CODES.md)
+**Last Updated**: November 21, 2025
+**Version**: 3.5.0
+**Related Documentation**: [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md), [ERROR_CODES.md](./ERROR_CODES.md), [DATA_FORMATS_REFERENCE.md](../DATA_FORMATS_REFERENCE.md)
