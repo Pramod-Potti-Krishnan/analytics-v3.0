@@ -1,7 +1,7 @@
 ##Analytics Service v3 - Director Integration Guide
 
-**Version**: 3.1.2
-**Date**: November 16, 2025
+**Version**: 3.5.0
+**Date**: November 21, 2025
 **Status**: ✅ Production Ready
 **Target Audience**: Director Agent Integration Team
 
@@ -19,6 +19,7 @@
 8. [Best Practices](#best-practices)
 9. [Troubleshooting](#troubleshooting)
 10. [Migration from Legacy](#migration-from-legacy)
+11. [Chart Development Workflow](#chart-development-workflow)
 
 ---
 
@@ -771,6 +772,88 @@ observations = result["content"]["element_2"]
 
 ---
 
+## 🛠️ Chart Development Workflow
+
+### Required Steps When Adding New Chart Types
+
+**CRITICAL**: Every time a new chart type is added to the Analytics Service, the following steps MUST be completed:
+
+#### 1. Update CHART_TYPE_CATALOG.md
+
+**Location**: `/docs/CHART_TYPE_CATALOG.md`
+
+**Required Updates**:
+- Update version number and date in header
+- Increment total chart type count
+- Add new section with complete chart specification:
+  - Chart ID and library
+  - Description
+  - Data constraints (min/max/optimal points)
+  - Use cases and examples
+  - Data requirements (JSON schema)
+  - Visual properties
+  - Interactive features
+  - When to use / When NOT to use
+  - API example with curl command
+- Update Quick Reference Matrix table
+- Update Chart Selection Guide tables
+- Update "By Layout" table
+
+#### 2. Provide Director Test Prompt
+
+After updating the catalog, **immediately provide the user with a Director test prompt** following this template:
+
+```
+Create a presentation slide showing [BUSINESS CONTEXT]. Use a [CHART_TYPE] chart type to visualize the following data:
+[SAMPLE DATA IN NATURAL LANGUAGE]
+
+The slide should highlight [KEY INSIGHTS] and suggest [STRATEGIC RECOMMENDATIONS].
+```
+
+**Example** (for d3_treemap):
+```
+Create a presentation slide showing our department budget allocation for FY 2025. Use a d3_treemap chart type to visualize the following data:
+- Engineering: $450,000
+- Sales: $320,000
+- Marketing: $180,000
+- Operations: $120,000
+- HR: $80,000
+- Finance: $60,000
+
+The slide should highlight which departments have the largest budget allocations and suggest strategic insights about resource distribution.
+```
+
+#### 3. Documentation Checklist
+
+Before marking chart development as complete:
+
+- [ ] CHART_TYPE_CATALOG.md updated with new chart entry
+- [ ] Version and date updated in catalog header
+- [ ] Chart type count incremented
+- [ ] Quick Reference Matrix includes new chart
+- [ ] Chart Selection Guide tables updated
+- [ ] DATA_FORMATS_REFERENCE.md updated with data format example
+- [ ] README.md updated with chart type count
+- [ ] Director test prompt provided to user
+- [ ] User has confirmed successful test from Director's end
+
+### Catalog Maintenance
+
+**File**: `docs/CHART_TYPE_CATALOG.md`
+**Purpose**: Primary reference for Director service chart selection
+**Update Frequency**: Every new chart type addition
+**Review Schedule**: Quarterly for accuracy
+
+This catalog is the **single source of truth** that Director uses to:
+- Discover available chart types
+- Understand data constraints
+- Select appropriate chart for user's narrative
+- Generate proper API requests
+
+**Failure to update the catalog will result in Director not being able to use the new chart type.**
+
+---
+
 ## 📞 Support & Resources
 
 ### Documentation
@@ -790,6 +873,6 @@ observations = result["content"]["element_2"]
 
 ---
 
-**Last Updated**: November 16, 2025
-**Version**: 3.1.2
+**Last Updated**: November 21, 2025
+**Version**: 3.5.0
 **Next Review**: Q1 2026
