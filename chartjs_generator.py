@@ -122,6 +122,84 @@ class ChartJSGenerator:
         self.gradients = self.colors.get("gradients", {})
 
     # ========================================
+    # DATA TRANSFORMATION
+    # ========================================
+
+    def _transform_director_to_chartjs(self, data: Union[List, Dict]) -> Dict[str, Any]:
+        """
+        Transform Director Agent data format to Chart.js format.
+
+        Director sends multi-series data as:
+            [
+                {"label": "Q1", "North America": 124, "EMEA": 98, "APAC": 75},
+                {"label": "Q2", "North America": 145, "EMEA": 112, "APAC": 88},
+                ...
+            ]
+
+        Chart.js needs:
+            {
+                "labels": ["Q1", "Q2", ...],
+                "datasets": [
+                    {"label": "North America", "data": [124, 145, ...]},
+                    {"label": "EMEA", "data": [98, 112, ...]},
+                    {"label": "APAC", "data": [75, 88, ...]}
+                ]
+            }
+
+        Also supports backward compatibility with existing formats:
+        - Array with single object: [{labels: [...], datasets: [...]}]
+        - Direct object: {labels: [...], datasets: [...]}
+
+        Args:
+            data: Input data in Director or standard format
+
+        Returns:
+            Chart data in Chart.js format {labels, datasets}
+        """
+        # Case 1: Director format - array of label-value objects
+        if isinstance(data, list) and len(data) > 0 and 'label' in data[0]:
+            logger.info(f"Transforming Director format to Chart.js (detected 'label' key)")
+
+            # Extract labels from 'label' field
+            labels = [item.get('label', '') for item in data]
+
+            # Get all series names (all keys except 'label')
+            series_names = [k for k in data[0].keys() if k != 'label']
+
+            # Build datasets for each series
+            datasets = []
+            for series_name in series_names:
+                dataset = {
+                    'label': series_name,
+                    'data': [item.get(series_name, 0) for item in data]
+                }
+                datasets.append(dataset)
+
+            transformed = {
+                'labels': labels,
+                'datasets': datasets
+            }
+            logger.info(f"Transformed: {len(labels)} labels, {len(datasets)} datasets")
+            return transformed
+
+        # Case 2: Array with single Chart.js object (backward compatibility)
+        if isinstance(data, list) and len(data) > 0 and 'datasets' in data[0]:
+            logger.info(f"Extracting Chart.js format from array (already has 'datasets')")
+            return data[0]
+
+        # Case 3: Already in Chart.js format
+        if isinstance(data, dict):
+            return data
+
+        # Case 4: Array format without recognizable structure - try first element
+        if isinstance(data, list) and len(data) > 0:
+            logger.warning(f"Unknown array format, extracting first element")
+            return data[0]
+
+        # Default: return as-is
+        return data
+
+    # ========================================
     # LINE CHARTS
     # ========================================
 
@@ -268,11 +346,8 @@ class ChartJSGenerator:
         Returns:
             HTML canvas element with stacked area chart configuration
         """
-        # Extract chart data from array format if needed (v3.4.3 fix)
-        if isinstance(data, list) and len(data) > 0:
-            chart_data = data[0]
-        else:
-            chart_data = data
+        # Transform Director format to Chart.js format (v3.4.4 fix)
+        chart_data = self._transform_director_to_chartjs(data)
 
         # Add stacking options
         stack_options = {
@@ -408,11 +483,8 @@ class ChartJSGenerator:
 
         Requires data["datasets"] with multiple series.
         """
-        # Extract chart data from array format if needed (v3.4.3 fix)
-        if isinstance(data, list) and len(data) > 0:
-            chart_data = data[0]
-        else:
-            chart_data = data
+        # Transform Director format to Chart.js format (v3.4.4 fix)
+        chart_data = self._transform_director_to_chartjs(data)
 
         if "datasets" not in chart_data:
             raise ValueError("Grouped bar chart requires 'datasets' in data")
@@ -440,11 +512,8 @@ class ChartJSGenerator:
 
         Bars stacked on top of each other.
         """
-        # Extract chart data from array format if needed (v3.4.3 fix)
-        if isinstance(data, list) and len(data) > 0:
-            chart_data = data[0]
-        else:
-            chart_data = data
+        # Transform Director format to Chart.js format (v3.4.4 fix)
+        chart_data = self._transform_director_to_chartjs(data)
 
         stack_options = {
             "scales": {
@@ -1869,11 +1938,14 @@ class ChartJSGenerator:
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
         """
-        labels = data.get("labels", [])
-        format_type = data.get("format", "number")
+        # Transform Director format to Chart.js format (v3.4.4 fix)
+        chart_data = self._transform_director_to_chartjs(data)
+
+        labels = chart_data.get("labels", [])
+        format_type = chart_data.get("format", "number")
 
         datasets = []
-        for idx, ds in enumerate(data.get("datasets", [])):
+        for idx, ds in enumerate(chart_data.get("datasets", [])):
             dataset_type = ds.get("type", "line")
             prepared_ds = {
                 "type": dataset_type,
@@ -3077,9 +3149,9 @@ class ChartJSGenerator:
         output_mode: str = "inline_script"
     ) -> str:
         """
-        Generate D3.js treemap chart (POC - alternative to Chart.js plugin).
+        Generate D3.js treemap chart using D3.js v7.
 
-        This is a proof of concept demonstrating D3.js integration for advanced
+        This provides SVG-based hierarchical visualization as an advanced alternative
         visualizations. Uses D3.js v7 for full control over treemap rendering.
 
         Args:
@@ -3088,7 +3160,7 @@ class ChartJSGenerator:
             height: Chart height in pixels (default: 720)
             chart_id: Unique chart ID
             options: Custom D3 options (reserved for future use)
-            enable_editor: Deferred for POC (not implemented)
+            enable_editor: Editor support (not yet implemented for D3 charts)
             presentation_id: For future editor integration
             api_base_url: API endpoint base
             output_mode: Always "inline_script" for D3 charts
@@ -3096,9 +3168,18 @@ class ChartJSGenerator:
         Returns:
             HTML with D3 treemap SVG and embedded D3.js library
         """
-        # Extract labels and values
-        labels = data.get("labels", [])
-        values = data.get("values", [])
+        # Extract chart data from array format if needed (v3.4.3 fix)
+        # Support both formats:
+        # 1. Array of objects: [{"label": "A", "value": 100}, ...]
+        # 2. Structured object: {"labels": [...], "values": [...]}
+        if isinstance(data, list):
+            # Format 1: Array of label-value objects
+            labels = [item.get("label", "") for item in data]
+            values = [item.get("value", 0) for item in data]
+        else:
+            # Format 2: Structured object
+            labels = data.get("labels", [])
+            values = data.get("values", [])
 
         if not labels or not values:
             return "<div style='color: red; padding: 20px;'>Error: D3 treemap requires labels and values</div>"
@@ -3125,7 +3206,7 @@ class ChartJSGenerator:
         svg_height = container_height - 40
 
         # Build D3 treemap HTML
-        d3_html = f"""<!-- D3.js Treemap Chart (POC) -->
+        d3_html = f"""<!-- D3.js Treemap Chart -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
 <div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
@@ -3250,6 +3331,773 @@ class ChartJSGenerator:
                     document.addEventListener('DOMContentLoaded', initD3Treemap);
                 }} else {{
                     initD3Treemap();
+                }}
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return d3_html
+
+    def generate_d3_sunburst_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 720,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate D3.js sunburst chart for multi-level hierarchical data.
+
+        Sunburst diagram displays hierarchical data as concentric circles,
+        with each ring representing a level in the hierarchy. Perfect for
+        budget breakdowns, organizational structures, file system usage.
+
+        Args:
+            data: Chart data with labels and values:
+                  {"labels": ["Cat1", "Cat2"], "values": [100, 200]}
+                  Or hierarchical: {"name": "root", "children": [...]}
+            height: Chart height in pixels (default: 720)
+            chart_id: Unique chart ID
+            options: Custom D3 options (reserved for future use)
+            enable_editor: Editor support (not yet implemented for D3 charts)
+            presentation_id: For future editor integration
+            api_base_url: API endpoint base
+            output_mode: Always "inline_script" for D3 charts
+
+        Returns:
+            HTML with D3 sunburst SVG and embedded D3.js library
+        """
+        # Extract chart data from array format if needed (v3.4.3 fix)
+        # Support both formats:
+        # 1. Array of objects: [{"label": "A", "value": 100}, ...]
+        # 2. Structured object: {"labels": [...], "values": [...]}
+        if isinstance(data, list):
+            # Format 1: Array of label-value objects
+            labels = [item.get("label", "") for item in data]
+            values = [item.get("value", 0) for item in data]
+        else:
+            # Format 2: Structured object
+            labels = data.get("labels", [])
+            values = data.get("values", [])
+
+        if not labels or not values:
+            return "<div style='color: red; padding: 20px;'>Error: D3 sunburst requires labels and values</div>"
+
+        # Transform to D3 hierarchical format
+        hierarchical_data = {
+            "name": "root",
+            "children": [
+                {"name": str(label), "value": float(value)}
+                for label, value in zip(labels, values)
+            ]
+        }
+
+        # Get theme colors
+        colors = self.palette
+
+        # Safe chart ID
+        chart_id_safe = chart_id or f"d3-sunburst-{id(data)}"
+
+        # Dimensions (square for radial layout)
+        container_width = 1260
+        container_height = height
+        size = min(container_width - 40, container_height - 40)
+        radius = size / 2
+
+        # Build D3 sunburst HTML
+        d3_html = f"""<!-- D3.js Sunburst Chart -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <div id="{chart_id_safe}"></div>
+    <script>
+        (function() {{
+            function initD3Sunburst() {{
+                // Data
+                const data = {json.dumps(hierarchical_data)};
+                const colors = {json.dumps(colors)};
+
+                // Dimensions
+                const width = {size};
+                const height = {size};
+                const radius = {radius};
+
+                // Create partition layout
+                const partition = d3.partition()
+                    .size([2 * Math.PI, radius]);
+
+                // Create hierarchy and sum values
+                const root = d3.hierarchy(data)
+                    .sum(d => d.value)
+                    .sort((a, b) => b.value - a.value);
+
+                // Generate partition layout
+                partition(root);
+
+                // Arc generator
+                const arc = d3.arc()
+                    .startAngle(d => d.x0)
+                    .endAngle(d => d.x1)
+                    .innerRadius(d => d.y0)
+                    .outerRadius(d => d.y1);
+
+                // Clear existing SVG (for Reveal.js re-rendering)
+                d3.select('#{chart_id_safe}').selectAll('*').remove();
+
+                // Create SVG
+                const svg = d3.select('#{chart_id_safe}')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('font', '12px Arial, sans-serif');
+
+                // Create group and center it
+                const g = svg.append('g')
+                    .attr('transform', `translate(${{width / 2}},${{height / 2}})`);
+
+                // Create arcs
+                const path = g.selectAll('path')
+                    .data(root.descendants().filter(d => d.depth))
+                    .enter().append('path')
+                    .attr('d', arc)
+                    .attr('fill', (d, i) => colors[i % colors.length])
+                    .attr('fill-opacity', 0.85)
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2)
+                    .on('mouseover', function(event, d) {{
+                        d3.select(this).attr('fill-opacity', 1);
+                    }})
+                    .on('mouseout', function(event, d) {{
+                        d3.select(this).attr('fill-opacity', 0.85);
+                    }});
+
+                // Add labels (only for larger arcs)
+                g.selectAll('text')
+                    .data(root.descendants().filter(d => d.depth && (d.x1 - d.x0) > 0.1))
+                    .enter().append('text')
+                    .attr('transform', function(d) {{
+                        const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+                        const y = (d.y0 + d.y1) / 2;
+                        return `rotate(${{x - 90}}) translate(${{y}},0) rotate(${{x < 180 ? 0 : 180}})`;
+                    }})
+                    .attr('dy', '0.35em')
+                    .attr('text-anchor', 'middle')
+                    .text(d => d.data.name)
+                    .attr('fill', '#fff')
+                    .attr('font-size', '11px')
+                    .attr('font-weight', 'bold')
+                    .style('pointer-events', 'none');
+
+                // Store chart instance
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = {{
+                    type: 'd3_sunburst',
+                    data: data,
+                    destroy: function() {{
+                        d3.select('#{chart_id_safe}').selectAll('*').remove();
+                    }}
+                }};
+
+                console.log('✅ D3 Sunburst {chart_id_safe} initialized');
+            }}
+
+            // Reveal.js-aware initialization (matches Chart.js pattern)
+            if (typeof Reveal !== 'undefined') {{
+                Reveal.on('ready', function() {{
+                    try {{
+                        const currentSlide = Reveal.getCurrentSlide();
+                        if (currentSlide && currentSlide.querySelector('#{chart_id_safe}')) {{
+                            setTimeout(initD3Sunburst, 100);
+                        }}
+                    }} catch (e) {{
+                        console.warn('D3 sunburst init on ready failed:', e);
+                    }}
+                }});
+
+                Reveal.on('slidechanged', function(event) {{
+                    try {{
+                        if (event.currentSlide && event.currentSlide.querySelector('#{chart_id_safe}')) {{
+                            initD3Sunburst();
+                        }}
+                    }} catch (e) {{
+                        console.warn('D3 sunburst init on slide change failed:', e);
+                    }}
+                }});
+            }} else {{
+                // Standalone mode (no Reveal.js)
+                if (document.readyState === 'loading') {{
+                    document.addEventListener('DOMContentLoaded', initD3Sunburst);
+                }} else {{
+                    initD3Sunburst();
+                }}
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return d3_html
+
+    def generate_d3_choropleth_usa_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 720,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate D3.js choropleth map of USA states using D3.js v7.
+
+        Choropleth (color-coded) map visualization showing geographic data
+        distribution across US states. Each state is colored based on its
+        data value, creating an intuitive geographic heat map. Perfect for
+        regional sales, market penetration, and state-by-state metrics.
+
+        Args:
+            data: Chart data with labels (state names) and values:
+                  {"labels": ["California", "Texas", ...], "values": [450000, 380000, ...]}
+                  Supports full names, abbreviations, or mixed formats
+            height: Chart height in pixels (default: 720)
+            chart_id: Unique chart ID
+            options: Custom D3 options (reserved for future use)
+            enable_editor: Editor support (not yet implemented for D3 charts)
+            presentation_id: For future editor integration
+            api_base_url: API endpoint base
+            output_mode: Always "inline_script" for D3 charts
+
+        Returns:
+            HTML with D3 choropleth map SVG and embedded D3.js library
+        """
+        # Extract labels and values
+        labels = data.get("labels", [])
+        values = data.get("values", [])
+
+        if not labels or not values:
+            return "<div style='color: red; padding: 20px;'>Error: D3 choropleth requires labels (state names) and values</div>"
+
+        # State name aliases (support both full names and abbreviations)
+        STATE_ALIASES = {
+            'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+            'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+            'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+            'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+            'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+            'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+            'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+            'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+            'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+            'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+            'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+            'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+            'WI': 'Wisconsin', 'WY': 'Wyoming'
+        }
+
+        # Create reverse mapping (full name -> abbreviation)
+        STATE_NAMES_TO_ABBR = {v: k for k, v in STATE_ALIASES.items()}
+
+        # Normalize state names and create data map
+        state_data_map = {}
+        for label, value in zip(labels, values):
+            label_str = str(label).strip()
+            # Check if it's an abbreviation
+            if label_str.upper() in STATE_ALIASES:
+                full_name = STATE_ALIASES[label_str.upper()]
+                state_data_map[full_name] = float(value)
+            # Check if it's a full name
+            elif label_str in STATE_NAMES_TO_ABBR:
+                state_data_map[label_str] = float(value)
+            # Try case-insensitive match
+            else:
+                for abbr, name in STATE_ALIASES.items():
+                    if name.lower() == label_str.lower():
+                        state_data_map[name] = float(value)
+                        break
+
+        # Get theme colors
+        colors = self.palette
+
+        # Safe chart ID
+        chart_id_safe = chart_id or f"d3-choropleth-{id(data)}"
+
+        # Dimensions
+        container_width = 1260
+        container_height = height
+        map_width = container_width - 100  # Leave room for legend
+        map_height = container_height - 40
+
+        # Calculate value domain for color scale
+        if values:
+            min_val = min(values)
+            max_val = max(values)
+        else:
+            min_val = 0
+            max_val = 100
+
+        # Build D3 choropleth HTML
+        d3_html = f"""<!-- D3.js Choropleth USA Map -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <div id="{chart_id_safe}"></div>
+    <script>
+        (function() {{
+            function initD3Choropleth() {{
+                // Data map
+                const stateData = {json.dumps(state_data_map)};
+                const colors = {json.dumps(colors)};
+
+                // Dimensions
+                const width = {map_width};
+                const height = {map_height};
+
+                // Value domain
+                const minValue = {min_val};
+                const maxValue = {max_val};
+
+                // Color scale - use quantize for discrete color bins
+                const colorScale = d3.scaleQuantize()
+                    .domain([minValue, maxValue])
+                    .range(colors);
+
+                // Clear existing SVG (for Reveal.js re-rendering)
+                d3.select('#{chart_id_safe}').selectAll('*').remove();
+
+                // Create SVG
+                const svg = d3.select('#{chart_id_safe}')
+                    .append('svg')
+                    .attr('width', width + 100)  // Extra space for legend
+                    .attr('height', height)
+                    .style('font', '12px Arial, sans-serif');
+
+                // Create map group
+                const mapGroup = svg.append('g')
+                    .attr('transform', 'translate(0, 0)');
+
+                // Projection for USA
+                const projection = d3.geoAlbersUsa()
+                    .scale(width * 1.3)
+                    .translate([width / 2, height / 2]);
+
+                const path = d3.geoPath().projection(projection);
+
+                // Tooltip
+                const tooltip = d3.select('#{chart_id_safe}')
+                    .append('div')
+                    .style('position', 'absolute')
+                    .style('background', 'rgba(0, 0, 0, 0.8)')
+                    .style('color', 'white')
+                    .style('padding', '8px 12px')
+                    .style('border-radius', '4px')
+                    .style('font-size', '13px')
+                    .style('pointer-events', 'none')
+                    .style('opacity', 0)
+                    .style('z-index', 1000);
+
+                // Load TopoJSON for US states
+                d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+                    .then(function(us) {{
+                        // Convert TopoJSON to GeoJSON
+                        const states = topojson.feature(us, us.objects.states);
+
+                        // Draw states
+                        mapGroup.selectAll('path')
+                            .data(states.features)
+                            .enter().append('path')
+                            .attr('d', path)
+                            .attr('fill', function(d) {{
+                                const stateName = d.properties.name;
+                                const value = stateData[stateName];
+                                return value !== undefined ? colorScale(value) : '#e0e0e0';
+                            }})
+                            .attr('stroke', '#fff')
+                            .attr('stroke-width', 1)
+                            .style('cursor', 'pointer')
+                            .on('mouseover', function(event, d) {{
+                                const stateName = d.properties.name;
+                                const value = stateData[stateName];
+
+                                // Highlight state
+                                d3.select(this)
+                                    .attr('stroke', '#333')
+                                    .attr('stroke-width', 2);
+
+                                // Show tooltip
+                                if (value !== undefined) {{
+                                    tooltip
+                                        .style('opacity', 1)
+                                        .html(`<strong>${{stateName}}</strong><br/>Value: ${{value.toLocaleString()}}`);
+                                }}
+                            }})
+                            .on('mousemove', function(event) {{
+                                tooltip
+                                    .style('left', (event.pageX + 10) + 'px')
+                                    .style('top', (event.pageY - 30) + 'px');
+                            }})
+                            .on('mouseout', function() {{
+                                d3.select(this)
+                                    .attr('stroke', '#fff')
+                                    .attr('stroke-width', 1);
+                                tooltip.style('opacity', 0);
+                            }});
+
+                        // Add legend
+                        const legendWidth = 20;
+                        const legendHeight = 200;
+                        const legendX = width + 20;
+                        const legendY = 50;
+
+                        const legendScale = d3.scaleLinear()
+                            .domain([minValue, maxValue])
+                            .range([legendHeight, 0]);
+
+                        const legendAxis = d3.axisRight(legendScale)
+                            .ticks(5)
+                            .tickFormat(d => d >= 1000 ? (d / 1000).toFixed(0) + 'K' : d);
+
+                        // Create gradient for legend
+                        const defs = svg.append('defs');
+                        const linearGradient = defs.append('linearGradient')
+                            .attr('id', 'legend-gradient-{chart_id_safe}')
+                            .attr('x1', '0%')
+                            .attr('y1', '100%')
+                            .attr('x2', '0%')
+                            .attr('y2', '0%');
+
+                        // Add color stops
+                        colors.forEach((color, i) => {{
+                            linearGradient.append('stop')
+                                .attr('offset', `${{(i / (colors.length - 1)) * 100}}%`)
+                                .attr('stop-color', color);
+                        }});
+
+                        // Legend rectangle
+                        svg.append('rect')
+                            .attr('x', legendX)
+                            .attr('y', legendY)
+                            .attr('width', legendWidth)
+                            .attr('height', legendHeight)
+                            .style('fill', 'url(#legend-gradient-{chart_id_safe})');
+
+                        // Legend axis
+                        svg.append('g')
+                            .attr('transform', `translate(${{legendX + legendWidth}}, ${{legendY}})`)
+                            .call(legendAxis)
+                            .style('font-size', '11px');
+
+                        console.log('✅ D3 Choropleth {chart_id_safe} initialized');
+                    }})
+                    .catch(function(error) {{
+                        console.error('Error loading TopoJSON:', error);
+                        d3.select('#{chart_id_safe}')
+                            .append('div')
+                            .style('color', 'red')
+                            .style('padding', '20px')
+                            .text('Error loading USA map data');
+                    }});
+
+                // Store chart instance
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = {{
+                    type: 'd3_choropleth_usa',
+                    data: stateData,
+                    destroy: function() {{
+                        d3.select('#{chart_id_safe}').selectAll('*').remove();
+                    }}
+                }};
+            }}
+
+            // Reveal.js-aware initialization (matches Chart.js pattern)
+            if (typeof Reveal !== 'undefined') {{
+                Reveal.on('ready', function() {{
+                    try {{
+                        const currentSlide = Reveal.getCurrentSlide();
+                        if (currentSlide && currentSlide.querySelector('#{chart_id_safe}')) {{
+                            setTimeout(initD3Choropleth, 100);
+                        }}
+                    }} catch (e) {{
+                        console.warn('D3 choropleth init on ready failed:', e);
+                    }}
+                }});
+
+                Reveal.on('slidechanged', function(event) {{
+                    try {{
+                        if (event.currentSlide && event.currentSlide.querySelector('#{chart_id_safe}')) {{
+                            initD3Choropleth();
+                        }}
+                    }} catch (e) {{
+                        console.warn('D3 choropleth init on slide change failed:', e);
+                    }}
+                }});
+            }} else {{
+                // Standalone mode (no Reveal.js)
+                if (document.readyState === 'loading') {{
+                    document.addEventListener('DOMContentLoaded', initD3Choropleth);
+                }} else {{
+                    initD3Choropleth();
+                }}
+            }}
+        }})();
+    </script>
+</div>"""
+
+        return d3_html
+
+    def generate_d3_sankey_chart(
+        self,
+        data: Dict[str, Any],
+        height: int = 720,
+        chart_id: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        enable_editor: bool = False,
+        presentation_id: Optional[str] = None,
+        api_base_url: str = "/api/charts",
+        output_mode: str = "inline_script"
+    ) -> str:
+        """
+        Generate D3.js Sankey diagram using D3.js v7.
+
+        Sankey diagram for visualizing flows between nodes (e.g., budget allocation,
+        process workflows, energy transfers, customer journey).
+
+        Data format: Simple label-value pairs converted to source→target flows
+        Input: [{"label": "Source → Target", "value": 100}, ...]
+        OR: [{"source": "A", "target": "B", "value": 100}, ...]
+        """
+        chart_id_safe = chart_id or f"sankey-{int(datetime.now().timestamp())}"
+        container_width = 1260
+        container_height = height
+
+        # Parse data into nodes and links
+        nodes_set = set()
+        links = []
+
+        # Handle two data formats:
+        # Format 1: {"label": "Source → Target", "value": X}
+        # Format 2: {"source": "A", "target": "B", "value": X}
+
+        for item in data.get('values', data.get('data', [])) if isinstance(data, dict) else data:
+            if 'source' in item and 'target' in item:
+                # Format 2: Explicit source/target
+                source = str(item['source'])
+                target = str(item['target'])
+                value = float(item.get('value', 0))
+            else:
+                # Format 1: Parse "Source → Target" from label
+                label = str(item.get('label', ''))
+                value = float(item.get('value', 0))
+
+                # Split on arrow symbols
+                if '→' in label or '->' in label or '→' in label:
+                    parts = label.replace('->', '→').split('→')
+                    if len(parts) == 2:
+                        source = parts[0].strip()
+                        target = parts[1].strip()
+                    else:
+                        # Fallback: treat as source→"Other"
+                        source = label.strip()
+                        target = "Other"
+                else:
+                    # No arrow: treat as source→"Output"
+                    source = label.strip()
+                    target = "Output"
+
+            nodes_set.add(source)
+            nodes_set.add(target)
+            links.append({"source": source, "target": target, "value": value})
+
+        # Create nodes array with indices
+        nodes_list = sorted(list(nodes_set))
+        nodes = [{"name": node} for node in nodes_list]
+        node_index = {node: i for i, node in enumerate(nodes_list)}
+
+        # Convert link source/target to indices
+        links_with_indices = [
+            {
+                "source": node_index[link["source"]],
+                "target": node_index[link["target"]],
+                "value": link["value"]
+            }
+            for link in links
+        ]
+
+        # Prepare data for D3
+        sankey_data = {
+            "nodes": nodes,
+            "links": links_with_indices
+        }
+
+        # Color palette for nodes
+        colors = [
+            "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8",
+            "#F7DC6F", "#BB8FCE", "#85C1E2", "#F8B739", "#52BE80"
+        ]
+
+        # Build D3 Sankey HTML
+        d3_html = f"""<!-- D3.js Sankey Diagram -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12"></script>
+
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <div id="{chart_id_safe}" style="width: 100%; height: 100%;"></div>
+    <script>
+        (function() {{
+            const data = {json.dumps(sankey_data)};
+            const colors = {json.dumps(colors)};
+
+            function initD3Sankey() {{
+                const container = document.getElementById('{chart_id_safe}');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+
+                // Clear any existing content
+                container.innerHTML = '';
+
+                // Create SVG
+                const svg = d3.select('#{chart_id_safe}')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .attr('viewBox', [0, 0, width, height])
+                    .attr('style', 'max-width: 100%; height: auto;');
+
+                // Create Sankey generator
+                const sankey = d3.sankey()
+                    .nodeId(d => d.name)
+                    .nodeWidth(15)
+                    .nodePadding(10)
+                    .extent([[20, 20], [width - 20, height - 20]]);
+
+                // Generate the Sankey diagram
+                const graph = sankey({{
+                    nodes: data.nodes.map(d => Object.assign({{}}, d)),
+                    links: data.links.map(d => Object.assign({{}}, d))
+                }});
+
+                // Create color scale
+                const colorScale = d3.scaleOrdinal()
+                    .domain(data.nodes.map(d => d.name))
+                    .range(colors);
+
+                // Add links (flows)
+                svg.append('g')
+                    .attr('fill', 'none')
+                    .selectAll('path')
+                    .data(graph.links)
+                    .join('path')
+                    .attr('d', d3.sankeyLinkHorizontal())
+                    .attr('stroke', d => colorScale(d.source.name))
+                    .attr('stroke-width', d => Math.max(1, d.width))
+                    .attr('opacity', 0.4)
+                    .on('mouseover', function(event, d) {{
+                        d3.select(this).attr('opacity', 0.7);
+                        showTooltip(event, `${{d.source.name}} → ${{d.target.name}}<br/>Value: ${{d.value.toLocaleString()}}`);
+                    }})
+                    .on('mouseout', function() {{
+                        d3.select(this).attr('opacity', 0.4);
+                        hideTooltip();
+                    }});
+
+                // Add nodes (rectangles)
+                const nodes = svg.append('g')
+                    .selectAll('rect')
+                    .data(graph.nodes)
+                    .join('rect')
+                    .attr('x', d => d.x0)
+                    .attr('y', d => d.y0)
+                    .attr('height', d => d.y1 - d.y0)
+                    .attr('width', d => d.x1 - d.x0)
+                    .attr('fill', d => colorScale(d.name))
+                    .attr('opacity', 0.9)
+                    .on('mouseover', function(event, d) {{
+                        d3.select(this).attr('opacity', 1.0);
+                        const incoming = d.sourceLinks.reduce((sum, l) => sum + l.value, 0);
+                        const outgoing = d.targetLinks.reduce((sum, l) => sum + l.value, 0);
+                        showTooltip(event, `${{d.name}}<br/>In: ${{incoming.toLocaleString()}}<br/>Out: ${{outgoing.toLocaleString()}}`);
+                    }})
+                    .on('mouseout', function() {{
+                        d3.select(this).attr('opacity', 0.9);
+                        hideTooltip();
+                    }});
+
+                // Add node labels
+                svg.append('g')
+                    .style('font-size', '12px')
+                    .style('font-weight', '600')
+                    .selectAll('text')
+                    .data(graph.nodes)
+                    .join('text')
+                    .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr('y', d => (d.y1 + d.y0) / 2)
+                    .attr('dy', '0.35em')
+                    .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+                    .attr('fill', '#333')
+                    .text(d => d.name);
+
+                // Tooltip
+                const tooltip = d3.select('#{chart_id_safe}')
+                    .append('div')
+                    .style('position', 'absolute')
+                    .style('background', 'rgba(0, 0, 0, 0.8)')
+                    .style('color', 'white')
+                    .style('padding', '8px 12px')
+                    .style('border-radius', '4px')
+                    .style('font-size', '13px')
+                    .style('pointer-events', 'none')
+                    .style('opacity', 0)
+                    .style('z-index', '1000');
+
+                function showTooltip(event, html) {{
+                    tooltip
+                        .style('opacity', 1)
+                        .html(html)
+                        .style('left', (event.pageX - container.getBoundingClientRect().left + 10) + 'px')
+                        .style('top', (event.pageY - container.getBoundingClientRect().top - 20) + 'px');
+                }}
+
+                function hideTooltip() {{
+                    tooltip.style('opacity', 0);
+                }}
+
+                // Store chart instance for cleanup
+                window.chartInstances = window.chartInstances || {{}};
+                window.chartInstances['{chart_id_safe}'] = {{
+                    destroy: function() {{
+                        container.innerHTML = '';
+                    }}
+                }};
+
+                console.log('✅ D3 Sankey diagram initialized:', '{chart_id_safe}');
+            }}
+
+            // Reveal.js integration
+            if (typeof Reveal !== 'undefined') {{
+                Reveal.on('ready', function() {{
+                    const currentSlide = Reveal.getCurrentSlide();
+                    if (currentSlide && currentSlide.querySelector('#{chart_id_safe}')) {{
+                        initD3Sankey();
+                    }}
+                }});
+
+                Reveal.on('slidechanged', function(event) {{
+                    if (event.currentSlide.querySelector('#{chart_id_safe}')) {{
+                        initD3Sankey();
+                    }}
+                }});
+            }} else {{
+                // Not in Reveal.js, init immediately
+                if (document.readyState === 'loading') {{
+                    document.addEventListener('DOMContentLoaded', initD3Sankey);
+                }} else {{
+                    initD3Sankey();
                 }}
             }}
         }})();
