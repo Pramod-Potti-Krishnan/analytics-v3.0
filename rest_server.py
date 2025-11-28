@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, Union
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, validator, root_validator, ValidationError
 import uvicorn
 
@@ -36,6 +37,7 @@ from chart_catalog import (
     SupportedLayout,
     ChartLibrary
 )
+from synthetic_data_generator import SyntheticDataGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +133,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files for Excel-like chart editor
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # Exception handlers
 @app.exception_handler(AnalyticsError)
@@ -173,6 +178,9 @@ storage = SupabaseStorage(
     key=settings.SUPABASE_KEY,
     bucket_name=settings.SUPABASE_BUCKET
 )
+
+# Initialize synthetic data generator
+synthetic_generator = SyntheticDataGenerator()
 
 
 # Request/Response Models
@@ -232,7 +240,7 @@ class AnalyticsRequest(BaseModel):
     slide_id: str = Field(..., min_length=1, description="Slide identifier")
     slide_number: int = Field(..., ge=1, description="Slide position in deck (1-indexed)")
     narrative: str = Field(..., min_length=1, max_length=2000, description="User's description of analytics needed")
-    data: List[Union[ChartDataPoint, dict]] = Field(..., min_items=1, max_items=50, description="Chart data: simple points [{label, value}] or complex structures (heatmap, boxplot, mixed)")
+    data: Optional[List[Union[ChartDataPoint, dict]]] = Field(None, min_items=1, max_items=50, description="Chart data: simple points [{label, value}] or complex structures (heatmap, boxplot, mixed). Optional if use_synthetic=true")
     context: dict = Field(default_factory=dict, description="Presentation context (theme, audience, etc.)")
     constraints: dict = Field(default_factory=dict, description="Layout constraints (dimensions, etc.)")
     chart_type: Optional[str] = Field(None, description="Optional chart type override (e.g., 'area', 'treemap', 'waterfall')")
@@ -254,8 +262,12 @@ class AnalyticsRequest(BaseModel):
     @validator('data')
     def validate_data_consistency(cls, v):
         """Validate data array consistency - supports both simple and complex formats."""
-        if not v or len(v) < 1:
-            raise ValueError("At least 1 data point required")
+        # Allow None for synthetic data generation (v3.8.0)
+        if v is None:
+            return v
+
+        if len(v) < 1:
+            raise ValueError("At least 1 data point required (or use use_synthetic=true for synthetic data)")
         if len(v) > 50:
             raise ValueError("Maximum 50 data points allowed to prevent performance issues")
 
@@ -290,6 +302,29 @@ class AnalyticsRequest(BaseModel):
                 }
             }
         }
+
+
+class SyntheticDataRequest(BaseModel):
+    """Request for standalone synthetic data generation."""
+    chart_type: str = Field(..., description="Chart type ID (e.g., 'line', 'd3_choropleth_usa')")
+    narrative: Optional[str] = Field(None, max_length=2000, description="Narrative for context extraction")
+    num_points: Optional[int] = Field(None, ge=1, le=50, description="Number of data points to generate")
+    scenario: Optional[str] = Field(None, description="Business scenario name (e.g., 'revenue_growth')")
+
+    @validator('chart_type')
+    def validate_chart_type(cls, v):
+        """Ensure chart type exists in catalog."""
+        catalog = get_chart_catalog()
+        valid_types = [ct.id for ct in catalog]
+        if v not in valid_types:
+            raise ValueError(f"Invalid chart type: {v}. Valid types: {', '.join(valid_types[:5])}...")
+        return v
+
+
+class PreviewRequest(BaseModel):
+    """Request for preview mode (chart with synthetic data)."""
+    narrative: Optional[str] = Field(None, max_length=2000, description="Narrative for context extraction")
+    num_points: Optional[int] = Field(None, ge=1, le=50, description="Number of data points to generate")
 
 
 class BatchAnalyticsRequest(BaseModel):
@@ -611,11 +646,181 @@ async def get_job_status(job_id: str):
     return status
 
 
+@app.post("/api/v1/synthetic/generate", tags=["Synthetic Data Generation"])
+async def generate_synthetic_data(request: SyntheticDataRequest):
+    """
+    Generate synthetic data for any chart type.
+
+    This endpoint generates realistic, context-aware synthetic data without requiring
+    Director integration. Useful for testing, development, and preview mode.
+
+    Args:
+        request: Synthetic data generation request
+
+    Returns:
+        Generated data array ready for chart rendering
+
+    Example:
+        ```json
+        {
+            "chart_type": "line",
+            "narrative": "Show quarterly revenue growth for 2024",
+            "scenario": "revenue_growth"
+        }
+        ```
+
+    Response:
+        ```json
+        {
+            "success": true,
+            "data": [
+                {"label": "Q1 2024", "value": 125000},
+                {"label": "Q2 2024", "value": 145000},
+                {"label": "Q3 2024", "value": 195000},
+                {"label": "Q4 2024", "value": 220000}
+            ],
+            "metadata": {
+                "chart_type": "line",
+                "num_points": 4,
+                "scenario": "revenue_growth",
+                "generated_at": "2025-11-25T..."
+            }
+        }
+        ```
+    """
+    try:
+        from datetime import datetime
+
+        # Generate synthetic data
+        data = synthetic_generator.generate(
+            chart_type=request.chart_type,
+            narrative=request.narrative,
+            num_points=request.num_points,
+            scenario=request.scenario
+        )
+
+        return {
+            "success": True,
+            "data": data,
+            "metadata": {
+                "chart_type": request.chart_type,
+                "num_points": len(data),
+                "scenario": request.scenario,
+                "generated_at": datetime.utcnow().isoformat() + "Z"
+            }
+        }
+
+    except ValueError as e:
+        # Validation errors from generator
+        raise validation_error(
+            code=ErrorCode.INVALID_DATA_POINTS,
+            message=str(e),
+            field="data_generation",
+            details={"error": str(e)},
+            suggestion="Check chart type and parameters"
+        )
+    except Exception as e:
+        logger.error(f"Synthetic data generation failed: {e}", exc_info=True)
+        raise processing_error(
+            code=ErrorCode.CHART_GENERATION_FAILED,
+            message=f"Failed to generate synthetic data: {str(e)}",
+            details={"exception_type": type(e).__name__},
+            retryable=True
+        )
+
+
+@app.post("/api/v1/preview/{chart_type}", tags=["Synthetic Data Generation"])
+async def preview_chart_type(
+    chart_type: str,
+    request: Optional[PreviewRequest] = None
+):
+    """
+    Generate preview slide for a chart type using synthetic data.
+
+    This endpoint creates a complete analytics slide with synthetic data,
+    allowing you to preview chart types without Director integration.
+
+    Args:
+        chart_type: Chart type ID (e.g., 'line', 'd3_choropleth_usa')
+        request: Optional preview parameters
+
+    Returns:
+        Complete slide content with chart and observations
+
+    Example:
+        ```
+        POST /api/v1/preview/d3_choropleth_usa
+        {
+            "narrative": "Show sales by top 10 states"
+        }
+        ```
+    """
+    try:
+        from datetime import datetime
+        from agent import generate_l02_analytics
+
+        # Use request if provided, otherwise create default
+        narrative = request.narrative if request else f"Preview of {chart_type} chart"
+        num_points = request.num_points if request else None
+
+        # Generate synthetic data
+        data = synthetic_generator.generate(
+            chart_type=chart_type,
+            narrative=narrative,
+            num_points=num_points
+        )
+
+        # Create analytics request dict
+        request_dict = {
+            "presentation_id": "preview",
+            "slide_id": f"preview-{chart_type}",
+            "slide_number": 1,
+            "narrative": narrative,
+            "data": data,
+            "chart_type": chart_type,
+            "context": {
+                "theme": "professional",
+                "mode": "preview"
+            },
+            "analytics_type": "preview"
+        }
+
+        # Generate slide using existing pipeline
+        result = await generate_l02_analytics(request_dict)
+
+        # Add synthetic data metadata
+        result["metadata"]["synthetic_data_used"] = True
+        result["metadata"]["preview_mode"] = True
+
+        return {
+            "content": result.get("content", {}),
+            "metadata": result.get("metadata", {})
+        }
+
+    except ValueError as e:
+        raise validation_error(
+            code=ErrorCode.INVALID_CHART_TYPE,
+            message=f"Invalid chart type: {chart_type}",
+            field="chart_type",
+            details={"error": str(e)},
+            suggestion="Check /api/v1/charts/catalog for valid chart types"
+        )
+    except Exception as e:
+        logger.error(f"Preview generation failed: {e}", exc_info=True)
+        raise processing_error(
+            code=ErrorCode.CHART_GENERATION_FAILED,
+            message=f"Failed to generate preview: {str(e)}",
+            details={"chart_type": chart_type},
+            retryable=True
+        )
+
+
 @app.post("/api/v1/analytics/{layout}/{analytics_type}", tags=["Analytics Generation"])
 async def generate_analytics_slide(
     layout: str,
     analytics_type: str,
-    request: AnalyticsRequest
+    request: AnalyticsRequest,
+    use_synthetic: bool = False
 ):
     """
     Generate analytics slide content (Text Service compatible).
@@ -630,9 +835,27 @@ async def generate_analytics_slide(
         layout: Layout type (L01, L02, L03)
         analytics_type: Analytics visualization type (revenue_over_time, market_share, etc.)
         request: Analytics generation request
+        use_synthetic: Optional flag to generate synthetic data instead of using request.data
 
     Returns:
         Slide content with chart HTML and insights
+
+    New Features (v3.8.0):
+        - Optional synthetic data generation via `use_synthetic=true` query parameter
+        - Automatic fallback to synthetic data if request.data is empty
+        - Metadata tracks whether synthetic data was used
+
+    Example with synthetic data:
+        ```
+        POST /api/v1/analytics/L02/revenue_over_time?use_synthetic=true
+        {
+            "presentation_id": "test-123",
+            "slide_id": "slide-1",
+            "slide_number": 1,
+            "narrative": "Show quarterly revenue growth for 2024"
+            // No data field needed - will be generated synthetically
+        }
+        ```
     """
     try:
         # Validate analytics type
@@ -654,12 +877,38 @@ async def generate_analytics_slide(
         if layout == "L02":
             from agent import generate_l02_analytics
 
-            logger.info(f"Generating L02 analytics: {analytics_type}")
+            # Check if we should use synthetic data
+            synthetic_data_used = False
 
             # Pass analytics_type explicitly in request dict (v3.1.4 hotfix)
             request_dict = request.dict()
             request_dict['analytics_type'] = analytics_type
+
+            # Generate synthetic data if requested or if data is empty
+            if use_synthetic or not request_dict.get('data') or len(request_dict.get('data', [])) == 0:
+                logger.info(f"Generating synthetic data for L02 analytics: {analytics_type}")
+
+                # Generate synthetic data
+                synthetic_data = synthetic_generator.generate(
+                    chart_type=request.chart_type or analytics_type,
+                    narrative=request.narrative,
+                    num_points=None  # Auto-determine from narrative/chart type
+                )
+
+                # Replace data in request
+                request_dict['data'] = synthetic_data
+                synthetic_data_used = True
+
+                logger.info(f"Generated {len(synthetic_data)} synthetic data points")
+            else:
+                logger.info(f"Using Director-provided data ({len(request_dict.get('data', []))} points)")
+
+            # Generate slide
             result = await generate_l02_analytics(request_dict)
+
+            # Add synthetic data metadata
+            result["metadata"]["synthetic_data_used"] = synthetic_data_used
+            result["metadata"]["data_source"] = "synthetic" if synthetic_data_used else "director"
 
             # Return Text Service compatible response
             # For L02: content contains element_3 (chart) and element_2 (observations)
