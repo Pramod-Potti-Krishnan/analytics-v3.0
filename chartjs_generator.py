@@ -2539,6 +2539,31 @@ class ChartJSGenerator:
         // Extract current chart data
         const chartData = extractChartData_{js_safe_id}(chart);
 
+        // === DIAGNOSTIC LOGGING ===
+        console.log('=== 📊 EXTRACTED CHART DATA FOR EDITOR ===');
+        console.log('Data type:', typeof chartData);
+        console.log('Is Array?:', Array.isArray(chartData));
+        console.log('Full data:', JSON.stringify(chartData, null, 2));
+
+        if (chartData && chartData.labels) {{
+            console.log('✅ Multi-series format detected');
+            console.log('  Labels:', chartData.labels);
+            console.log('  Datasets count:', chartData.datasets ? chartData.datasets.length : 0);
+            if (chartData.datasets) {{
+                chartData.datasets.forEach((ds, i) => {{
+                    console.log(`  Dataset ${{i}}:`, ds.label, '- data points:', ds.data.length);
+                }});
+            }}
+        }} else if (Array.isArray(chartData)) {{
+            console.log('✅ Simple array format detected');
+            console.log('  Rows:', chartData.length);
+            if (chartData.length > 0) {{
+                console.log('  First row sample:', chartData[0]);
+            }}
+        }}
+        console.log('Chart type parameter:', '{chart_type}');
+        console.log('=== END DIAGNOSTIC DATA ===');
+
         // Open Excel-like editor
         openChartEditor(
             '{chart_id}',
