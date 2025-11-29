@@ -15,6 +15,7 @@
 class ChartSpreadsheetEditor {
     constructor(chartId, chartType, initialData, options = {}) {
         this.chartId = chartId;
+        this.safeChartId = chartId.replace(/-/g, '_').replace(/\./g, '_').replace(/ /g, '_');
         this.chartType = chartType;
         this.data = this._parseData(initialData);
         this.options = {
@@ -307,7 +308,7 @@ class ChartSpreadsheetEditor {
                 <div class="spreadsheet-editor-dialog">
                     <div class="spreadsheet-editor-header">
                         <h3>Edit Chart Data</h3>
-                        <button class="spreadsheet-close-btn" onclick="window.chartEditor_${this.chartId}.close()">&times;</button>
+                        <button class="spreadsheet-close-btn" onclick="window.chartEditor_${this.safeChartId}.close()">&times;</button>
                     </div>
 
                     ${this.columnConfig.helpText ? `
@@ -324,20 +325,20 @@ class ChartSpreadsheetEditor {
 
                     <div class="spreadsheet-editor-footer">
                         <div class="spreadsheet-actions-left">
-                            <button class="spreadsheet-btn spreadsheet-btn-secondary" onclick="window.chartEditor_${this.chartId}.addRow()">
+                            <button class="spreadsheet-btn spreadsheet-btn-secondary" onclick="window.chartEditor_${this.safeChartId}.addRow()">
                                 + Add Row
                             </button>
                             ${this.columnConfig.canAddColumns ? `
-                            <button class="spreadsheet-btn spreadsheet-btn-secondary" onclick="window.chartEditor_${this.chartId}.addSeriesColumn()">
+                            <button class="spreadsheet-btn spreadsheet-btn-secondary" onclick="window.chartEditor_${this.safeChartId}.addSeriesColumn()">
                                 + Add Series
                             </button>
                             ` : ''}
                         </div>
                         <div class="spreadsheet-actions-right">
-                            <button class="spreadsheet-btn spreadsheet-btn-cancel" onclick="window.chartEditor_${this.chartId}.cancel()">
+                            <button class="spreadsheet-btn spreadsheet-btn-cancel" onclick="window.chartEditor_${this.safeChartId}.cancel()">
                                 Cancel
                             </button>
-                            <button class="spreadsheet-btn spreadsheet-btn-primary" onclick="window.chartEditor_${this.chartId}.save()">
+                            <button class="spreadsheet-btn spreadsheet-btn-primary" onclick="window.chartEditor_${this.safeChartId}.save()">
                                 Save & Update Chart
                             </button>
                         </div>
@@ -418,7 +419,7 @@ class ChartSpreadsheetEditor {
 
         // Actions column
         html += `<td class="spreadsheet-cell-actions">
-            <button class="spreadsheet-delete-btn" onclick="window.chartEditor_${this.chartId}.deleteRow('${row.id}')" title="Delete row">
+            <button class="spreadsheet-delete-btn" onclick="window.chartEditor_${this.safeChartId}.deleteRow('${row.id}')" title="Delete row">
                 🗑️
             </button>
         </td>`;
@@ -1179,7 +1180,8 @@ window.openChartEditor = function(chartId, chartType, chartData, options = {}) {
 
     // Create editor instance
     const editor = new ChartSpreadsheetEditor(chartId, chartType, chartData, options);
-    window[`chartEditor_${chartId}`] = editor; // Make globally accessible
+    const safeChartId = chartId.replace(/-/g, '_').replace(/\./g, '_').replace(/ /g, '_');
+    window[`chartEditor_${safeChartId}`] = editor; // Make globally accessible
 
     // Render editor
     editor.render(editorContainerId);
