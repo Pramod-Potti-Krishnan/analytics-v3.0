@@ -390,8 +390,19 @@ class ChartSpreadsheetEditor {
             const isActive = activeColumns.includes(col);
             const activeClass = isActive ? 'spreadsheet-col-active' : '';
             const activeIcon = isActive ? '<span class="active-icon">✓</span>' : '';
+
+            // Add delete button for series columns (not Label)
+            const canDelete = this.columnConfig.canAddColumns && col !== 'Label';
+            const deleteBtn = canDelete ?
+                `<button class="spreadsheet-delete-col-btn"
+                         onclick="window.chartEditor_${this.safeChartId}.deleteSeriesColumn('${col}')"
+                         title="Delete series">🗑️</button>` : '';
+
             html += `<th class="spreadsheet-col-header ${activeClass}" data-column="${col}">
-                ${col} ${activeIcon}
+                <span class="col-header-content">
+                    ${col} ${activeIcon}
+                </span>
+                ${deleteBtn}
             </th>`;
         });
 
@@ -647,6 +658,45 @@ class ChartSpreadsheetEditor {
 
             .spreadsheet-delete-btn:hover {
                 background: #fee;
+            }
+
+            /* Column header layout and delete button */
+            .spreadsheet-col-header {
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 12px 8px;
+            }
+
+            .col-header-content {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .spreadsheet-delete-col-btn {
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                font-size: 14px;
+                padding: 2px 6px;
+                border-radius: 3px;
+                transition: all 0.2s;
+                opacity: 0;
+                line-height: 1;
+                flex-shrink: 0;
+            }
+
+            .spreadsheet-col-header:hover .spreadsheet-delete-col-btn {
+                opacity: 1;
+            }
+
+            .spreadsheet-delete-col-btn:hover {
+                background: #fee;
+                transform: scale(1.1);
             }
 
             .spreadsheet-editor-footer {
@@ -994,6 +1044,41 @@ class ChartSpreadsheetEditor {
 
         this._refreshTable();
         this._showToast(`Series "${newSeriesName}" added`, 'success');
+    }
+
+    deleteSeriesColumn(columnName) {
+        if (!this.columnConfig.canAddColumns) return;
+
+        // Prevent deletion of Label column
+        if (columnName === 'Label') {
+            this._showToast('Cannot delete Label column', 'error');
+            return;
+        }
+
+        // Ensure at least 1 data column remains
+        const dataColumns = this.columnConfig.columns.filter(col => col !== 'Label');
+        if (dataColumns.length <= 1) {
+            this._showToast('At least 1 data column required', 'error');
+            return;
+        }
+
+        // Confirmation dialog
+        if (!confirm(`Delete series "${columnName}"?\n\nThis will remove all data for this series.`)) {
+            return;
+        }
+
+        // Remove from columnConfig
+        this.columnConfig.columns = this.columnConfig.columns.filter(col => col !== columnName);
+        this.columnConfig.activeColumns = this.columnConfig.activeColumns.filter(col => col !== columnName);
+        delete this.columnConfig.columnTypes[columnName];
+
+        // Remove from all data rows
+        this.data.forEach(row => {
+            delete row[columnName];
+        });
+
+        this._refreshTable();
+        this._showToast(`Series "${columnName}" deleted`, 'success');
     }
 
     /**
