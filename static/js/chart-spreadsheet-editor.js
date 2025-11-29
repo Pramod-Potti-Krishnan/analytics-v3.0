@@ -888,17 +888,16 @@ class ChartSpreadsheetEditor {
             /* Column header layout and delete button */
             .spreadsheet-col-header {
                 position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 8px;
                 padding: 12px 8px;
+                text-align: center;
+                vertical-align: middle;
             }
 
             .col-header-content {
                 flex: 1;
                 display: flex;
                 align-items: center;
+                justify-content: space-between;
                 gap: 4px;
             }
 
