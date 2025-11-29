@@ -1193,7 +1193,7 @@ class ChartSpreadsheetEditor {
             if (e.target.classList.contains('spreadsheet-input')) {
                 this._clearSelection();
                 e.target.focus();
-                e.target.select();
+                // Don't call select() - keep in readonly mode for navigation
                 return;
             }
         });
