@@ -2572,12 +2572,9 @@ class ChartJSGenerator:
             {{
                 apiEndpoint: '{api_base_url}/update-data',
                 onSave: async (newData, chartId) => {{
-                    console.log('Saving chart data:', newData);
+                    console.log('💾 Saving chart data:', newData);
 
-                    // Update chart instance
-                    updateChartData_{js_safe_id}(chart, newData, '{chart_type}');
-
-                    // Save to API
+                    // Save to API FIRST (before updating chart)
                     try {{
                         const response = await fetch('{api_base_url}/api/charts/update-data', {{
                             method: 'POST',
@@ -2585,19 +2582,27 @@ class ChartJSGenerator:
                             body: JSON.stringify({{
                                 chart_id: chartId,
                                 presentation_id: '{presentation_id}',
-                                data: newData,
-                                timestamp: Date.now()
+                                ...newData,  // Spread labels, datasets/values into top level
+                                timestamp: new Date().toISOString()
                             }})
                         }});
 
                         if (!response.ok) {{
-                            throw new Error('API request failed');
+                            const errorData = await response.json().catch(() => ({{}}));
+                            const errorMsg = errorData.detail || `API request failed: ${{response.status}}`;
+                            throw new Error(errorMsg);
                         }}
 
-                        console.log('✅ Chart data saved successfully');
+                        const result = await response.json();
+                        console.log('✅ API save successful:', result);
+
+                        // Update chart instance ONLY AFTER successful save
+                        updateChartData_{js_safe_id}(chart, newData, '{chart_type}');
+                        console.log('✅ Chart visual updated');
+
                     }} catch (error) {{
                         console.error('❌ Error saving chart data:', error);
-                        throw error;
+                        throw error;  // Chart remains unchanged if save fails
                     }}
                 }}
             }}
@@ -2641,13 +2646,42 @@ class ChartJSGenerator:
 
     // Update chart instance with new data
     function updateChartData_{js_safe_id}(chart, newData, chartType) {{
+        console.log('📝 Updating chart with new data:', newData);
+
         if (chartType === 'scatter' || chartType === 'bubble') {{
             // Object-based data
             chart.data.datasets[0].data = newData;
         }} else if (newData.labels && newData.datasets) {{
-            // Multi-series format
+            // Multi-series format - preserve styling while updating data
             chart.data.labels = newData.labels;
-            chart.data.datasets = newData.datasets;
+
+            // Preserve existing dataset styling (colors, borders, etc.)
+            const oldDatasets = chart.data.datasets.slice();  // Copy existing datasets
+
+            newData.datasets.forEach((newDs, i) => {{
+                if (oldDatasets[i]) {{
+                    // Update existing dataset, preserve styling
+                    chart.data.datasets[i] = {{
+                        ...oldDatasets[i],          // Keep all styling properties
+                        label: newDs.label,         // Update label
+                        data: newDs.data            // Update data
+                    }};
+                }} else {{
+                    // New dataset - add with data from editor
+                    // Chart.js will apply default styling on next render
+                    chart.data.datasets[i] = {{
+                        label: newDs.label,
+                        data: newDs.data
+                    }};
+                }}
+            }});
+
+            // Remove extra datasets if user deleted series
+            if (chart.data.datasets.length > newData.datasets.length) {{
+                chart.data.datasets.length = newData.datasets.length;
+            }}
+
+            console.log(`✅ Updated chart with ${{newData.datasets.length}} series`);
         }} else if (Array.isArray(newData)) {{
             // Simple label-value format
             chart.data.labels = newData.map(d => d.label);
