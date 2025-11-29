@@ -39,7 +39,15 @@ class ChartSpreadsheetEditor {
     _parseData(data) {
         const chartType = this.chartType;
 
-        // Handle different data formats
+        // Auto-detect multi-series format (labels + datasets) regardless of chart type
+        // This handles cases where chartType is 'bar' but data is actually multi-series
+        if (data && data.labels && Array.isArray(data.labels) &&
+            data.datasets && Array.isArray(data.datasets) && data.datasets.length > 0) {
+            console.log('🔍 Auto-detected multi-series data format');
+            return this._parseMultiSeriesData(data);
+        }
+
+        // Handle different data formats by chart type
         if (chartType === 'scatter') {
             return this._parseScatterData(data);
         } else if (chartType === 'bubble') {
@@ -263,7 +271,22 @@ class ChartSpreadsheetEditor {
             }
         };
 
-        return configs[this.chartType] || configs['line'];
+        // Auto-detect multi-series data based on parsed data structure
+        // If chartType lookup fails but data has multi-series structure, return multi-series config
+        let config = configs[this.chartType];
+
+        if (!config && this.data && this.data.length > 0) {
+            const firstRow = this.data[0];
+            const rowKeys = Object.keys(firstRow).filter(k => k !== 'id');
+
+            // If row has more than 2 columns (Label + multiple series columns), it's multi-series
+            if (rowKeys.length > 2 || (rowKeys.length === 2 && !rowKeys.includes('Value'))) {
+                console.log('🔍 Auto-detected multi-series structure in data');
+                config = this._getMultiSeriesConfig();
+            }
+        }
+
+        return config || configs['line'];
     }
 
     _getMultiSeriesConfig() {
