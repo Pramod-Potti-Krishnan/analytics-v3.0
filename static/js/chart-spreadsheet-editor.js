@@ -30,6 +30,10 @@ class ChartSpreadsheetEditor {
         this.originalData = JSON.parse(JSON.stringify(this.data));
         this.columnConfig = this._getColumnConfig();
 
+        // Excel-style selection state
+        this.selectedColumn = null;
+        this.selectedRow = null;
+
         this._initializeEventListeners();
     }
 
@@ -481,7 +485,8 @@ class ChartSpreadsheetEditor {
                        value="${value}"
                        ${step ? `step="${step}"` : ''}
                        data-row-id="${row.id}"
-                       data-column="${col}" />
+                       data-column="${col}"
+                       readonly />
             </td>`;
         });
 
@@ -634,7 +639,7 @@ class ChartSpreadsheetEditor {
             }
 
             .excel-name-row th {
-                background: #F2F2F2;
+                background: #F2F2F2 !important;
                 border: 1px solid #D4D4D4;
                 font-weight: 400;
                 font-size: 10pt;
@@ -644,6 +649,11 @@ class ChartSpreadsheetEditor {
                 position: sticky;
                 top: 32px;
                 z-index: 11;
+            }
+
+            /* Ensure letter row also keeps gray background */
+            .excel-letter-row th.spreadsheet-col-active {
+                background: #F2F2F2 !important;
             }
 
             .spreadsheet-col-corner {
@@ -723,13 +733,29 @@ class ChartSpreadsheetEditor {
                 font-family: inherit;
                 background: transparent;
                 outline: none;
+                cursor: pointer;
             }
 
-            .spreadsheet-input:focus {
+            /* Readonly state (selected, not editing) */
+            .spreadsheet-input[readonly] {
+                cursor: pointer;
+                background: transparent;
+            }
+
+            .spreadsheet-input[readonly]:focus {
+                background: #E7F3FF;
+                box-shadow: inset 0 0 0 2px #4A90E2;
+                outline: 2px solid #4A90E2;
+                outline-offset: -2px;
+            }
+
+            /* Edit mode (not readonly) */
+            .spreadsheet-input:not([readonly]):focus {
                 background: #FFFFFF;
                 box-shadow: inset 0 0 0 2px #217346;
                 outline: 2px solid #217346;
                 outline-offset: -2px;
+                cursor: text;
             }
 
             .spreadsheet-table tr:hover td {
@@ -791,6 +817,35 @@ class ChartSpreadsheetEditor {
             .spreadsheet-delete-col-btn:hover {
                 background: #fee;
                 transform: scale(1.1);
+            }
+
+            /* Excel-style column/row selection highlighting */
+            .excel-selected-column {
+                background: #E7F3FF !important;
+                border-left: 1px solid #4A90E2;
+                border-right: 1px solid #4A90E2;
+            }
+
+            .excel-selected-row {
+                background: #E7F3FF !important;
+                border-top: 1px solid #4A90E2;
+                border-bottom: 1px solid #4A90E2;
+            }
+
+            .excel-selected-header {
+                background: #4A90E2 !important;
+                color: white !important;
+            }
+
+            .excel-selected-header .active-icon {
+                color: white !important;
+            }
+
+            .spreadsheet-col-letter:hover,
+            .spreadsheet-col-header:hover,
+            .spreadsheet-cell-number:hover {
+                background: #E8E8E8;
+                cursor: pointer;
             }
 
             .spreadsheet-editor-footer {
@@ -870,6 +925,57 @@ class ChartSpreadsheetEditor {
         const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
         if (!table) return;
 
+        // Excel-style column header click (select entire column)
+        table.addEventListener('click', (e) => {
+            // Click on column letter
+            if (e.target.classList.contains('spreadsheet-col-letter')) {
+                const columnName = e.target.dataset.column;
+                this._selectColumn(columnName);
+                return;
+            }
+
+            // Click on column name header
+            if (e.target.classList.contains('spreadsheet-col-header') ||
+                e.target.closest('.spreadsheet-col-header')) {
+                const header = e.target.classList.contains('spreadsheet-col-header') ?
+                    e.target : e.target.closest('.spreadsheet-col-header');
+                const columnName = header.dataset.column;
+                if (columnName) {
+                    this._selectColumn(columnName);
+                    return;
+                }
+            }
+
+            // Click on row number (select entire row)
+            if (e.target.classList.contains('spreadsheet-cell-number')) {
+                const row = e.target.closest('tr');
+                const rowId = row.dataset.rowId;
+                if (rowId) {
+                    this._selectRow(rowId);
+                    return;
+                }
+            }
+
+            // Single click on cell input - select/focus (Excel-style)
+            if (e.target.classList.contains('spreadsheet-input')) {
+                this._clearSelection();
+                e.target.focus();
+                e.target.select();
+                return;
+            }
+        });
+
+        // Double-click on cell - enter edit mode (Excel-style)
+        table.addEventListener('dblclick', (e) => {
+            if (e.target.classList.contains('spreadsheet-input')) {
+                e.target.removeAttribute('readonly');
+                e.target.focus();
+                // Position cursor at end
+                const len = e.target.value.length;
+                e.target.setSelectionRange(len, len);
+            }
+        });
+
         // Cell navigation
         table.addEventListener('keydown', (e) => {
             const input = e.target;
@@ -877,6 +983,13 @@ class ChartSpreadsheetEditor {
 
             const cell = input.closest('td');
             const row = cell.closest('tr');
+
+            // If readonly and user types a printable character, enter edit mode
+            if (input.hasAttribute('readonly') && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                input.removeAttribute('readonly');
+                input.value = '';  // Clear and start typing
+                return;  // Let the character be typed
+            }
 
             switch (e.key) {
                 case 'Enter':
@@ -891,26 +1004,54 @@ class ChartSpreadsheetEditor {
                         this._navigateToNextCell(row, cell);
                     }
                     break;
+                case 'Home':
+                    e.preventDefault();
+                    if (e.ctrlKey) {
+                        this._jumpToFirstCell();
+                    } else {
+                        this._jumpToFirstCellInRow(row);
+                    }
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    if (e.ctrlKey) {
+                        this._jumpToLastCell();
+                    } else {
+                        this._jumpToLastCellInRow(row);
+                    }
+                    break;
                 case 'ArrowUp':
-                    if (!input.value || input.selectionStart === 0) {
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        this._jumpToFirstRow(cell);
+                    } else if (!input.value || input.selectionStart === 0) {
                         e.preventDefault();
                         this._navigateToPreviousRow(row, cell);
                     }
                     break;
                 case 'ArrowDown':
-                    if (!input.value || input.selectionStart === input.value.length) {
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        this._jumpToLastRow(cell);
+                    } else if (!input.value || input.selectionStart === input.value.length) {
                         e.preventDefault();
                         this._navigateToNextRow(row, cell);
                     }
                     break;
                 case 'ArrowLeft':
-                    if (input.selectionStart === 0) {
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        this._jumpToFirstCellInRow(row);
+                    } else if (input.selectionStart === 0) {
                         e.preventDefault();
                         this._navigateToPreviousCell(row, cell);
                     }
                     break;
                 case 'ArrowRight':
-                    if (input.selectionStart === input.value.length) {
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        this._jumpToLastCellInRow(row);
+                    } else if (input.selectionStart === input.value.length) {
                         e.preventDefault();
                         this._navigateToNextCell(row, cell);
                     }
@@ -918,10 +1059,12 @@ class ChartSpreadsheetEditor {
             }
         });
 
-        // Auto-save on blur
+        // Auto-save on blur and restore readonly state
         table.addEventListener('blur', (e) => {
             if (e.target.classList.contains('spreadsheet-input')) {
                 this._updateCellValue(e.target);
+                // Restore readonly state (Excel-style: exit edit mode)
+                e.target.setAttribute('readonly', 'readonly');
             }
         }, true);
     }
@@ -982,6 +1125,95 @@ class ChartSpreadsheetEditor {
         const prevRow = row.previousElementSibling;
         if (prevRow) {
             const targetCell = prevRow.children[columnIndex];
+            if (targetCell && targetCell.classList.contains('spreadsheet-cell')) {
+                const input = targetCell.querySelector('.spreadsheet-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+        }
+    }
+
+    /**
+     * Excel-style jump navigation (Ctrl+Arrow, Home/End)
+     */
+    _jumpToFirstCell() {
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        const firstRow = table.querySelector('tbody tr:first-child');
+        if (firstRow) {
+            const firstCell = firstRow.querySelector('.spreadsheet-cell');
+            if (firstCell) {
+                const input = firstCell.querySelector('.spreadsheet-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+        }
+    }
+
+    _jumpToLastCell() {
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        const lastRow = table.querySelector('tbody tr:last-child');
+        if (lastRow) {
+            const cells = lastRow.querySelectorAll('.spreadsheet-cell');
+            const lastCell = cells[cells.length - 1];
+            if (lastCell) {
+                const input = lastCell.querySelector('.spreadsheet-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+        }
+    }
+
+    _jumpToFirstCellInRow(row) {
+        const firstCell = row.querySelector('.spreadsheet-cell');
+        if (firstCell) {
+            const input = firstCell.querySelector('.spreadsheet-input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+    }
+
+    _jumpToLastCellInRow(row) {
+        const cells = row.querySelectorAll('.spreadsheet-cell');
+        const lastCell = cells[cells.length - 1];
+        if (lastCell) {
+            const input = lastCell.querySelector('.spreadsheet-input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+    }
+
+    _jumpToFirstRow(currentCell) {
+        const columnIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        const firstRow = table.querySelector('tbody tr:first-child');
+        if (firstRow) {
+            const targetCell = firstRow.children[columnIndex];
+            if (targetCell && targetCell.classList.contains('spreadsheet-cell')) {
+                const input = targetCell.querySelector('.spreadsheet-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+        }
+    }
+
+    _jumpToLastRow(currentCell) {
+        const columnIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        const lastRow = table.querySelector('tbody tr:last-child');
+        if (lastRow) {
+            const targetCell = lastRow.children[columnIndex];
             if (targetCell && targetCell.classList.contains('spreadsheet-cell')) {
                 const input = targetCell.querySelector('.spreadsheet-input');
                 if (input) {
@@ -1173,6 +1405,63 @@ class ChartSpreadsheetEditor {
 
         this._refreshTable();
         this._showToast(`Series "${columnName}" deleted`, 'success');
+    }
+
+    /**
+     * Excel-style column/row selection
+     */
+    _selectColumn(columnName) {
+        // Clear previous selection
+        this._clearSelection();
+
+        this.selectedColumn = columnName;
+
+        // Highlight all cells in the column
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        const cells = table.querySelectorAll(`[data-column="${columnName}"]`);
+        cells.forEach(cell => {
+            if (cell.tagName === 'TH') {
+                cell.classList.add('excel-selected-header');
+            } else if (cell.tagName === 'TD') {
+                cell.classList.add('excel-selected-column');
+            }
+        });
+
+        console.log(`✓ Selected column: ${columnName}`);
+    }
+
+    _selectRow(rowId) {
+        // Clear previous selection
+        this._clearSelection();
+
+        this.selectedRow = rowId;
+
+        // Highlight all cells in the row
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        const row = table.querySelector(`tr[data-row-id="${rowId}"]`);
+        if (row) {
+            row.querySelectorAll('.spreadsheet-cell').forEach(cell => {
+                cell.classList.add('excel-selected-row');
+            });
+            // Highlight row number
+            const rowNum = row.querySelector('.spreadsheet-cell-number');
+            if (rowNum) rowNum.classList.add('excel-selected-header');
+        }
+
+        console.log(`✓ Selected row: ${rowId}`);
+    }
+
+    _clearSelection() {
+        this.selectedColumn = null;
+        this.selectedRow = null;
+
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        if (table) {
+            table.querySelectorAll('.excel-selected-column, .excel-selected-row, .excel-selected-header')
+                .forEach(el => {
+                    el.classList.remove('excel-selected-column', 'excel-selected-row', 'excel-selected-header');
+                });
+        }
     }
 
     /**
