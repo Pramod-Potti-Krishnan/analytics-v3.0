@@ -2570,7 +2570,7 @@ class ChartJSGenerator:
             '{chart_type}',
             chartData,
             {{
-                apiEndpoint: '{api_base_url}/api/charts/update-data',
+                apiEndpoint: '{api_base_url}/update-data',
                 onSave: async (newData, chartId) => {{
                     console.log('Saving chart data:', newData);
 
