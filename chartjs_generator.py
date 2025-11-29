@@ -2509,7 +2509,7 @@ class ChartJSGenerator:
 </div>
 
 <!-- Load Excel-like Spreadsheet Editor Library -->
-<script src="/static/js/chart-spreadsheet-editor.js"></script>
+<script src="{api_base_url}/static/js/chart-spreadsheet-editor.js"></script>
 
 <script>
 (function() {{{{
