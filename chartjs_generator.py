@@ -2490,6 +2490,15 @@ class ChartJSGenerator:
         """
         js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
 
+        # Extract service base URL (remove /api/charts suffix for static file serving)
+        # api_base_url may be:
+        #   - "https://analytics-v30-production.up.railway.app/api/charts" (production)
+        #   - "/api/charts" (local dev)
+        # We need just the domain part for static files:
+        #   - "https://analytics-v30-production.up.railway.app" (production)
+        #   - "" (local dev, becomes relative URL)
+        service_base_url = api_base_url.replace('/api/charts', '') if '/api/charts' in api_base_url else api_base_url
+
         # v4.0: Streamlined HTML with Excel editor library
         editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
   <canvas id="{chart_id}"></canvas>
@@ -2509,7 +2518,7 @@ class ChartJSGenerator:
 </div>
 
 <!-- Load Excel-like Spreadsheet Editor Library -->
-<script src="{api_base_url}/static/js/chart-spreadsheet-editor.js"></script>
+<script src="{service_base_url}/static/js/chart-spreadsheet-editor.js"></script>
 
 <script>
 (function() {{{{
