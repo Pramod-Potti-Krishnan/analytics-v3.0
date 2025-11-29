@@ -2521,17 +2521,17 @@ class ChartJSGenerator:
 
   <!-- Excel Editor Function Definitions -->
   <script>
-  (function() {{{{
-      window.openChartEditor_{js_safe_id} = function() {{{{
+  (function() {{
+      window.openChartEditor_{js_safe_id} = function() {{
         console.log('=== Excel Editor: Opening for chart {chart_id} ===');
 
         // Get chart instance
         const chart = window.chartInstances?.['{chart_id}'];
-        if (!chart) {{{{
+        if (!chart) {{
             console.error('Chart not found in window.chartInstances');
             alert('Chart not ready. Please wait and try again.');
             return;
-        }}}}
+        }}
 
         console.log('✅ Chart found. Chart type:', chart.config.type);
         console.log('Chart type parameter:', '{chart_type}');
@@ -2544,94 +2544,94 @@ class ChartJSGenerator:
             '{chart_id}',
             '{chart_type}',
             chartData,
-            {{{{
+            {{
                 apiEndpoint: '{api_base_url}/api/charts/update-data',
-                onSave: async (newData, chartId) => {{{{
+                onSave: async (newData, chartId) => {{
                     console.log('Saving chart data:', newData);
 
                     // Update chart instance
                     updateChartData_{js_safe_id}(chart, newData, '{chart_type}');
 
                     // Save to API
-                    try {{{{
-                        const response = await fetch('{api_base_url}/api/charts/update-data', {{{{
+                    try {{
+                        const response = await fetch('{api_base_url}/api/charts/update-data', {{
                             method: 'POST',
-                            headers: {{{{ 'Content-Type': 'application/json' }}}},
-                            body: JSON.stringify({{{{
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{
                                 chart_id: chartId,
                                 presentation_id: '{presentation_id}',
                                 data: newData,
                                 timestamp: Date.now()
-                            }}}})
-                        }}}});
+                            }})
+                        }});
 
-                        if (!response.ok) {{{{
+                        if (!response.ok) {{
                             throw new Error('API request failed');
-                        }}}}
+                        }}
 
                         console.log('✅ Chart data saved successfully');
-                    }}}} catch (error) {{{{
+                    }} catch (error) {{
                         console.error('❌ Error saving chart data:', error);
                         throw error;
-                    }}}}
-                }}}}
-            }}}}
+                    }}
+                }}
+            }}
         );
-    }}}};
+    }};
 
     // Extract data from chart instance based on chart type
-    function extractChartData_{js_safe_id}(chart) {{{{
+    function extractChartData_{js_safe_id}(chart) {{
         const chartType = chart.config.type;
 
-        if (chartType === 'scatter') {{{{
-            // Scatter: array of {{{{x, y}}}}
+        if (chartType === 'scatter') {{
+            // Scatter: array of {{x, y}}
             return chart.data.datasets[0]?.data || [];
-        }}}} else if (chartType === 'bubble') {{{{
-            // Bubble: array of {{{{label, x, y, r}}}}
+        }} else if (chartType === 'bubble') {{
+            // Bubble: array of {{label, x, y, r}}
             return chart.data.datasets[0]?.data || [];
-        }}}} else if (['bar', 'line', 'pie', 'doughnut', 'radar', 'polarArea'].includes(chartType)) {{{{
+        }} else if (['bar', 'line', 'pie', 'doughnut', 'radar', 'polarArea'].includes(chartType)) {{
             // Check if multi-series
-            if (chart.data.datasets.length > 1 || chart.data.datasets[0]?.label) {{{{
+            if (chart.data.datasets.length > 1 || chart.data.datasets[0]?.label) {{
                 // Multi-series format
-                return {{{{
+                return {{
                     labels: chart.data.labels || [],
-                    datasets: chart.data.datasets.map(ds => ({{{{
+                    datasets: chart.data.datasets.map(ds => ({{
                         label: ds.label,
                         data: ds.data
-                    }}}}))
-                }}}};
-            }}}} else {{{{
+                    }}))
+                }};
+            }} else {{
                 // Simple label-value format
                 const labels = chart.data.labels || [];
                 const values = chart.data.datasets[0]?.data || [];
-                return labels.map((label, i) => ({{{{ label, value: values[i] }}}}));
-            }}}}
-        }}}} else {{{{
+                return labels.map((label, i) => ({{ label, value: values[i] }}));
+            }}
+        }} else {{
             // Default: label-value format
             const labels = chart.data.labels || [];
             const values = chart.data.datasets[0]?.data || [];
-            return labels.map((label, i) => ({{{{ label, value: values[i] }}}}));
-        }}}}
-    }}}}
+            return labels.map((label, i) => ({{ label, value: values[i] }}));
+        }}
+    }}
 
     // Update chart instance with new data
-    function updateChartData_{js_safe_id}(chart, newData, chartType) {{{{
-        if (chartType === 'scatter' || chartType === 'bubble') {{{{
+    function updateChartData_{js_safe_id}(chart, newData, chartType) {{
+        if (chartType === 'scatter' || chartType === 'bubble') {{
             // Object-based data
             chart.data.datasets[0].data = newData;
-        }}}} else if (newData.labels && newData.datasets) {{{{
+        }} else if (newData.labels && newData.datasets) {{
             // Multi-series format
             chart.data.labels = newData.labels;
             chart.data.datasets = newData.datasets;
-        }}}} else if (Array.isArray(newData)) {{{{
+        }} else if (Array.isArray(newData)) {{
             // Simple label-value format
             chart.data.labels = newData.map(d => d.label);
             chart.data.datasets[0].data = newData.map(d => d.value);
-        }}}}
+        }}
 
         chart.update();
-    }}}}
-  }}}})();
+    }}
+  }})();
   </script>
 </div>
 """
