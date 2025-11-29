@@ -551,8 +551,8 @@ class ChartSpreadsheetEditor {
             const isActive = activeColumns.includes(col);
             const activeClass = isActive ? 'spreadsheet-cell-active' : '';
             const columnType = this.columnConfig.columnTypes[col] || 'text';
-            const inputType = columnType === 'number' ? 'number' : 'text';
-            const step = columnType === 'number' ? 'any' : '';
+            // Always use type="text" to avoid browser spinner buttons
+            const inputType = 'text';
 
             html += `<td class="spreadsheet-cell ${activeClass}"
                          data-row-id="${row.id}"
@@ -561,7 +561,6 @@ class ChartSpreadsheetEditor {
                 <input type="${inputType}"
                        class="spreadsheet-input"
                        value="${value}"
-                       ${step ? `step="${step}"` : ''}
                        data-row-id="${row.id}"
                        data-column="${col}"
                        readonly />
@@ -1257,7 +1256,12 @@ class ChartSpreadsheetEditor {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         this._jumpToFirstRow(cell);
-                    } else if (!input.value || input.selectionStart === 0) {
+                    } else if (input.hasAttribute('readonly')) {
+                        // In readonly mode, always navigate
+                        e.preventDefault();
+                        this._navigateToPreviousRow(row, cell);
+                    } else if (input.selectionStart === 0) {
+                        // In edit mode, navigate only if cursor at start
                         e.preventDefault();
                         this._navigateToPreviousRow(row, cell);
                     }
@@ -1266,7 +1270,12 @@ class ChartSpreadsheetEditor {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         this._jumpToLastRow(cell);
-                    } else if (!input.value || input.selectionStart === input.value.length) {
+                    } else if (input.hasAttribute('readonly')) {
+                        // In readonly mode, always navigate
+                        e.preventDefault();
+                        this._navigateToNextRow(row, cell);
+                    } else if (input.selectionStart === input.value.length) {
+                        // In edit mode, navigate only if cursor at end
                         e.preventDefault();
                         this._navigateToNextRow(row, cell);
                     }
@@ -1275,7 +1284,12 @@ class ChartSpreadsheetEditor {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         this._jumpToFirstCellInRow(row);
+                    } else if (input.hasAttribute('readonly')) {
+                        // In readonly mode, always navigate
+                        e.preventDefault();
+                        this._navigateToPreviousCell(row, cell);
                     } else if (input.selectionStart === 0) {
+                        // In edit mode, navigate only if cursor at start
                         e.preventDefault();
                         this._navigateToPreviousCell(row, cell);
                     }
@@ -1284,7 +1298,12 @@ class ChartSpreadsheetEditor {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         this._jumpToLastCellInRow(row);
+                    } else if (input.hasAttribute('readonly')) {
+                        // In readonly mode, always navigate
+                        e.preventDefault();
+                        this._navigateToNextCell(row, cell);
                     } else if (input.selectionStart === input.value.length) {
+                        // In edit mode, navigate only if cursor at end
                         e.preventDefault();
                         this._navigateToNextCell(row, cell);
                     }
