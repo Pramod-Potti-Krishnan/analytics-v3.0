@@ -2515,14 +2515,14 @@ class ChartJSGenerator:
   <script>
     {inline_script}
   </script>
-</div>
 
-<!-- Load Excel-like Spreadsheet Editor Library -->
-<script src="{service_base_url}/static/js/chart-spreadsheet-editor.js"></script>
+  <!-- Load Excel-like Spreadsheet Editor Library -->
+  <script src="{service_base_url}/static/js/chart-spreadsheet-editor.js"></script>
 
-<script>
-(function() {{{{
-    window.openChartEditor_{js_safe_id} = function() {{{{
+  <!-- Excel Editor Function Definitions -->
+  <script>
+  (function() {{{{
+      window.openChartEditor_{js_safe_id} = function() {{{{
         console.log('=== Excel Editor: Opening for chart {chart_id} ===');
 
         // Get chart instance
@@ -2631,8 +2631,9 @@ class ChartJSGenerator:
 
         chart.update();
     }}}}
-}}}})();
-</script>
+  }}}})();
+  </script>
+</div>
 """
 
         return editor_html
