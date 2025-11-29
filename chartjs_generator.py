@@ -2576,7 +2576,7 @@ class ChartJSGenerator:
 
                     // Save to API FIRST (before updating chart)
                     try {{
-                        const response = await fetch('{api_base_url}/api/charts/update-data', {{
+                        const response = await fetch('{api_base_url}/update-data', {{
                             method: 'POST',
                             headers: {{ 'Content-Type': 'application/json' }},
                             body: JSON.stringify({{

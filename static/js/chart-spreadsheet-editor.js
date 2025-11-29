@@ -309,7 +309,7 @@ class ChartSpreadsheetEditor {
 
         return {
             columns: columns,
-            activeColumns: columns,
+            activeColumns: [...columns],  // Create array copy to avoid duplicate additions
             canAddColumns: true,
             columnTypes: columnTypes
         };
@@ -1079,17 +1079,22 @@ class ChartSpreadsheetEditor {
     _exportData() {
         const chartType = this.chartType;
 
+        // Auto-detect multi-series format based on column structure
+        const hasMultipleSeries = this.columnConfig.columns.length > 2;  // More than Label + 1 value column
+        const hasValueColumn = this.columnConfig.columns.includes('Value');
+
         if (chartType === 'scatter') {
             return this.data.map(row => ({ x: row.X, y: row.Y }));
         } else if (chartType === 'bubble') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y, r: row.Radius }));
-        } else if (['bar_grouped', 'bar_stacked', 'area_stacked'].includes(chartType)) {
-            // Multi-series format
+        } else if (['bar_grouped', 'bar_stacked', 'area_stacked'].includes(chartType) ||
+                   (hasMultipleSeries && !hasValueColumn)) {
+            // Multi-series format (explicit chartType OR auto-detected structure)
             const labels = this.data.map(row => row.Label);
             const seriesColumns = this.columnConfig.columns.filter(col => col !== 'Label');
             const datasets = seriesColumns.map(seriesName => ({
                 label: seriesName,
-                data: this.data.map(row => row[seriesName])
+                data: this.data.map(row => parseFloat(row[seriesName]) || 0)
             }));
             return { labels, datasets };
         } else if (chartType === 'd3_sankey') {
