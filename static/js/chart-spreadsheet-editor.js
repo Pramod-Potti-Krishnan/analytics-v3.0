@@ -159,6 +159,20 @@ class ChartSpreadsheetEditor {
     }
 
     /**
+     * Convert column index to Excel-style letter (0→A, 1→B, 25→Z, 26→AA)
+     */
+    _getColumnLetter(index) {
+        let letter = '';
+        let num = index + 1;
+        while (num > 0) {
+            const mod = (num - 1) % 26;
+            letter = String.fromCharCode(65 + mod) + letter;
+            num = Math.floor((num - 1) / 26);
+        }
+        return letter;
+    }
+
+    /**
      * Get column configuration for chart type
      */
     _getColumnConfig() {
@@ -382,9 +396,28 @@ class ChartSpreadsheetEditor {
 
         let html = '<table class="spreadsheet-table" id="spreadsheet-table-' + this.chartId + '">';
 
-        // Header row
-        html += '<thead><tr>';
-        html += '<th class="spreadsheet-col-number">#</th>';
+        // Header - Excel-style dual rows
+        html += '<thead>';
+
+        // Row 1: Excel column letters (A, B, C, D...)
+        html += '<tr class="excel-letter-row">';
+        html += '<th class="spreadsheet-col-corner"></th>';  // Blank top-left corner
+
+        columns.forEach((col, idx) => {
+            const letter = this._getColumnLetter(idx);
+            const isActive = activeColumns.includes(col);
+            const activeClass = isActive ? 'spreadsheet-col-active' : '';
+            html += `<th class="spreadsheet-col-letter ${activeClass}" data-column="${col}" data-col-index="${idx}">
+                ${letter}
+            </th>`;
+        });
+
+        html += '<th class="spreadsheet-col-actions-header"></th>';  // Blank for Actions column
+        html += '</tr>';
+
+        // Row 2: Column names (Label, North America, EMEA, etc.)
+        html += '<tr class="excel-name-row">';
+        html += '<th class="spreadsheet-row-header">#</th>';
 
         columns.forEach(col => {
             const isActive = activeColumns.includes(col);
@@ -407,7 +440,8 @@ class ChartSpreadsheetEditor {
         });
 
         html += '<th class="spreadsheet-col-actions">Actions</th>';
-        html += '</tr></thead>';
+        html += '</tr>';
+        html += '</thead>';
 
         // Data rows
         html += '<tbody>';
@@ -559,29 +593,85 @@ class ChartSpreadsheetEditor {
 
             .spreadsheet-table-wrapper {
                 background: white;
-                border-radius: 8px;
-                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                border: 1px solid #D4D4D4;
                 overflow: auto;
                 max-height: calc(90vh - 250px);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
 
             .spreadsheet-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                font-size: 14px;
+                font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+                font-size: 11pt;
             }
 
             .spreadsheet-table th {
-                background: #f1f3f5;
-                color: #495057;
-                font-weight: 600;
-                padding: 12px 8px;
-                border: 1px solid #dee2e6;
+                background: #F2F2F2;
+                color: #333333;
+                font-weight: 400;
+                padding: 8px;
+                border: 1px solid #D4D4D4;
                 position: sticky;
                 top: 0;
                 z-index: 10;
-                text-align: left;
+                text-align: center;
+            }
+
+            /* Excel-style dual-row header */
+            .excel-letter-row th {
+                background: #F2F2F2;
+                border: 1px solid #D4D4D4;
+                font-weight: 600;
+                font-size: 11pt;
+                color: #333333;
+                text-align: center;
+                padding: 6px 8px;
+                position: sticky;
+                top: 0;
+                z-index: 12;
+            }
+
+            .excel-name-row th {
+                background: #F2F2F2;
+                border: 1px solid #D4D4D4;
+                font-weight: 400;
+                font-size: 10pt;
+                color: #333333;
+                text-align: center;
+                padding: 6px 8px;
+                position: sticky;
+                top: 32px;
+                z-index: 11;
+            }
+
+            .spreadsheet-col-corner {
+                background: #F2F2F2;
+                border: 1px solid #D4D4D4;
+                width: 50px;
+            }
+
+            .spreadsheet-col-letter {
+                background: #F2F2F2;
+                color: #333333;
+                font-weight: 600;
+                min-width: 80px;
+                cursor: default;
+            }
+
+            .spreadsheet-row-header {
+                background: #F2F2F2;
+                color: #333333;
+                font-weight: 400;
+                width: 50px;
+                text-align: center;
+            }
+
+            .spreadsheet-col-actions-header {
+                background: #F2F2F2;
+                border: 1px solid #D4D4D4;
+                width: 80px;
             }
 
             .spreadsheet-col-active {
@@ -599,9 +689,10 @@ class ChartSpreadsheetEditor {
             .spreadsheet-cell-number {
                 width: 50px;
                 text-align: center;
-                background: #e9ecef;
-                font-weight: 600;
-                color: #6c757d;
+                background: #F2F2F2;
+                font-weight: 400;
+                color: #333333;
+                border: 1px solid #D4D4D4;
             }
 
             .spreadsheet-col-actions,
@@ -612,7 +703,8 @@ class ChartSpreadsheetEditor {
 
             .spreadsheet-table td {
                 padding: 0;
-                border: 1px solid #dee2e6;
+                border: 1px solid #D4D4D4;
+                background: #FFFFFF;
             }
 
             .spreadsheet-cell {
@@ -634,8 +726,10 @@ class ChartSpreadsheetEditor {
             }
 
             .spreadsheet-input:focus {
-                background: #e7f3ff;
-                box-shadow: inset 0 0 0 2px #007bff;
+                background: #FFFFFF;
+                box-shadow: inset 0 0 0 2px #217346;
+                outline: 2px solid #217346;
+                outline-offset: -2px;
             }
 
             .spreadsheet-table tr:hover td {
