@@ -349,7 +349,85 @@ class ChartSpreadsheetEditor {
                 <div class="spreadsheet-editor-dialog">
                     <div class="spreadsheet-editor-header">
                         <h3>Edit Chart Data</h3>
-                        <button class="spreadsheet-close-btn" onclick="window.chartEditor_${this.safeChartId}.close()">&times;</button>
+                        <div class="spreadsheet-header-actions">
+                            <button class="spreadsheet-help-btn" onclick="window.chartEditor_${this.safeChartId}.showHelp()" title="Show keyboard shortcuts and features">
+                                ❓ Help
+                            </button>
+                            <button class="spreadsheet-close-btn" onclick="window.chartEditor_${this.safeChartId}.close()">&times;</button>
+                        </div>
+                    </div>
+
+                    <!-- Help Modal (hidden by default) -->
+                    <div id="spreadsheet-help-modal-${this.safeChartId}" class="spreadsheet-help-modal" style="display: none;">
+                        <div class="spreadsheet-help-overlay" onclick="window.chartEditor_${this.safeChartId}.hideHelp()"></div>
+                        <div class="spreadsheet-help-dialog">
+                            <div class="spreadsheet-help-header">
+                                <h3>📖 Excel-Style Editor Guide</h3>
+                                <button class="spreadsheet-help-close" onclick="window.chartEditor_${this.safeChartId}.hideHelp()">&times;</button>
+                            </div>
+                            <div class="spreadsheet-help-content">
+                                <div class="help-section">
+                                    <h4>🖱️ Click Behavior</h4>
+                                    <ul>
+                                        <li><strong>Single click cell:</strong> Select (navigate, readonly mode)</li>
+                                        <li><strong>Double click cell:</strong> Enter edit mode</li>
+                                        <li><strong>Start typing:</strong> Auto-enter edit mode, replace value</li>
+                                        <li><strong>Click column letter (A, B, C):</strong> Select entire column</li>
+                                        <li><strong>Click row number (1, 2, 3):</strong> Select entire row</li>
+                                    </ul>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>⌨️ Keyboard Navigation</h4>
+                                    <ul>
+                                        <li><strong>Arrow keys:</strong> Navigate between cells</li>
+                                        <li><strong>Tab:</strong> Move to next cell</li>
+                                        <li><strong>Shift + Tab:</strong> Move to previous cell</li>
+                                        <li><strong>Enter:</strong> Save and move down</li>
+                                        <li><strong>Home:</strong> Jump to first cell in row</li>
+                                        <li><strong>End:</strong> Jump to last cell in row</li>
+                                        <li><strong>Ctrl/Cmd + Home:</strong> Jump to first cell (A1)</li>
+                                        <li><strong>Ctrl/Cmd + End:</strong> Jump to last cell</li>
+                                        <li><strong>Ctrl/Cmd + ↑:</strong> Jump to first row (same column)</li>
+                                        <li><strong>Ctrl/Cmd + ↓:</strong> Jump to last row (same column)</li>
+                                        <li><strong>Ctrl/Cmd + ←:</strong> Jump to first cell in row</li>
+                                        <li><strong>Ctrl/Cmd + →:</strong> Jump to last cell in row</li>
+                                    </ul>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>✏️ Editing Features</h4>
+                                    <ul>
+                                        <li><strong>Add Row:</strong> Click "+ Add Row" button</li>
+                                        <li><strong>Delete Row:</strong> Click 🗑️ icon in Actions column</li>
+                                        <li><strong>Add Column:</strong> Click "+ Add Series" button (multi-series charts only)</li>
+                                        <li><strong>Delete Column:</strong> Hover column header, click 🗑️ icon</li>
+                                        <li><strong>Paste from Excel:</strong> Ctrl/Cmd + V (copies multiple cells)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>🎨 Visual Indicators</h4>
+                                    <ul>
+                                        <li><strong>Gray headers:</strong> Column letters and names</li>
+                                        <li><strong>Blue border:</strong> Selected cell (readonly, navigate mode)</li>
+                                        <li><strong>Green border:</strong> Editing cell (can type)</li>
+                                        <li><strong>Light blue highlight:</strong> Selected column or row</li>
+                                        <li><strong>Yellow background:</strong> Active data columns (with ✓)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="help-section help-section-tip">
+                                    <h4>💡 Pro Tips</h4>
+                                    <ul>
+                                        <li>Use keyboard shortcuts for faster editing</li>
+                                        <li>Double-click or start typing to edit</li>
+                                        <li>Click column/row headers for quick selection</li>
+                                        <li>Press Escape to cancel changes and close editor</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     ${this.columnConfig.helpText ? `
@@ -552,6 +630,33 @@ class ChartSpreadsheetEditor {
                 margin: 0;
                 font-size: 20px;
                 font-weight: 600;
+            }
+
+            .spreadsheet-header-actions {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .spreadsheet-help-btn {
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .spreadsheet-help-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             }
 
             .spreadsheet-close-btn {
@@ -846,6 +951,135 @@ class ChartSpreadsheetEditor {
             .spreadsheet-cell-number:hover {
                 background: #E8E8E8;
                 cursor: pointer;
+            }
+
+            /* Help Modal Styles */
+            .spreadsheet-help-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 15000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .spreadsheet-help-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+            }
+
+            .spreadsheet-help-dialog {
+                position: relative;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 90%;
+                max-width: 700px;
+                max-height: 80vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                z-index: 1;
+            }
+
+            .spreadsheet-help-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 20px 24px;
+                border-bottom: 2px solid #e0e0e0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+
+            .spreadsheet-help-header h3 {
+                margin: 0;
+                font-size: 20px;
+                font-weight: 600;
+            }
+
+            .spreadsheet-help-close {
+                background: transparent;
+                border: none;
+                color: white;
+                font-size: 32px;
+                cursor: pointer;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                line-height: 32px;
+                transition: transform 0.2s;
+            }
+
+            .spreadsheet-help-close:hover {
+                transform: scale(1.1);
+            }
+
+            .spreadsheet-help-content {
+                padding: 24px;
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            .help-section {
+                margin-bottom: 24px;
+            }
+
+            .help-section:last-child {
+                margin-bottom: 0;
+            }
+
+            .help-section h4 {
+                margin: 0 0 12px 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: #333;
+            }
+
+            .help-section ul {
+                margin: 0;
+                padding-left: 20px;
+                list-style-type: none;
+            }
+
+            .help-section li {
+                margin-bottom: 8px;
+                padding-left: 20px;
+                position: relative;
+                line-height: 1.5;
+                color: #555;
+            }
+
+            .help-section li::before {
+                content: "•";
+                position: absolute;
+                left: 0;
+                color: #667eea;
+                font-weight: bold;
+                font-size: 18px;
+            }
+
+            .help-section strong {
+                color: #333;
+                font-weight: 600;
+            }
+
+            .help-section-tip {
+                background: #f0f7ff;
+                border-left: 4px solid #667eea;
+                padding: 16px;
+                border-radius: 6px;
+            }
+
+            .help-section-tip h4 {
+                color: #667eea;
             }
 
             .spreadsheet-editor-footer {
@@ -1587,6 +1821,23 @@ class ChartSpreadsheetEditor {
         if (tableWrapper) {
             tableWrapper.innerHTML = this._renderTable();
             this._attachTableEventListeners();
+        }
+    }
+
+    /**
+     * Help modal
+     */
+    showHelp() {
+        const helpModal = document.getElementById(`spreadsheet-help-modal-${this.safeChartId}`);
+        if (helpModal) {
+            helpModal.style.display = 'flex';
+        }
+    }
+
+    hideHelp() {
+        const helpModal = document.getElementById(`spreadsheet-help-modal-${this.safeChartId}`);
+        if (helpModal) {
+            helpModal.style.display = 'none';
         }
     }
 
