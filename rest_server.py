@@ -1023,12 +1023,36 @@ async def generate_analytics_batch(request: BatchAnalyticsRequest):
 # INTERACTIVE CHART EDITOR API
 # ========================================
 
+class DatasetSchema(BaseModel):
+    """Single dataset in multi-series format."""
+    label: str = Field(..., min_length=1, description="Series name/label")
+    data: List[float] = Field(..., min_items=2, max_items=50, description="Data points for this series")
+
+    @validator('data')
+    def validate_data(cls, v):
+        """Validate data array contains valid numbers."""
+        for i, val in enumerate(v):
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"Data point at index {i} must be a number, got {type(val).__name__}")
+            if val != val:  # NaN check
+                raise ValueError(f"Data point at index {i} cannot be NaN")
+            if abs(val) == float('inf'):
+                raise ValueError(f"Data point at index {i} cannot be infinity")
+        return [float(val) for val in v]
+
+
 class ChartDataUpdate(BaseModel):
-    """Request to update chart data."""
+    """Request to update chart data - supports both single-series and multi-series formats."""
     chart_id: str = Field(..., min_length=1, description="Chart identifier")
     presentation_id: str = Field(..., min_length=1, description="Presentation UUID")
     labels: List[str] = Field(..., min_items=2, max_items=50, description="X-axis labels (2-50 items)")
-    values: List[float] = Field(..., min_items=2, max_items=50, description="Y-axis values (2-50 items)")
+
+    # Single-series format (simple charts)
+    values: Optional[List[float]] = Field(default=None, min_items=2, max_items=50, description="Y-axis values for single-series charts")
+
+    # Multi-series format (grouped/stacked charts)
+    datasets: Optional[List[DatasetSchema]] = Field(default=None, min_items=1, max_items=20, description="Multiple data series for multi-series charts")
+
     timestamp: Optional[str] = Field(default=None, description="Update timestamp")
 
     @validator('chart_id', 'presentation_id')
@@ -1057,28 +1081,49 @@ class ChartDataUpdate(BaseModel):
 
         return [str(label).strip() for label in v]
 
-    @validator('values')
-    def validate_values(cls, v, values):
-        """Validate values array and ensure it matches labels length."""
-        if not v or len(v) < 2:
-            raise ValueError("At least 2 values required")
-        if len(v) > 50:
-            raise ValueError("Maximum 50 values allowed")
+    @validator('datasets', always=True)
+    def validate_format(cls, v, values):
+        """Ensure either values OR datasets is provided (mutually exclusive)."""
+        has_values = values.get('values') is not None
+        has_datasets = v is not None
 
-        # Check if lengths match
-        if 'labels' in values and len(v) != len(values['labels']):
-            raise ValueError(f"Number of values ({len(v)}) must match number of labels ({len(values['labels'])})")
+        # Must provide exactly one format
+        if not has_values and not has_datasets:
+            raise ValueError("Must provide either 'values' (single-series) or 'datasets' (multi-series)")
+        if has_values and has_datasets:
+            raise ValueError("Cannot provide both 'values' and 'datasets' - choose one format")
 
-        # Validate each value is a finite number
-        for i, val in enumerate(v):
-            if not isinstance(val, (int, float)):
-                raise ValueError(f"Value at index {i} must be a number, got {type(val).__name__}")
-            if val != val:  # NaN check
-                raise ValueError(f"Value at index {i} cannot be NaN")
-            if abs(val) == float('inf'):
-                raise ValueError(f"Value at index {i} cannot be infinity")
+        labels = values.get('labels', [])
 
-        return [float(val) for val in v]
+        # Validate single-series format
+        if has_values:
+            vals = values.get('values')
+            if len(vals) != len(labels):
+                raise ValueError(f"Number of values ({len(vals)}) must match number of labels ({len(labels)})")
+
+            for i, val in enumerate(vals):
+                if not isinstance(val, (int, float)):
+                    raise ValueError(f"Value at index {i} must be a number, got {type(val).__name__}")
+                if val != val:  # NaN check
+                    raise ValueError(f"Value at index {i} cannot be NaN")
+                if abs(val) == float('inf'):
+                    raise ValueError(f"Value at index {i} cannot be infinity")
+
+        # Validate multi-series format
+        if has_datasets:
+            if len(v) < 1:
+                raise ValueError("At least 1 dataset required for multi-series format")
+            if len(v) > 20:
+                raise ValueError("Maximum 20 datasets allowed")
+
+            for i, ds in enumerate(v):
+                if len(ds.data) != len(labels):
+                    raise ValueError(
+                        f"Dataset {i} ('{ds.label}'): data length ({len(ds.data)}) "
+                        f"must match labels length ({len(labels)})"
+                    )
+
+        return v
 
 
 @app.post("/api/charts/update-data", tags=["Interactive Editor"])
@@ -1086,27 +1131,50 @@ async def update_chart_data(data: ChartDataUpdate):
     """
     Save edited chart data (for interactive editor).
 
+    Supports both single-series (labels + values) and multi-series (labels + datasets) formats.
+
     Args:
-        data: Chart data with labels and values
+        data: Chart data with labels and either values (single-series) or datasets (multi-series)
 
     Returns:
-        Success status and message
+        Success status and message with format information
     """
     try:
-        logger.info(f"Updating chart data: {data.chart_id} in presentation {data.presentation_id}")
+        # Determine format
+        is_multi_series = data.datasets is not None
+        format_type = "multi-series" if is_multi_series else "single-series"
+
+        if is_multi_series:
+            logger.info(
+                f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
+                f"({len(data.datasets)} series, {len(data.labels)} labels)"
+            )
+        else:
+            logger.info(
+                f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
+                f"({len(data.labels)} labels, {len(data.values)} values)"
+            )
 
         # TODO: Save to database when ChartData model is available
         # For now, just return success to allow client-side editing
         # In production, you'd save to PostgreSQL or Supabase
 
-        return {
+        response_data = {
             "success": True,
-            "message": "Chart data updated successfully",
+            "message": f"Chart data updated successfully ({format_type})",
             "chart_id": data.chart_id,
             "presentation_id": data.presentation_id,
-            "labels_count": len(data.labels),
-            "values_count": len(data.values)
+            "format": format_type,
+            "labels_count": len(data.labels)
         }
+
+        if is_multi_series:
+            response_data["series_count"] = len(data.datasets)
+            response_data["series_names"] = [ds.label for ds in data.datasets]
+        else:
+            response_data["values_count"] = len(data.values)
+
+        return response_data
 
     except Exception as e:
         logger.error(f"Failed to update chart data: {e}", exc_info=True)
