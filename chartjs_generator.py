@@ -2749,6 +2749,88 @@ class ChartJSGenerator:
 
         return editor_html
 
+    def _wrap_d3_chart_with_editor(
+        self,
+        d3_html: str,
+        chart_id: str,
+        chart_type: str,  # 'd3_treemap', 'd3_sunburst', etc.
+        data: Union[List[Dict[str, Any]], Dict[str, Any]],  # Current chart data
+        presentation_id: str,
+        api_base_url: str
+    ) -> str:
+        """Add editor overlay to D3 charts (read-only with refresh)"""
+
+        js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
+
+        # Convert data to simple format for editor
+        if isinstance(data, list):
+            editor_data = data  # Already in correct format
+        else:
+            # Extract from dict format
+            labels = data.get('labels', [])
+            values = data.get('values', [])
+            editor_data = [{"label": l, "value": v} for l, v in zip(labels, values)]
+
+        wrapped_html = f"""<div style="position: relative;">
+  {d3_html}
+
+  <!-- Edit Button -->
+  <button class="chart-edit-btn"
+          onclick="openD3Editor_{js_safe_id}()"
+          style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 100; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap;"
+          onmouseover="this.style.width='80px'; this.style.borderRadius='20px'; this.innerHTML='✏️ <span style=\\'margin-left: 6px; font-size: 13px;\\'>edit</span>'; this.style.background='rgba(0,0,0,0.8)'"
+          onmouseout="this.style.width='36px'; this.style.borderRadius='50%'; this.innerHTML='✏️'; this.style.background='rgba(0,0,0,0.6)'">
+    ✏️
+  </button>
+
+  <script src="/static/js/chart-spreadsheet-editor.js"></script>
+  <script>
+    function openD3Editor_{js_safe_id}() {{
+      const data = {json.dumps(editor_data)};
+
+      openChartEditor(
+        '{chart_id}',
+        '{chart_type}',
+        data,
+        {{
+          onSave: async (newData, chartId) => {{
+            console.log('💾 Saving D3 chart data:', newData);
+
+            // Save to backend API
+            try {{
+              const response = await fetch('{api_base_url}/update-data', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                  chart_id: chartId,
+                  presentation_id: '{presentation_id}',
+                  data: newData,
+                  chart_type: '{chart_type}',
+                  timestamp: Date.now()
+                }})
+              }});
+
+              if (!response.ok) {{
+                throw new Error('Save failed');
+              }}
+
+              // Show refresh message (D3 charts need full re-render)
+              alert('✅ Chart data saved successfully!\\n\\n⚠️ D3 charts require a page refresh to display updates.\\n\\nPlease refresh the page to see your changes.');
+
+            }} catch (error) {{
+              console.error('❌ Error saving D3 chart data:', error);
+              alert('❌ Failed to save chart data. Please try again.');
+              throw error;
+            }}
+          }}
+        }}
+      );
+    }}
+  </script>
+</div>"""
+
+        return wrapped_html
+
     def _build_chart_options(
         self,
         format_type: str,
@@ -3244,6 +3326,17 @@ class ChartJSGenerator:
     </script>
 </div>"""
 
+        # Add editor overlay if enabled
+        if enable_editor and presentation_id:
+            d3_html = self._wrap_d3_chart_with_editor(
+                d3_html=d3_html,
+                chart_id=chart_id_safe,
+                chart_type='d3_treemap',
+                data={'labels': labels, 'values': values},
+                presentation_id=presentation_id,
+                api_base_url=api_base_url
+            )
+
         return d3_html
 
     def generate_d3_sunburst_chart(
@@ -3446,6 +3539,17 @@ class ChartJSGenerator:
         }})();
     </script>
 </div>"""
+
+        # Add editor overlay if enabled
+        if enable_editor and presentation_id:
+            d3_html = self._wrap_d3_chart_with_editor(
+                d3_html=d3_html,
+                chart_id=chart_id_safe,
+                chart_type='d3_sunburst',
+                data={'labels': labels, 'values': values},
+                presentation_id=presentation_id,
+                api_base_url=api_base_url
+            )
 
         return d3_html
 
@@ -3756,6 +3860,17 @@ class ChartJSGenerator:
     </script>
 </div>"""
 
+        # Add editor overlay if enabled
+        if enable_editor and presentation_id:
+            d3_html = self._wrap_d3_chart_with_editor(
+                d3_html=d3_html,
+                chart_id=chart_id_safe,
+                chart_type='d3_choropleth_usa',
+                data={'labels': labels, 'values': values},
+                presentation_id=presentation_id,
+                api_base_url=api_base_url
+            )
+
         return d3_html
 
     def generate_d3_sankey_chart(
@@ -4010,6 +4125,19 @@ class ChartJSGenerator:
         }})();
     </script>
 </div>"""
+
+        # Add editor overlay if enabled
+        if enable_editor and presentation_id:
+            # Reconstruct simple format from links data for editor
+            editor_data = [{"label": f"{link['source']} → {link['target']}", "value": link['value']} for link in links]
+            d3_html = self._wrap_d3_chart_with_editor(
+                d3_html=d3_html,
+                chart_id=chart_id_safe,
+                chart_type='d3_sankey',
+                data=editor_data,  # Pass as list format for editor
+                presentation_id=presentation_id,
+                api_base_url=api_base_url
+            )
 
         return d3_html
 

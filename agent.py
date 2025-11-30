@@ -424,7 +424,7 @@ async def process_analytics_slide(
                     data=data,
                     height=height,
                     chart_id=chart_id,
-                    enable_editor=False,  # Deferred for POC
+                    enable_editor=enable_editor,  # Now enabled for D3 charts
                     presentation_id=presentation_id,
                     api_base_url=api_base_url,
                     output_mode="inline_script"
@@ -1001,7 +1001,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 data=chart_data,
                 height=720,
                 chart_id=f"chart-{slide_id}",
-                enable_editor=False,  # Deferred for POC
+                enable_editor=enable_editor,  # Now enabled for D3 charts
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
