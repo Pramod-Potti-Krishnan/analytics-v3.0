@@ -785,6 +785,17 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                     "series_name": slide_title,
                     "format": "simple"
                 }
+        elif chart_type in ["scatter", "bubble"]:
+            # Scatter/bubble: preserve x/y/r coordinates (v3.4.5 fix for y=0 bug)
+            # Data is already in [{x, y, label}] or [{x, y, r, label}] format from synthetic generator
+            chart_data = data
+            # Create insight data by extracting y values for trend analysis
+            insight_data = {
+                "labels": [d.get("label", f"Point {i+1}") for i, d in enumerate(data)],
+                "values": [d.get("y", 0) for d in data],  # Extract y coordinate for insights
+                "series_name": slide_title,
+                "format": "scatter" if chart_type == "scatter" else "bubble"
+            }
         else:
             # Simple charts: convert to {labels, values} format
             chart_data = {
