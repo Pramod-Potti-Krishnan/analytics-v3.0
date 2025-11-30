@@ -2669,16 +2669,12 @@ class ChartJSGenerator:
             // Bubble: array of {{label, x, y, r}}
             return chart.data.datasets[0]?.data || [];
         }} else if (['bar', 'line', 'pie', 'doughnut', 'radar', 'polarArea'].includes(chartType)) {{
-            // Chart types that are always single-series (circular/radial charts)
-            const alwaysSimpleSeries = ['pie', 'doughnut', 'polarArea'];
+            // UNIVERSAL RULE: Use dataset count to determine format
+            // - Multiple datasets → Multi-series format (multi-line, grouped bars, stacked areas)
+            // - Single dataset → Simple format (single line, pie, radar, etc.)
 
-            if (alwaysSimpleSeries.includes(chartType)) {{
-                // Always use simple format for pie/doughnut/polar (inherently single-series)
-                const labels = chart.data.labels || [];
-                const values = chart.data.datasets[0]?.data || [];
-                return labels.map((label, i) => ({{ label, value: values[i] }}));
-            }} else if (chart.data.datasets.length > 1) {{
-                // Multi-series format for charts with multiple datasets
+            if (chart.data.datasets.length > 1) {{
+                // Multi-series format
                 return {{
                     labels: chart.data.labels || [],
                     datasets: chart.data.datasets.map(ds => ({{
@@ -2687,7 +2683,7 @@ class ChartJSGenerator:
                     }}))
                 }};
             }} else {{
-                // Simple format for single-series line/bar/radar
+                // Single-series format (works for all: line, bar, radar, pie, doughnut, polar)
                 const labels = chart.data.labels || [];
                 const values = chart.data.datasets[0]?.data || [];
                 return labels.map((label, i) => ({{ label, value: values[i] }}));
