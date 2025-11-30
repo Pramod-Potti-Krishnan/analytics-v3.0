@@ -56,7 +56,7 @@ class ChartSpreadsheetEditor {
             return this._parseScatterData(data);
         } else if (chartType === 'bubble') {
             return this._parseBubbleData(data);
-        } else if (['bar_grouped', 'bar_stacked', 'area_stacked'].includes(chartType)) {
+        } else if (['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'].includes(chartType)) {
             return this._parseMultiSeriesData(data);
         } else if (chartType === 'd3_sankey') {
             return this._parseSankeyData(data);
@@ -257,6 +257,9 @@ class ChartSpreadsheetEditor {
             'bar_grouped': this._getMultiSeriesConfig(),
             'bar_stacked': this._getMultiSeriesConfig(),
             'area_stacked': this._getMultiSeriesConfig(),
+            'mixed': this._getMultiSeriesConfig(),
+            'combo': this._getMultiSeriesConfig(),
+            'combination': this._getMultiSeriesConfig(),
 
             // D3 charts
             'd3_treemap': {
@@ -1807,7 +1810,7 @@ class ChartSpreadsheetEditor {
             return this.data.map(row => ({ x: row.X, y: row.Y }));
         } else if (chartType === 'bubble') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y, r: row.Radius }));
-        } else if (['bar_grouped', 'bar_stacked', 'area_stacked'].includes(chartType) ||
+        } else if (['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'].includes(chartType) ||
                    (hasMultipleSeries && !hasValueColumn)) {
             // Multi-series format (explicit chartType OR auto-detected structure)
             const labels = this.data.map(row => row.Label);

@@ -429,9 +429,53 @@ async def process_analytics_slide(
                     api_base_url=api_base_url,
                     output_mode="inline_script"
                 )
+            elif chart_type in ["sunburst", "d3_sunburst"]:
+                logger.info(f"✅ D3 SUNBURST ROUTING TRIGGERED - chart_type={chart_type}")
+                return chart_gen.generate_d3_sunburst_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=False,  # Editor not yet implemented for D3 charts
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "d3_choropleth_usa":
+                logger.info(f"✅ D3 CHOROPLETH USA ROUTING TRIGGERED - chart_type={chart_type}")
+                return chart_gen.generate_d3_choropleth_usa_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=False,  # Editor not yet implemented for D3 charts
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type == "d3_sankey":
+                logger.info(f"✅ D3 SANKEY ROUTING TRIGGERED - chart_type={chart_type}")
+                return chart_gen.generate_d3_sankey_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=False,  # Editor not yet implemented for D3 charts
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
+            elif chart_type in ["mixed", "combo", "combination"]:
+                logger.info(f"✅ MIXED CHART ROUTING TRIGGERED - chart_type={chart_type}")
+                return chart_gen.generate_mixed_chart(
+                    data=data,
+                    height=height,
+                    chart_id=chart_id,
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id,
+                    api_base_url=api_base_url,
+                    output_mode="inline_script"
+                )
             # CHART.JS PLUGIN TYPES - REMOVED (v3.4.3 - non-functional)
-            # Removed: treemap, heatmap, matrix, boxplot, candlestick, financial, sankey, mixed
-            # These plugin-based charts were not rendering correctly and have been removed.
+            # Removed: treemap, heatmap, matrix, boxplot, candlestick, financial, sankey
+            # Note: mixed chart has been re-enabled as of this update
             # Keeping 14 total chart types: 9 original + 5 new native Chart.js types
             else:
                 # Default to bar chart for truly unknown types
@@ -961,6 +1005,33 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
+        elif chart_type in ["sunburst", "d3_sunburst"]:
+            chart_html = chart_gen.generate_d3_sunburst_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=False,  # Editor not yet implemented for D3 charts
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "d3_choropleth_usa":
+            chart_html = chart_gen.generate_d3_choropleth_usa_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=False,  # Editor not yet implemented for D3 charts
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
+        elif chart_type == "d3_sankey":
+            chart_html = chart_gen.generate_d3_sankey_chart(
+                data=chart_data,
+                height=720,
+                chart_id=f"chart-{slide_id}",
+                enable_editor=False,  # Editor not yet implemented for D3 charts
+                presentation_id=presentation_id,
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+            )
         # CHART.JS PLUGIN TYPES (v3.4.1+)
         elif chart_type == "treemap":
             chart_html = chart_gen.generate_treemap_chart(
@@ -1007,7 +1078,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
-        elif chart_type == "mixed":
+        elif chart_type in ["mixed", "combo", "combination"]:
             chart_html = chart_gen.generate_mixed_chart(
                 data=chart_data,
                 height=720,
