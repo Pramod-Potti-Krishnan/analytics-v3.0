@@ -2583,15 +2583,55 @@ class ChartJSGenerator:
                 onSave: async (newData, chartId) => {{
                     console.log('💾 Saving chart data:', newData);
 
+                    // Transform editor export format to API format
+                    function transformToApiFormat(data, chartType) {{
+                        console.log('🔄 Transforming data for chart type:', chartType);
+
+                        // Multi-series format: {{labels: [...], datasets: [...]}} - already correct
+                        if (data && data.labels && data.datasets) {{
+                            console.log('✅ Multi-series format detected - no transformation needed');
+                            return {{ labels: data.labels, datasets: data.datasets }};
+                        }}
+
+                        // Simple charts: [{{label, value}}] → {{labels: [...], values: [...]}}
+                        if (Array.isArray(data) && data.length > 0 && data[0].label !== undefined && data[0].value !== undefined) {{
+                            console.log('✅ Simple chart format detected - converting to labels/values');
+                            return {{
+                                labels: data.map(d => d.label),
+                                values: data.map(d => d.value)
+                            }};
+                        }}
+
+                        // Scatter format: [{{x, y}}] - not yet supported by API
+                        if (Array.isArray(data) && data.length > 0 && data[0].x !== undefined && data[0].y !== undefined && data[0].r === undefined) {{
+                            console.error('❌ Scatter chart format not yet supported by API');
+                            throw new Error(`Scatter chart save not yet supported - API schema update needed. Chart type: ${{chartType}}`);
+                        }}
+
+                        // Bubble format: [{{label, x, y, r}}] - not yet supported by API
+                        if (Array.isArray(data) && data.length > 0 && data[0].r !== undefined) {{
+                            console.error('❌ Bubble chart format not yet supported by API');
+                            throw new Error(`Bubble chart save not yet supported - API schema update needed. Chart type: ${{chartType}}`);
+                        }}
+
+                        // Fallback: return as-is and let API validation handle it
+                        console.warn('⚠️ Unknown data format - passing through as-is');
+                        return data;
+                    }}
+
                     // Save to API FIRST (before updating chart)
                     try {{
+                        // Transform data to API-compatible format
+                        const apiPayload = transformToApiFormat(newData, '{chart_type}');
+                        console.log('📤 Sending to API:', apiPayload);
+
                         const response = await fetch('{api_base_url}/update-data', {{
                             method: 'POST',
                             headers: {{ 'Content-Type': 'application/json' }},
                             body: JSON.stringify({{
                                 chart_id: chartId,
                                 presentation_id: '{presentation_id}',
-                                ...newData,  // Spread labels, datasets/values into top level
+                                ...apiPayload,  // Spread transformed data (now in correct format)
                                 timestamp: new Date().toISOString()
                             }})
                         }});
