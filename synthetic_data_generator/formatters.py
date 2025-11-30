@@ -66,13 +66,16 @@ class DataFormatter:
         """
         Convert to scatter format: {x, y, label}.
 
+        If data already has x,y keys (from generator), preserve them.
+        Otherwise convert from simple {label, value} format.
+
         Input: [{"label": "A", "value": 100}, ...]
         Output: [{"x": 0, "y": 100, "label": "A"}, ...]
         """
         return [
             {
-                "x": i,
-                "y": item['value'],
+                "x": item.get('x', i),           # Preserve generator's x or use index
+                "y": item.get('y', item['value']),  # Preserve generator's y or use value
                 "label": item['label']
             }
             for i, item in enumerate(data)
@@ -86,14 +89,17 @@ class DataFormatter:
         """
         Convert to bubble format: {x, y, r, label}.
 
+        If data already has x,y,r keys (from generator), preserve them.
+        Otherwise convert from simple {label, value} format.
+
         Input: [{"label": "A", "value": 100}, ...]
         Output: [{"x": 0, "y": 100, "r": 15, "label": "A"}, ...]
         """
         return [
             {
-                "x": i,
-                "y": item['value'],
-                "r": random.randint(10, 30),  # Bubble size
+                "x": item.get('x', i),                    # Preserve generator's x or use index
+                "y": item.get('y', item['value']),        # Preserve generator's y or use value
+                "r": item.get('r', random.randint(10, 30)),  # Preserve generator's r or generate
                 "label": item['label']
             }
             for i, item in enumerate(data)
