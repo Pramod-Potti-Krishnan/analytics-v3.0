@@ -96,10 +96,11 @@ class ChartSpreadsheetEditor {
     }
 
     _parseScatterData(data) {
-        // X-Y format (no labels in table)
+        // Label, X, Y format
         if (Array.isArray(data)) {
             return data.map((item, idx) => ({
                 id: `row-${idx}`,
+                Label: item.label || item.Label || `Point ${idx + 1}`,
                 X: item.x || item.X || 0,
                 Y: item.y || item.Y || 0
             }));
@@ -255,10 +256,10 @@ class ChartSpreadsheetEditor {
 
             // Scatter chart
             'scatter': {
-                columns: ['X', 'Y'],
-                activeColumns: ['X', 'Y'],
+                columns: ['Label', 'X', 'Y'],
+                activeColumns: ['Label', 'X', 'Y'],
                 canAddColumns: false,
-                columnTypes: { X: 'number', Y: 'number' }
+                columnTypes: { Label: 'text', X: 'number', Y: 'number' }
             },
 
             // Bubble chart
@@ -1833,7 +1834,7 @@ class ChartSpreadsheetEditor {
         const multiSeriesChartTypes = ['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'];
 
         if (chartType === 'scatter') {
-            return this.data.map(row => ({ x: row.X, y: row.Y }));
+            return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y }));
         } else if (chartType === 'bubble') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y, r: row.Radius }));
         } else if (multiSeriesChartTypes.includes(chartType)) {

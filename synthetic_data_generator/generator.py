@@ -261,7 +261,7 @@ class SyntheticDataGenerator:
             y_values.append(round(y, 2))
 
         return [
-            {"label": label, "value": y, "x": round(x, 2), "y": y}
+            {"label": label, "x": round(x, 2), "y": y}
             for label, x, y in zip(labels, x_values, y_values)
         ]
 

@@ -69,14 +69,14 @@ class DataFormatter:
         If data already has x,y keys (from generator), preserve them.
         Otherwise convert from simple {label, value} format.
 
-        Input: [{"label": "A", "value": 100}, ...]
-        Output: [{"x": 0, "y": 100, "label": "A"}, ...]
+        Input: [{"label": "A", "value": 100}, ...]  OR  [{"label": "A", "x": 10, "y": 20}, ...]
+        Output: [{"x": 0, "y": 100, "label": "A"}, ...]  OR  [{"x": 10, "y": 20, "label": "A"}, ...]
         """
         return [
             {
-                "x": item.get('x', i),           # Preserve generator's x or use index
-                "y": item.get('y', item['value']),  # Preserve generator's y or use value
-                "label": item['label']
+                "x": item.get('x', i),                        # Preserve generator's x or use index
+                "y": item.get('y', item.get('value', 0)),     # Preserve generator's y or use value or 0
+                "label": item.get('label', f"Point {i+1}")
             }
             for i, item in enumerate(data)
         ]
@@ -92,15 +92,15 @@ class DataFormatter:
         If data already has x,y,r keys (from generator), preserve them.
         Otherwise convert from simple {label, value} format.
 
-        Input: [{"label": "A", "value": 100}, ...]
-        Output: [{"x": 0, "y": 100, "r": 15, "label": "A"}, ...]
+        Input: [{"label": "A", "value": 100}, ...]  OR  [{"label": "A", "x": 10, "y": 20, "r": 15}, ...]
+        Output: [{"x": 0, "y": 100, "r": 15, "label": "A"}, ...]  OR  [{"x": 10, "y": 20, "r": 15, "label": "A"}, ...]
         """
         return [
             {
-                "x": item.get('x', i),                    # Preserve generator's x or use index
-                "y": item.get('y', item['value']),        # Preserve generator's y or use value
-                "r": item.get('r', random.randint(10, 30)),  # Preserve generator's r or generate
-                "label": item['label']
+                "x": item.get('x', i),                        # Preserve generator's x or use index
+                "y": item.get('y', item.get('value', 0)),     # Preserve generator's y or use value or 0
+                "r": item.get('r', random.randint(10, 30)),   # Preserve generator's r or generate
+                "label": item.get('label', f"Point {i+1}")
             }
             for i, item in enumerate(data)
         ]
