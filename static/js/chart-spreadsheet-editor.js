@@ -70,11 +70,27 @@ class ChartSpreadsheetEditor {
     _parseSimpleData(data) {
         // Label-value format
         if (Array.isArray(data)) {
-            return data.map((item, idx) => ({
-                id: `row-${idx}`,
-                Label: item.label || item.Label || '',
-                Value: item.value || item.Value || 0
-            }));
+            return data.map((item, idx) => {
+                // Extract label (case-insensitive)
+                const label = item.label || item.Label || '';
+
+                // Extract value from any numeric property (not 'label')
+                let value = item.value || item.Value;
+                if (value === undefined) {
+                    // Find first numeric property that's not a label
+                    const numericKey = Object.keys(item).find(key =>
+                        key.toLowerCase() !== 'label' &&
+                        typeof item[key] === 'number'
+                    );
+                    value = numericKey ? item[numericKey] : 0;
+                }
+
+                return {
+                    id: `row-${idx}`,
+                    Label: label,
+                    Value: value
+                };
+            });
         }
         return [];
     }
@@ -308,8 +324,11 @@ class ChartSpreadsheetEditor {
             const firstRow = this.data[0];
             const rowKeys = Object.keys(firstRow).filter(k => k !== 'id');
 
+            // Check that Value column exists AND has non-undefined values
+            const hasValidValue = rowKeys.includes('Value') && firstRow.Value !== undefined;
+
             // If row has more than 2 columns (Label + multiple series columns), it's multi-series
-            if (rowKeys.length > 2 || (rowKeys.length === 2 && !rowKeys.includes('Value'))) {
+            if (rowKeys.length > 2 || (rowKeys.length === 2 && !hasValidValue)) {
                 console.log('🔍 Auto-detected multi-series structure in data');
                 config = this._getMultiSeriesConfig();
             }
@@ -1835,8 +1854,15 @@ class ChartSpreadsheetEditor {
         } else if (chartType === 'd3_choropleth_usa') {
             return this.data.map(row => ({ label: row.State, value: row.Value }));
         } else {
-            // Simple label-value format
-            return this.data.map(row => ({ label: row.Label, value: row.Value }));
+            // Simple label-value format - use actual column names from columnConfig
+            const columns = this.columnConfig.columns;
+            const labelCol = columns[0]; // Usually 'Label'
+            const valueCol = columns[1]; // Usually 'Value' or other numeric column
+
+            return this.data.map(row => ({
+                label: row[labelCol],
+                value: row[valueCol]
+            }));
         }
     }
 
