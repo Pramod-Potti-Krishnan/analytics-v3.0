@@ -49,12 +49,23 @@ async def process_analytics_direct(
         await deps.send_progress_update("data_processing", 10, "Processing request")
         
         if user_data:
-            # Use provided data
-            chart_data = {
-                "labels": [d.get("label", f"Item {i}") for i, d in enumerate(user_data)],
-                "values": [d.get("value", 0) for d in user_data],
-                "title": title
-            }
+            # Use provided data - detect format based on chart type
+            if chart_type in ["scatter", "bubble"]:
+                # Scatter/bubble: preserve x/y/r coordinates
+                chart_data = {
+                    "datasets": [{
+                        "label": title,
+                        "data": user_data  # Pass through with x, y, r, label intact
+                    }],
+                    "title": title
+                }
+            else:
+                # Simple charts: extract label/value pairs
+                chart_data = {
+                    "labels": [d.get("label", f"Item {i}") for i, d in enumerate(user_data)],
+                    "values": [d.get("value", 0) for d in user_data],
+                    "title": title
+                }
             await deps.send_progress_update("data_processing", 25, "Using provided data")
         else:
             # Synthesize data
@@ -846,22 +857,25 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
         elif chart_type == "scatter":
-            # Convert label-value format to scatter datasets format (x-y coordinates)
-            # Preserve labels as custom property for tooltips
-            # NOTE: Editor team needs to enhance editor to support object data points
-            scatter_data = {
-                "datasets": [{
-                    "label": slide_title,
-                    "data": [
-                        {
-                            "x": i,
-                            "y": v,
-                            "label": chart_data["labels"][i]  # Preserve original label
-                        }
-                        for i, v in enumerate(chart_data["values"])
-                    ]
-                }]
-            }
+            # Check if data is already in scatter format (from line 51-61)
+            if isinstance(chart_data, dict) and "datasets" in chart_data:
+                # Already formatted with x/y coordinates - use directly
+                scatter_data = chart_data
+            else:
+                # Legacy: Convert label-value format to scatter datasets format
+                scatter_data = {
+                    "datasets": [{
+                        "label": slide_title,
+                        "data": [
+                            {
+                                "x": i,
+                                "y": v,
+                                "label": chart_data["labels"][i]  # Preserve original label
+                            }
+                            for i, v in enumerate(chart_data["values"])
+                        ]
+                    }]
+                }
             # v3.1.9: FIX datalabels bug - pass in options parameter (not data dict!)
             scatter_options = {
                 "plugins": {
@@ -880,31 +894,33 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
             )
         elif chart_type == "bubble":
-            # Convert label-value format to bubble datasets format (x-y-r coordinates)
-            # Preserve labels and vary bubble radius based on value
-            # NOTE: Editor team needs to enhance editor to support object data points
+            # Check if data is already in bubble format (from line 51-61)
+            if isinstance(chart_data, dict) and "datasets" in chart_data:
+                # Already formatted with x/y/r coordinates - use directly
+                bubble_data = chart_data
+            else:
+                # Legacy: Convert label-value format to bubble datasets format
+                # v3.1.9: Improved proportional radius scaling (8-40px range)
+                values = chart_data["values"]
+                max_val = max(values) if values else 1
+                min_val = min(values) if values else 0
+                val_range = max_val - min_val if max_val != min_val else 1
 
-            # v3.1.9: Improved proportional radius scaling (8-40px range)
-            values = chart_data["values"]
-            max_val = max(values) if values else 1
-            min_val = min(values) if values else 0
-            val_range = max_val - min_val if max_val != min_val else 1
-
-            bubble_data = {
-                "datasets": [{
-                    "label": slide_title,
-                    "data": [
-                        {
-                            "x": i,
-                            "y": v,
-                            # Proportional scaling: maps min→8px, max→40px
-                            "r": max(8, min(40, 8 + (v - min_val) / val_range * 32)),
-                            "label": chart_data["labels"][i]  # Preserve original label
-                        }
-                        for i, v in enumerate(values)
-                    ]
-                }]
-            }
+                bubble_data = {
+                    "datasets": [{
+                        "label": slide_title,
+                        "data": [
+                            {
+                                "x": i,
+                                "y": v,
+                                # Proportional scaling: maps min→8px, max→40px
+                                "r": max(8, min(40, 8 + (v - min_val) / val_range * 32)),
+                                "label": chart_data["labels"][i]  # Preserve original label
+                            }
+                            for i, v in enumerate(values)
+                        ]
+                    }]
+                }
             # v3.1.9: FIX datalabels bug - pass in options parameter (not data dict!)
             bubble_options = {
                 "plugins": {

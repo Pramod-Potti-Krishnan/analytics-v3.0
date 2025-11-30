@@ -1041,17 +1041,41 @@ class DatasetSchema(BaseModel):
         return [float(val) for val in v]
 
 
+class ScatterBubbleDataPoint(BaseModel):
+    """Single data point for scatter/bubble charts."""
+    x: float = Field(..., description="X coordinate")
+    y: float = Field(..., description="Y coordinate")
+    r: Optional[float] = Field(default=None, description="Bubble radius (bubble charts only)")
+    label: str = Field(..., min_length=1, description="Point label")
+
+    @validator('x', 'y', 'r')
+    def validate_numeric(cls, v, field):
+        """Validate numeric values."""
+        if v is None and field.name == 'r':
+            return v  # r is optional
+        if v is not None:
+            if v != v:  # NaN check
+                raise ValueError(f"{field.name} cannot be NaN")
+            if abs(v) == float('inf'):
+                raise ValueError(f"{field.name} cannot be infinity")
+        return v
+
+
 class ChartDataUpdate(BaseModel):
-    """Request to update chart data - supports both single-series and multi-series formats."""
+    """Request to update chart data - supports simple, multi-series, and scatter/bubble formats."""
     chart_id: str = Field(..., min_length=1, description="Chart identifier")
     presentation_id: str = Field(..., min_length=1, description="Presentation UUID")
-    labels: List[str] = Field(..., min_items=2, max_items=50, description="X-axis labels (2-50 items)")
+    chart_type: str = Field(..., description="Chart type (e.g., 'scatter', 'bubble', 'bar', etc.)")
 
-    # Single-series format (simple charts)
-    values: Optional[List[float]] = Field(default=None, min_items=2, max_items=50, description="Y-axis values for single-series charts")
+    # Simple charts: labels + values
+    labels: Optional[List[str]] = Field(default=None, min_items=2, max_items=50, description="X-axis labels (simple charts)")
+    values: Optional[List[float]] = Field(default=None, min_items=2, max_items=50, description="Y-axis values (simple charts)")
 
-    # Multi-series format (grouped/stacked charts)
-    datasets: Optional[List[DatasetSchema]] = Field(default=None, min_items=1, max_items=20, description="Multiple data series for multi-series charts")
+    # Multi-series charts: labels + datasets
+    datasets: Optional[List[DatasetSchema]] = Field(default=None, min_items=1, max_items=20, description="Multiple data series (multi-series charts)")
+
+    # Scatter/bubble charts: data points with x/y/r coordinates
+    data: Optional[List[ScatterBubbleDataPoint]] = Field(default=None, min_items=2, max_items=50, description="Data points for scatter/bubble charts")
 
     timestamp: Optional[str] = Field(default=None, description="Update timestamp")
 
@@ -1064,8 +1088,11 @@ class ChartDataUpdate(BaseModel):
 
     @validator('labels')
     def validate_labels(cls, v):
-        """Validate labels array."""
-        if not v or len(v) < 2:
+        """Validate labels array (optional for scatter/bubble)."""
+        if v is None:
+            return v  # Optional for scatter/bubble charts
+
+        if len(v) < 2:
             raise ValueError("At least 2 labels required")
         if len(v) > 50:
             raise ValueError("Maximum 50 labels allowed")
@@ -1081,23 +1108,55 @@ class ChartDataUpdate(BaseModel):
 
         return [str(label).strip() for label in v]
 
-    @validator('datasets', always=True)
+    @validator('data', always=True)
     def validate_format(cls, v, values):
-        """Ensure either values OR datasets is provided (mutually exclusive)."""
+        """Validate that appropriate data format is provided based on chart type."""
+        chart_type = values.get('chart_type', '')
+        has_labels = values.get('labels') is not None
         has_values = values.get('values') is not None
-        has_datasets = v is not None
+        has_datasets = values.get('datasets') is not None
+        has_data = v is not None  # scatter/bubble data
 
-        # Must provide exactly one format
-        if not has_values and not has_datasets:
-            raise ValueError("Must provide either 'values' (single-series) or 'datasets' (multi-series)")
-        if has_values and has_datasets:
-            raise ValueError("Cannot provide both 'values' and 'datasets' - choose one format")
+        # Scatter/bubble charts: require 'data' field
+        if chart_type in ['scatter', 'bubble']:
+            if not has_data:
+                raise ValueError(f"{chart_type} charts require 'data' field with x/y coordinates")
+            if has_labels or has_values or has_datasets:
+                raise ValueError(f"{chart_type} charts should only use 'data' field, not labels/values/datasets")
 
-        labels = values.get('labels', [])
+            # Validate bubble charts have radius
+            if chart_type == 'bubble':
+                for i, point in enumerate(v):
+                    if point.r is None:
+                        raise ValueError(f"Bubble chart data point {i} missing radius 'r'")
 
-        # Validate single-series format
+            return v
+
+        # Multi-series charts: require labels + datasets
+        if has_datasets:
+            if not has_labels:
+                raise ValueError("Multi-series charts require 'labels' field")
+            if has_values or has_data:
+                raise ValueError("Cannot mix datasets with values or data")
+
+            labels = values.get('labels', [])
+            for i, ds in enumerate(v if has_datasets else []):
+                if len(ds.data) != len(labels):
+                    raise ValueError(
+                        f"Dataset {i} ('{ds.label}'): data length ({len(ds.data)}) "
+                        f"must match labels length ({len(labels)})"
+                    )
+            return values.get('datasets')
+
+        # Simple charts: require labels + values
         if has_values:
-            vals = values.get('values')
+            if not has_labels:
+                raise ValueError("Simple charts require 'labels' field")
+            if has_datasets or has_data:
+                raise ValueError("Cannot mix values with datasets or data")
+
+            labels = values.get('labels', [])
+            vals = values.get('values', [])
             if len(vals) != len(labels):
                 raise ValueError(f"Number of values ({len(vals)}) must match number of labels ({len(labels)})")
 
@@ -1108,22 +1167,10 @@ class ChartDataUpdate(BaseModel):
                     raise ValueError(f"Value at index {i} cannot be NaN")
                 if abs(val) == float('inf'):
                     raise ValueError(f"Value at index {i} cannot be infinity")
+            return v
 
-        # Validate multi-series format
-        if has_datasets:
-            if len(v) < 1:
-                raise ValueError("At least 1 dataset required for multi-series format")
-            if len(v) > 20:
-                raise ValueError("Maximum 20 datasets allowed")
-
-            for i, ds in enumerate(v):
-                if len(ds.data) != len(labels):
-                    raise ValueError(
-                        f"Dataset {i} ('{ds.label}'): data length ({len(ds.data)}) "
-                        f"must match labels length ({len(labels)})"
-                    )
-
-        return v
+        # No valid format provided
+        raise ValueError("Must provide either: (1) labels+values for simple charts, (2) labels+datasets for multi-series, or (3) data for scatter/bubble")
 
 
 @app.post("/api/charts/update-data", tags=["Interactive Editor"])
