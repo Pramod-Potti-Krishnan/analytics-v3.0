@@ -296,7 +296,15 @@ class ChartSpreadsheetEditor {
         // If chartType lookup fails but data has multi-series structure, return multi-series config
         let config = configs[this.chartType];
 
-        if (!config && this.data && this.data.length > 0) {
+        // List of simple chart types that should NEVER be auto-detected as multi-series
+        const simpleChartTypes = [
+            'line', 'bar_vertical', 'bar_horizontal', 'pie', 'doughnut',
+            'radar', 'polar_area', 'area', 'waterfall',
+            'd3_treemap', 'd3_sunburst', 'd3_choropleth_usa'
+        ];
+
+        // Only auto-detect for unknown chart types (not in configs and not in simple list)
+        if (!config && !simpleChartTypes.includes(this.chartType) && this.data && this.data.length > 0) {
             const firstRow = this.data[0];
             const rowKeys = Object.keys(firstRow).filter(k => k !== 'id');
 
@@ -1802,17 +1810,15 @@ class ChartSpreadsheetEditor {
     _exportData() {
         const chartType = this.chartType;
 
-        // Auto-detect multi-series format based on column structure
-        const hasMultipleSeries = this.columnConfig.columns.length > 2;  // More than Label + 1 value column
-        const hasValueColumn = this.columnConfig.columns.includes('Value');
+        // Define multi-series chart types explicitly (no auto-detection)
+        const multiSeriesChartTypes = ['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'];
 
         if (chartType === 'scatter') {
             return this.data.map(row => ({ x: row.X, y: row.Y }));
         } else if (chartType === 'bubble') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y, r: row.Radius }));
-        } else if (['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'].includes(chartType) ||
-                   (hasMultipleSeries && !hasValueColumn)) {
-            // Multi-series format (explicit chartType OR auto-detected structure)
+        } else if (multiSeriesChartTypes.includes(chartType)) {
+            // Multi-series format (ONLY for explicitly multi-series chart types)
             const labels = this.data.map(row => row.Label);
             const seriesColumns = this.columnConfig.columns.filter(col => col !== 'Label');
             const datasets = seriesColumns.map(seriesName => ({
@@ -1902,13 +1908,16 @@ class ChartSpreadsheetEditor {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chart_id: chartId,
+                presentation_id: this.presentationId || 'unknown',
                 data: chartData,
                 timestamp: Date.now()
             })
         });
 
         if (!response.ok) {
-            throw new Error('Failed to save chart data');
+            const errorData = await response.json().catch(() => ({}));
+            const errorMsg = errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+            throw new Error(`Failed to save: ${errorMsg}`);
         }
 
         // Update chart instance
