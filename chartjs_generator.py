@@ -212,7 +212,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"  # "inline_script" (Layout Builder) or "revealchart" (legacy)
+        output_mode: str = "inline_script",  # "inline_script" (Layout Builder) or "revealchart" (legacy)
+        semantic_chart_type: Optional[str] = None  # Semantic type for editor (e.g., "area_stacked")
     ) -> str:
         """
         Generate Chart.js line chart.
@@ -279,7 +280,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode  # Pass through output mode
+            output_mode,  # Pass through output mode
+            semantic_chart_type  # Pass semantic type for editor
         )
 
     def generate_area_chart(
@@ -370,7 +372,8 @@ class ChartJSGenerator:
 
         return self.generate_line_chart(
             chart_data, height, chart_id, merged_options,
-            enable_editor, presentation_id, api_base_url, output_mode
+            enable_editor, presentation_id, api_base_url, output_mode,
+            semantic_chart_type="area_stacked"  # Tell editor this is stacked area
         )
 
     # ========================================
@@ -1997,7 +2000,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"  # "revealchart" or "inline_script"
+        output_mode: str = "inline_script",  # "revealchart" or "inline_script"
+        semantic_chart_type: Optional[str] = None  # Semantic type for editor
     ) -> str:
         """
         Wrap Chart.js config in canvas element.
@@ -2026,7 +2030,8 @@ class ChartJSGenerator:
                 chart_id,
                 enable_editor,
                 presentation_id,
-                api_base_url
+                api_base_url,
+                semantic_chart_type  # Pass semantic type for editor
             )
 
         # Legacy RevealChart mode
@@ -2066,7 +2071,8 @@ class ChartJSGenerator:
         chart_id: str,
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
-        api_base_url: str = "/api/charts"
+        api_base_url: str = "/api/charts",
+        semantic_chart_type: Optional[str] = None  # Semantic type for editor
     ) -> str:
         """
         Generate Layout Builder-compliant HTML with inline Chart.js script.
@@ -2163,13 +2169,16 @@ class ChartJSGenerator:
 
         # Add interactive editor if requested
         if enable_editor and presentation_id:
+            # Use semantic type if provided, otherwise fall back to Chart.js type
+            chart_type_for_editor = semantic_chart_type or config.get('type', 'bar')
+
             chart_html = self._wrap_inline_script_with_editor(
                 chart_html,
                 chart_id,
                 presentation_id,
                 api_base_url,
                 inline_script,
-                chart_type=config.get('type', 'bar')  # v3.2.1: Pass chart type for dynamic editor
+                chart_type=chart_type_for_editor  # v3.2.1: Pass chart type for dynamic editor
             )
 
         return chart_html
