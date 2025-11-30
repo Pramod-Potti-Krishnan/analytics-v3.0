@@ -1192,16 +1192,24 @@ async def update_chart_data(data: ChartDataUpdate):
         Success status and message with format information
     """
     try:
-        # Determine format
-        is_multi_series = data.datasets is not None
-        format_type = "multi-series" if is_multi_series else "single-series"
+        # Determine format based on chart_type and available fields
+        is_scatter_bubble = data.chart_type in ['scatter', 'bubble'] and data.data is not None
+        is_multi_series = data.datasets is not None and not is_scatter_bubble
 
-        if is_multi_series:
+        if is_scatter_bubble:
+            format_type = data.chart_type
+            logger.info(
+                f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
+                f"({len(data.data)} data points)"
+            )
+        elif is_multi_series:
+            format_type = "multi-series"
             logger.info(
                 f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
                 f"({len(data.datasets)} series, {len(data.labels)} labels)"
             )
         else:
+            format_type = "single-series"
             logger.info(
                 f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
                 f"({len(data.labels)} labels, {len(data.values)} values)"
@@ -1217,13 +1225,17 @@ async def update_chart_data(data: ChartDataUpdate):
             "chart_id": data.chart_id,
             "presentation_id": data.presentation_id,
             "format": format_type,
-            "labels_count": len(data.labels)
+            "chart_type": data.chart_type
         }
 
-        if is_multi_series:
+        if is_scatter_bubble:
+            response_data["data_points_count"] = len(data.data)
+        elif is_multi_series:
+            response_data["labels_count"] = len(data.labels)
             response_data["series_count"] = len(data.datasets)
             response_data["series_names"] = [ds.label for ds in data.datasets]
         else:
+            response_data["labels_count"] = len(data.labels)
             response_data["values_count"] = len(data.values)
 
         return response_data

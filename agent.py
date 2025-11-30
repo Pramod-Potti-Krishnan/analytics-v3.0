@@ -70,7 +70,7 @@ async def process_analytics_direct(
         else:
             # Synthesize data
             await deps.send_progress_update("data_processing", 15, "Generating synthetic data")
-            synthesis_result = await data_synthesizer_direct(deps, content, sample_size=10)
+            synthesis_result = await data_synthesizer_direct(deps, content, chart_type=chart_type, sample_size=10)
             
             if synthesis_result["success"]:
                 chart_data = synthesis_result["data"]

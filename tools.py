@@ -465,86 +465,86 @@ async def chart_generator_direct(
 async def data_synthesizer_direct(
     deps: 'AnalyticsDependencies',
     data_description: str,
+    chart_type: str,
     sample_size: int = 50
 ) -> Dict[str, Any]:
     """
-    Direct data synthesizer without RunContext.
+    Direct data synthesizer using SyntheticDataGenerator for chart-type-aware data generation.
+
+    Args:
+        deps: Analytics dependencies
+        data_description: Description/narrative for data generation
+        chart_type: Type of chart (scatter, bubble, bar, etc.)
+        sample_size: Number of data points to generate
+
+    Returns:
+        Dict with success, data (formatted for chart type), and sample_size
     """
     try:
+        from synthetic_data_generator import SyntheticDataGenerator
+
         # Send progress update
         await deps.send_progress_update("data_processing", 25, "Synthesizing data")
-        
+
         # Clamp sample size
-        sample_size = max(10, min(1000, sample_size))
-        
-        # Use OpenAI to generate data
-        client = get_openai_client()
-        
-        prompt = f"""Generate realistic data for: {data_description}
-        
-        Create exactly {sample_size} data points in JSON format:
-        {{
-            "labels": ["label1", "label2", ...],
-            "values": [value1, value2, ...],
-            "x": [x1, x2, ...],
-            "y": [y1, y2, ...],
-            "title": "Descriptive title"
-        }}
-        
-        Ensure the data is realistic and matches the description context.
-        Return ONLY valid JSON, no explanations."""
-        
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a data generation specialist. Generate realistic datasets."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=2000
+        sample_size = max(2, min(50, sample_size))
+
+        # Initialize generator
+        gen = SyntheticDataGenerator()
+
+        # Generate chart-type-aware data
+        logger.info(f"Generating synthetic data for {chart_type} ({sample_size} points)")
+        raw_data = gen.generate(
+            chart_type=chart_type,
+            narrative=data_description,
+            num_points=sample_size
         )
-        
-        # Parse response
-        data_json = response.choices[0].message.content.strip()
-        # Clean up JSON if needed
-        if data_json.startswith("```json"):
-            data_json = data_json[7:]
-        if data_json.endswith("```"):
-            data_json = data_json[:-3]
-            
-        data = json.loads(data_json)
-        
-        # Ensure we have the right sample size
-        for key in ["values", "x", "y"]:
-            if key in data and len(data[key]) != sample_size:
-                # Adjust to match sample size
-                if len(data[key]) > sample_size:
-                    data[key] = data[key][:sample_size]
-                else:
-                    # Pad with interpolated values
-                    while len(data[key]) < sample_size:
-                        data[key].append(data[key][-1] if data[key] else 0)
-        
-        # Adjust labels if needed
-        if "labels" in data and len(data["labels"]) != sample_size:
-            if len(data["labels"]) > sample_size:
-                data["labels"] = data["labels"][:sample_size]
+
+        # Format data based on chart type
+        if chart_type in ["scatter", "bubble"]:
+            # Scatter/bubble: raw_data is already [{x, y, label}] or [{x, y, r, label}]
+            chart_data = {
+                "datasets": [{
+                    "label": data_description,
+                    "data": raw_data  # Already in correct object format
+                }],
+                "title": data_description
+            }
+            logger.info(f"Formatted scatter/bubble data: {len(raw_data)} points with x/y coordinates")
+
+        elif chart_type in ["bar_grouped", "bar_stacked", "area_stacked"]:
+            # Multi-series: raw_data is already {labels, datasets}
+            chart_data = raw_data
+            chart_data["title"] = data_description
+            logger.info(f"Formatted multi-series data: {len(raw_data.get('labels', []))} labels, {len(raw_data.get('datasets', []))} series")
+
+        else:
+            # Simple format: convert [{label, value}] to {labels, values}
+            if isinstance(raw_data, list):
+                chart_data = {
+                    "labels": [d["label"] for d in raw_data],
+                    "values": [d["value"] for d in raw_data],
+                    "title": data_description
+                }
+                logger.info(f"Formatted simple data: {len(chart_data['labels'])} labels")
             else:
-                while len(data["labels"]) < sample_size:
-                    data["labels"].append(f"Item {len(data['labels']) + 1}")
-        
+                # Already in dict format
+                chart_data = raw_data
+                chart_data["title"] = data_description
+                logger.info(f"Using pre-formatted data structure")
+
         await deps.send_progress_update("data_processing", 40, "Data synthesized successfully")
-        
+
         return {
             "success": True,
-            "data": data,
+            "data": chart_data,
             "sample_size": sample_size,
             "description": data_description
         }
-        
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse synthesized data: {e}")
-        # Return simple default dataset
+
+    except Exception as e:
+        logger.error(f"Synthetic data generation failed: {e}", exc_info=True)
+        # Fallback to simple default dataset
         return {
             "success": True,
             "data": {
@@ -553,13 +553,7 @@ async def data_synthesizer_direct(
                 "title": data_description
             },
             "sample_size": sample_size,
-            "warning": "Used fallback data generation"
-        }
-    except Exception as e:
-        logger.error(f"Data synthesis failed: {e}")
-        return {
-            "success": False,
-            "error": f"Data synthesis failed: {str(e)}"
+            "warning": f"Used fallback data generation: {str(e)}"
         }
 
 
