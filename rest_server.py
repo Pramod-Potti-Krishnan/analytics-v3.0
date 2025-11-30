@@ -1049,15 +1049,20 @@ class ScatterBubbleDataPoint(BaseModel):
     label: str = Field(..., min_length=1, description="Point label")
 
     @validator('x', 'y', 'r')
-    def validate_numeric(cls, v, field):
+    def validate_numeric(cls, v, values, **kwargs):
         """Validate numeric values."""
-        if v is None and field.name == 'r':
-            return v  # r is optional
-        if v is not None:
-            if v != v:  # NaN check
-                raise ValueError(f"{field.name} cannot be NaN")
-            if abs(v) == float('inf'):
-                raise ValueError(f"{field.name} cannot be infinity")
+        # Get field name from kwargs (Pydantic V2 compatibility)
+        field_name = kwargs.get('field', {}).get('name', 'value')
+
+        if v is None:
+            # r is optional, x and y are required (handled by Field)
+            return v
+
+        if v != v:  # NaN check
+            raise ValueError(f"{field_name} cannot be NaN")
+        if abs(v) == float('inf'):
+            raise ValueError(f"{field_name} cannot be infinity")
+
         return v
 
 
