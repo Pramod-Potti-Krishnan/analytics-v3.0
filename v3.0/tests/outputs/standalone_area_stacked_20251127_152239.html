@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area Stacked - Standalone Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .info {
+            background: #e9ecef;
+            padding: 20px;
+            border-left: 4px solid #007bff;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .info pre {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .chart-wrapper {
+            margin: 30px 0;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+        .success-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            Area Stacked
+            <span class="success-badge">✓ STANDALONE TEST</span>
+        </h1>
+
+        <div class="info">
+            <h3>Test Information</h3>
+            <p><strong>Chart Type:</strong> area_stacked</p>
+            <p><strong>Test Time:</strong> 20251127_152239</p>
+            <p><strong>Data Format:</strong> Director Agent v3.4 format (transformed to Chart.js)</p>
+            <p><strong>Environment:</strong> Standalone HTML (no Layout Service)</p>
+        </div>
+
+        <div class="info">
+            <h3>Test Data</h3>
+            <pre>[{'label': 'Q1', 'Product A': 120, 'Product B': 95, 'Product C': 70}, {'label': 'Q2', 'Product A': 145, 'Product B': 110, 'Product C': 85}]
+  ...</pre>
+        </div>
+
+        <div class="chart-wrapper">
+            <h2>Chart Output</h2>
+            <div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+  <canvas id="line-chart-4334235968"></canvas>
+  <script>
+    (function() {
+      function initChart() {
+        // v3.3.4: Destroy existing chart instance to force animation replay
+        if (window.chartInstances && window.chartInstances['line-chart-4334235968']) {
+          console.log('Chart line-chart-4334235968 exists, destroying to replay animation...');
+          window.chartInstances['line-chart-4334235968'].destroy();
+          delete window.chartInstances['line-chart-4334235968'];
+        }
+
+        const ctx = document.getElementById('line-chart-4334235968').getContext('2d');
+        const chartConfig = {"type": "line", "data": {"labels": ["Q1", "Q2", "Q3", "Q4"], "datasets": [{"label": "Product A", "data": [120, 145, 170, 200], "backgroundColor": "rgba(255, 107, 107, 0.2)", "borderColor": "#FF6B6B", "borderWidth": 3, "fill": true, "tension": 0.4, "pointRadius": 6, "pointBackgroundColor": "#FF6B6B", "pointBorderColor": "#fff", "pointBorderWidth": 3}, {"label": "Product B", "data": [95, 110, 130, 155], "backgroundColor": "rgba(78, 205, 196, 0.2)", "borderColor": "#4ECDC4", "borderWidth": 3, "fill": true, "tension": 0.4, "pointRadius": 6, "pointBackgroundColor": "#4ECDC4", "pointBorderColor": "#fff", "pointBorderWidth": 3}, {"label": "Product C", "data": [70, 85, 100, 120], "backgroundColor": "rgba(255, 230, 109, 0.2)", "borderColor": "#FFE66D", "borderWidth": 3, "fill": true, "tension": 0.4, "pointRadius": 6, "pointBackgroundColor": "#FFE66D", "pointBorderColor": "#fff", "pointBorderWidth": 3}]}, "options": {"responsive": true, "maintainAspectRatio": false, "animation": {"duration": 1500, "easing": "easeInOutQuart", "delay": 0, "loop": false, "animateRotate": true, "animateScale": true}, "plugins": {"legend": {"display": true, "position": "top", "labels": {"font": {"size": 14, "weight": "bold"}, "padding": 15, "usePointStyle": true}}, "datalabels": {"display": true, "color": "#fff", "font": {"size": 14, "weight": "bold"}, "formatter": "function(value) { return value.toLocaleString(); }", "anchor": "end", "align": "top", "offset": 4, "backgroundColor": "rgba(0, 0, 0, 0.7)", "borderRadius": 4, "padding": 6}, "tooltip": {"enabled": true, "mode": "nearest", "intersect": true}}, "scales": {"x": {"display": true, "grid": {"display": true, "color": "rgba(0, 0, 0, 0.08)", "lineWidth": 1}, "ticks": {"display": true, "font": {"size": 12, "weight": "500"}, "color": "#333", "padding": 8, "autoSkip": false, "maxRotation": 45, "minRotation": 0}, "title": {"display": true, "text": "", "font": {"size": 13, "weight": "bold"}, "color": "#333"}, "stacked": true}, "y": {"display": true, "beginAtZero": true, "grid": {"display": true, "color": "rgba(0, 0, 0, 0.08)", "lineWidth": 1}, "ticks": {"display": true, "font": {"size": 12, "weight": "500"}, "color": "#333", "padding": 8, "callback": "function(value) { return value.toLocaleString(); }"}, "title": {"display": true, "text": "Value", "font": {"size": 13, "weight": "bold"}, "color": "#333"}, "stacked": true}}}};
+        const chart = new Chart(ctx, chartConfig);
+
+        // Store reference for editor access
+        window.chartInstances = window.chartInstances || {};
+        window.chartInstances['line-chart-4334235968'] = chart;
+
+        console.log('✅ Chart line-chart-4334235968 initialized successfully');
+      }
+
+      // Reveal.js-aware initialization to ensure animations play
+      if (typeof Reveal !== 'undefined') {
+        // Wait for Reveal.js to be fully initialized before accessing methods
+        Reveal.on('ready', function() {
+          try {
+            const currentSlide = Reveal.getCurrentSlide();
+            if (currentSlide && currentSlide.querySelector('#line-chart-4334235968')) {
+              setTimeout(initChart, 100);  // Small delay for slide transition
+            }
+          } catch (e) {
+            console.warn('Chart init on ready failed:', e);
+          }
+        });
+
+        // v3.3.4: Always reinitialize on slide change to replay animation
+        Reveal.on('slidechanged', function(event) {
+          try {
+            if (event.currentSlide && event.currentSlide.querySelector('#line-chart-4334235968')) {
+              initChart();  // This now destroys old chart and creates new one
+            }
+          } catch (e) {
+            console.warn('Chart init on slide change failed:', e);
+          }
+        });
+      } else {
+        // No Reveal.js detected, init immediately (standalone mode)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initChart);
+        } else {
+          initChart();
+        }
+      }
+    })();
+  </script>
+</div>
+        </div>
+
+        <div class="info">
+            <h3>Validation Checklist</h3>
+            <ul>
+                <li>✓ Chart renders visually (not blank)</li>
+                <li>✓ All data series appear</li>
+                <li>✓ Labels are visible</li>
+                <li>✓ No console errors</li>
+                <li>✓ Chart is interactive (hover works)</li>
+            </ul>
+            <p><strong>Open browser console (F12) to check for any JavaScript errors.</strong></p>
+        </div>
+    </div>
+</body>
+</html>

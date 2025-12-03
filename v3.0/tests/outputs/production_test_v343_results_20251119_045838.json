@@ -1,0 +1,178 @@
+{
+  "test_time": "2025-11-19T04:58:38.792505Z",
+  "production_url": "https://analytics-v30-production.up.railway.app",
+  "version": "v3.4.3",
+  "results": {
+    "health": {
+      "status": "\u2705 PASS",
+      "error": null
+    },
+    "catalog": {
+      "status": "\u2705 PASS",
+      "error": null,
+      "total_types": 22,
+      "chartjs_types": 22
+    },
+    "chart_generation": {
+      "total": 22,
+      "passed": 22,
+      "failed": 0,
+      "results": [
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "line",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30625
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "bar_vertical",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30945
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "bar_horizontal",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 31025
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "pie",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30585
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "doughnut",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30785
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "scatter",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30745
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "bubble",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30705
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "radar",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30665
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "polar_area",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30865
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "area",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30625
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "area_stacked",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30945
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "bar_grouped",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30905
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "bar_stacked",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30905
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "waterfall",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30825
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "treemap",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30745
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "heatmap",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30745
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "matrix",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30705
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "boxplot",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30745
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "candlestick",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30905
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "financial",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30825
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "sankey",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30705
+        },
+        {
+          "status": "\u2705 PASS",
+          "chart_type": "mixed",
+          "actual_type": "line",
+          "error": null,
+          "html_size": 30665
+        }
+      ]
+    }
+  }
+}

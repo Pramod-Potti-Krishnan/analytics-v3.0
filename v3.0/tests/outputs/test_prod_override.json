@@ -1,0 +1,13 @@
+{
+  "presentation_id": "prod-test",
+  "slide_id": "slide-1",
+  "slide_number": 1,
+  "narrative": "Show cumulative revenue growth",
+  "chart_type": "area",
+  "data": [
+    {"label": "Q1", "value": 100},
+    {"label": "Q2", "value": 150},
+    {"label": "Q3", "value": 200},
+    {"label": "Q4", "value": 250}
+  ]
+}
