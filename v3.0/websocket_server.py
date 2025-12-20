@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Analytics Microservice v3",
     description="WebSocket-based analytics chart generation service",
-    version="3.0.0",
+    version="3.1.0",
     lifespan=lifespan
 )
 

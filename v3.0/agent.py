@@ -531,6 +531,9 @@ async def process_analytics_slide(
                 "element_1": subtitle,
                 "element_4": chart_html,
                 "element_3": insight,
+                # Aliases for Director convenience
+                "chart_html": chart_html,  # For C3/V2 layouts
+                "body": insight,           # For V2 layout
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }
@@ -557,6 +560,10 @@ async def process_analytics_slide(
                 "element_1": subtitle,
                 "element_3": chart_html,  # Chart.js inline script (already Layout Builder compliant)
                 "element_2": formatted_observations,  # Styled observations panel
+                # Aliases for Director convenience
+                "chart_html": chart_html,         # For C3/V2 layouts
+                "element_4": chart_html,          # For L02 SPEC compliance (diagram slot)
+                "body": formatted_observations,   # For V2 layout
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }
@@ -607,6 +614,9 @@ async def process_analytics_slide(
                 "element_2": right_chart,
                 "element_3": left_desc,
                 "element_5": right_desc,
+                # Aliases for Director convenience (uses primary chart/text)
+                "chart_html": left_chart,   # Primary chart alias
+                "body": left_desc,          # Primary text alias
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }

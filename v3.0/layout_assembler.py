@@ -178,8 +178,13 @@ class L02LayoutAssembler:
         )
 
         result = {
+            # Original fields (keep for backward compatibility)
             "element_3": element_3,
-            "element_2": element_2
+            "element_2": element_2,
+            # NEW aliases for Director convenience (reduces mapping burden)
+            "chart_html": element_3,   # For C3-chart, V2-chart-text layouts
+            "element_4": element_3,    # For L02 SPEC compliance (diagram slot)
+            "body": element_2          # For V2-chart-text layout
         }
 
         logger.info(f"L02 assembly complete - element_3: {len(element_3)} chars, element_2: {len(element_2)} chars")

@@ -5,7 +5,7 @@ FastAPI-based REST endpoints replacing WebSocket implementation.
 
 import logging
 import asyncio
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Literal
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Analytics Microservice v3",
     description="""
-## Analytics Service v3.4.3 - Complete Chart.js Suite (20+ Chart Types)
+## Analytics Service v3.1.0 - Complete Chart.js Suite (20+ Chart Types)
 
 Generate interactive Chart.js visualizations with comprehensive charting capabilities.
 
@@ -86,7 +86,8 @@ Generate interactive Chart.js visualizations with comprehensive charting capabil
 - ✅ **Structured Error Responses** (retryable flags, fix suggestions)
 - ✅ **Chart Type Discovery** (complete catalog with use cases)
 - ✅ **Interactive Editor** (L02 charts)
-- ✅ **Text Service Compatible** (Director Agent integration)
+- ✅ **Director Agent Integration** (Service Coordination endpoints)
+- ✅ **Field Aliases** (chart_html, element_4, body - reduces Director mapping)
 
 ### Quick Start
 ```python
@@ -112,7 +113,7 @@ response = requests.post(
 - **Chart Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
 - **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
     """,
-    version="3.1.4",
+    version="3.1.0",
     contact={
         "name": "Analytics Service Team",
         "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
@@ -155,6 +156,10 @@ response = requests.post(
         {
             "name": "Layout Service Integration",
             "description": "Chart generation for Layout Service with grid-based sizing constraints"
+        },
+        {
+            "name": "Service Coordination",
+            "description": "Director Agent coordination endpoints for Strawman Service integration (Phase 1-3)"
         }
     ]
 )
@@ -368,6 +373,106 @@ class BatchAnalyticsRequest(BaseModel):
     slides: list = Field(..., description="List of analytics requests")
 
 
+# ========================================
+# SERVICE COORDINATION MODELS (Phase 1-3)
+# Director Agent Strawman Service Integration
+# ========================================
+
+class SlideContent(BaseModel):
+    """Slide content for service coordination."""
+    title: str = Field(..., description="Slide title")
+    topics: List[str] = Field(default_factory=list, description="Slide topics/bullet points")
+    topic_count: int = Field(default=0, description="Number of topics")
+
+
+class ContentHints(BaseModel):
+    """Content hints for service routing."""
+    has_numbers: bool = Field(default=False, description="Content contains numerical data")
+    is_comparison: bool = Field(default=False, description="Content is comparing items")
+    is_time_based: bool = Field(default=False, description="Content is time-series based")
+    detected_keywords: List[str] = Field(default_factory=list, description="Keywords detected in content")
+
+
+class AvailableSpace(BaseModel):
+    """Available space constraints from layout."""
+    width: int = Field(..., description="Available width in pixels")
+    height: int = Field(..., description="Available height in pixels")
+    sub_zones: Optional[List[Dict[str, Any]]] = Field(None, description="Sub-zone dimensions if multi-column")
+
+
+class CanHandleRequest(BaseModel):
+    """Phase 2: Request for content negotiation."""
+    slide_content: SlideContent = Field(..., description="Slide content to evaluate")
+    content_hints: ContentHints = Field(default_factory=ContentHints, description="Content analysis hints")
+    available_space: Optional[AvailableSpace] = Field(None, description="Layout space constraints")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "slide_content": {
+                    "title": "Q4 Revenue Analysis",
+                    "topics": ["Revenue grew 15%", "New markets contributed 30%", "Cost reduction achieved"],
+                    "topic_count": 3
+                },
+                "content_hints": {
+                    "has_numbers": True,
+                    "is_comparison": False,
+                    "is_time_based": False,
+                    "detected_keywords": ["revenue", "growth", "percentage"]
+                },
+                "available_space": {
+                    "width": 1800,
+                    "height": 750
+                }
+            }
+        }
+
+
+class SpaceUtilization(BaseModel):
+    """Space utilization estimate."""
+    fits_well: bool = Field(..., description="Content fits well in available space")
+    estimated_fill_percent: int = Field(..., ge=0, le=100, description="Estimated space fill percentage")
+
+
+class CanHandleResponse(BaseModel):
+    """Phase 2: Response for content negotiation."""
+    can_handle: bool = Field(..., description="Whether this service can handle the content")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0.0-1.0)")
+    reason: str = Field(..., description="Explanation for the decision")
+    suggested_approach: str = Field(..., description="Suggested approach (chart/text)")
+    space_utilization: Optional[SpaceUtilization] = Field(None, description="Space utilization estimate")
+
+
+class RecommendChartRequest(BaseModel):
+    """Phase 3: Request for chart type recommendation."""
+    slide_content: SlideContent = Field(..., description="Slide content to evaluate")
+    detected_patterns: Optional[List[str]] = Field(None, description="Detected data patterns (time_series, comparison, composition, etc.)")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "slide_content": {
+                    "title": "Revenue Trend",
+                    "topics": ["Show revenue growth over 4 quarters"],
+                    "topic_count": 1
+                },
+                "detected_patterns": ["time_series"]
+            }
+        }
+
+
+class ChartRecommendation(BaseModel):
+    """Single chart type recommendation."""
+    chart_type: str = Field(..., description="Recommended chart type ID")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
+    reason: str = Field(..., description="Reason for this recommendation")
+
+
+class RecommendChartResponse(BaseModel):
+    """Phase 3: Response with chart type recommendations."""
+    recommended_charts: List[ChartRecommendation] = Field(..., description="Ranked chart recommendations")
+
+
 async def process_chart_job(job_id: str, request_data: Dict[str, Any]):
     """
     Process chart generation job asynchronously.
@@ -474,6 +579,340 @@ async def get_stats():
         "job_stats": job_manager.get_stats(),
         "storage_bucket": settings.SUPABASE_BUCKET
     }
+
+
+# ========================================
+# SERVICE COORDINATION ENDPOINTS (Phase 1-3)
+# Director Agent Strawman Service Integration
+# ========================================
+
+@app.get("/capabilities", tags=["Service Coordination"])
+async def get_capabilities():
+    """
+    **Phase 1: Service Capabilities Endpoint**
+
+    Returns complete service description for Director Agent's Strawman Service.
+    This endpoint enables intelligent service routing by exposing what this
+    service can handle, what it handles well, and what patterns it recognizes.
+
+    Returns:
+        ServiceCapabilities: Complete service metadata including:
+        - Supported chart types and libraries
+        - Content signals (what we handle well/poorly)
+        - Pattern detection capabilities
+        - Chart recommendations by pattern type
+        - Available endpoints
+    """
+    catalog = get_chart_catalog()
+
+    return {
+        "service": "analytics-service",
+        "version": "3.1.0",
+        "status": "healthy",
+
+        "capabilities": {
+            "slide_types": ["chart", "visualization", "data_display"],
+            "chart_types": [ct.id for ct in catalog],
+            "supported_layouts": ["L01", "L02", "L03"],
+            "supports_themes": True,
+            "can_generate_data": True,
+            "chart_libraries": ["Chart.js", "D3.js"]
+        },
+
+        # v3.1.0: Field aliases for Director convenience (reduces mapping burden)
+        "response_format": {
+            "content_fields": {
+                "element_3": "Chart HTML (original field)",
+                "element_2": "Observations/insights HTML (original field)",
+                "chart_html": "Alias for element_3 (for C3-chart, V2-chart-text)",
+                "element_4": "Alias for element_3 (for L02 SPEC compliance)",
+                "body": "Alias for element_2 (for V2-chart-text)"
+            },
+            "field_mapping_guide": {
+                "C3-chart": {"chart_html": "element_3"},
+                "V2-chart-text": {"chart_html": "element_3", "body": "element_2"},
+                "L02": {"element_4": "element_3", "element_2": "element_2"}
+            },
+            "note": "Director can use aliases directly without mapping. Original fields kept for backward compatibility."
+        },
+
+        "content_signals": {
+            "handles_well": [
+                "numerical_data", "time_series", "comparisons_with_numbers",
+                "distributions", "trends", "percentages"
+            ],
+            "handles_poorly": [
+                "pure_text_content", "bullet_points", "processes_without_data"
+            ],
+            "keywords": [
+                "chart", "graph", "trend", "over time", "percentage",
+                "growth", "decline", "revenue", "sales", "distribution",
+                "metrics", "KPI", "data", "numbers", "statistics"
+            ],
+            "pattern_detection": {
+                "time_series": ["over time", "by quarter", "by month", "trend", "growth", "quarterly", "monthly", "yearly"],
+                "comparison": ["vs", "compared to", "difference between", "versus", "compare"],
+                "composition": ["breakdown", "distribution", "share of", "percentage", "proportion", "parts of"]
+            }
+        },
+
+        "chart_recommendations": {
+            "time_series": ["line", "area"],
+            "comparison": ["bar_vertical", "bar_horizontal", "bar_grouped"],
+            "composition": ["pie", "doughnut", "d3_treemap"],
+            "correlation": ["scatter", "bubble"],
+            "hierarchy": ["d3_treemap", "d3_sunburst"],
+            "flow": ["d3_sankey"],
+            "geographic": ["d3_choropleth_usa"]
+        },
+
+        "endpoints": {
+            "capabilities": "GET /capabilities",
+            "generate": "POST /api/v1/analytics/{layout}/{analytics_type}",
+            "can_handle": "POST /api/v1/analytics/can-handle",
+            "recommend_chart": "POST /api/v1/analytics/recommend-chart",
+            "chart_types": "GET /api/v1/chart-types",
+            "synthetic_data": "POST /api/v1/synthetic/generate"
+        }
+    }
+
+
+@app.post("/api/v1/analytics/can-handle",
+          response_model=CanHandleResponse,
+          tags=["Service Coordination"])
+async def can_handle(request: CanHandleRequest):
+    """
+    **Phase 2: Content Negotiation Endpoint**
+
+    Answers: "Can Analytics Service handle this content?"
+    Returns a confidence score and reasoning to enable intelligent service routing.
+
+    The Strawman Service queries all content services with the same request,
+    and routes to the service with highest confidence that fits the space.
+
+    Args:
+        request: CanHandleRequest with slide content, hints, and space constraints
+
+    Returns:
+        CanHandleResponse with:
+        - can_handle: Whether we can process this content
+        - confidence: Score from 0.0 to 1.0
+        - reason: Explanation of the decision
+        - suggested_approach: "chart" or "text"
+        - space_utilization: How well content fits available space
+    """
+    content = request.slide_content
+    hints = request.content_hints
+
+    # Calculate confidence based on content signals
+    confidence = 0.0
+    reasons = []
+
+    # Check for numerical data signals
+    if hints.has_numbers:
+        confidence += 0.3
+        reasons.append("contains numerical data")
+
+    # Check for time-based data
+    if hints.is_time_based:
+        confidence += 0.25
+        reasons.append("time series detected")
+
+    # Check for comparison signals
+    if hints.is_comparison:
+        confidence += 0.2
+        reasons.append("comparison data")
+
+    # Keyword matching against our capabilities
+    chart_keywords = ["chart", "graph", "trend", "growth", "revenue", "percentage",
+                      "distribution", "over time", "metrics", "KPI", "data",
+                      "numbers", "statistics", "sales", "performance"]
+    matched_keywords = []
+    for kw in hints.detected_keywords:
+        if any(ck in kw.lower() for ck in chart_keywords):
+            matched_keywords.append(kw)
+    if matched_keywords:
+        confidence += min(0.25, len(matched_keywords) * 0.08)
+        reasons.append(f"keywords matched: {matched_keywords[:3]}")
+
+    # Check topic content for numbers/percentages
+    numeric_topics = sum(1 for t in content.topics
+                         if any(c.isdigit() for c in t) or '%' in t or '$' in t)
+    if numeric_topics > 0:
+        confidence += min(0.2, numeric_topics * 0.07)
+        reasons.append(f"{numeric_topics} topics with numbers/percentages")
+
+    # Check title for chart-related keywords
+    title_lower = content.title.lower()
+    title_signals = ["chart", "graph", "trend", "growth", "revenue", "sales",
+                     "performance", "metrics", "analysis", "data", "statistics"]
+    if any(sig in title_lower for sig in title_signals):
+        confidence += 0.1
+        reasons.append("title suggests data visualization")
+
+    # Normalize confidence to 0-1 range
+    confidence = min(1.0, max(0.0, confidence))
+
+    # Determine if we can handle it (threshold: 0.4)
+    can_handle_result = confidence >= 0.4
+
+    # Suggest approach
+    suggested_approach = "chart" if can_handle_result else "text"
+
+    # Space utilization (if space provided)
+    space_util = None
+    if request.available_space:
+        space_util = SpaceUtilization(
+            fits_well=True,  # Charts scale to fit available space
+            estimated_fill_percent=85 if can_handle_result else 0
+        )
+
+    return CanHandleResponse(
+        can_handle=can_handle_result,
+        confidence=round(confidence, 2),
+        reason=" | ".join(reasons) if reasons else "No chart signals detected",
+        suggested_approach=suggested_approach,
+        space_utilization=space_util
+    )
+
+
+@app.post("/api/v1/analytics/recommend-chart",
+          response_model=RecommendChartResponse,
+          tags=["Service Coordination"])
+async def recommend_chart(request: RecommendChartRequest):
+    """
+    **Phase 3: Chart Type Recommendation Endpoint**
+
+    Recommends the best chart types based on content and detected patterns.
+    Used after /can-handle confirms this service should handle the content.
+
+    The Strawman Service uses this to get specific chart type recommendations
+    that fit the layout constraints and match the data characteristics.
+
+    Args:
+        request: RecommendChartRequest with slide content and detected patterns
+
+    Returns:
+        RecommendChartResponse with ranked chart recommendations (top 5)
+    """
+    content = request.slide_content
+    patterns = request.detected_patterns or []
+
+    recommendations = []
+
+    # Pattern-based recommendations mapping
+    pattern_map = {
+        "time_series": [
+            ("line", 0.95, "Time series data best shown as line chart"),
+            ("area", 0.80, "Area chart also effective for trends over time")
+        ],
+        "comparison": [
+            ("bar_vertical", 0.90, "Vertical bars ideal for category comparison"),
+            ("bar_horizontal", 0.85, "Horizontal bars work well for long category labels"),
+            ("bar_grouped", 0.75, "Grouped bars for multi-series comparison")
+        ],
+        "composition": [
+            ("pie", 0.90, "Pie chart shows parts of a whole clearly"),
+            ("doughnut", 0.85, "Doughnut provides clean composition view"),
+            ("d3_treemap", 0.70, "Treemap for hierarchical composition data")
+        ],
+        "correlation": [
+            ("scatter", 0.90, "Scatter plot reveals correlations between variables"),
+            ("bubble", 0.80, "Bubble chart adds third dimension to correlation")
+        ],
+        "hierarchy": [
+            ("d3_treemap", 0.90, "Treemap visualizes hierarchical data effectively"),
+            ("d3_sunburst", 0.85, "Sunburst for nested hierarchies with drill-down")
+        ],
+        "flow": [
+            ("d3_sankey", 0.90, "Sankey diagram shows flow between nodes")
+        ],
+        "geographic": [
+            ("d3_choropleth_usa", 0.95, "Choropleth map for US state-level data")
+        ],
+        "distribution": [
+            ("bar_vertical", 0.85, "Bar chart shows distribution clearly"),
+            ("pie", 0.75, "Pie chart for percentage distribution")
+        ]
+    }
+
+    # Add recommendations based on detected patterns
+    for pattern in patterns:
+        if pattern in pattern_map:
+            for chart_type, confidence, reason in pattern_map[pattern]:
+                # Avoid duplicates
+                if not any(r.chart_type == chart_type for r in recommendations):
+                    recommendations.append(ChartRecommendation(
+                        chart_type=chart_type,
+                        confidence=confidence,
+                        reason=reason
+                    ))
+
+    # Keyword-based fallback if no patterns provided or matched
+    if not recommendations:
+        title_lower = content.title.lower()
+        topics_text = " ".join(content.topics).lower()
+        combined = f"{title_lower} {topics_text}"
+
+        # Detect patterns from text content
+        if any(kw in combined for kw in ["trend", "over time", "growth", "monthly", "quarterly", "yearly", "timeline"]):
+            recommendations.append(ChartRecommendation(
+                chart_type="line",
+                confidence=0.85,
+                reason="Time-related keywords detected in content"
+            ))
+            recommendations.append(ChartRecommendation(
+                chart_type="area",
+                confidence=0.70,
+                reason="Area chart as alternative for time trends"
+            ))
+        elif any(kw in combined for kw in ["compare", "vs", "versus", "difference", "against"]):
+            recommendations.append(ChartRecommendation(
+                chart_type="bar_vertical",
+                confidence=0.85,
+                reason="Comparison keywords detected in content"
+            ))
+            recommendations.append(ChartRecommendation(
+                chart_type="bar_grouped",
+                confidence=0.70,
+                reason="Grouped bar for multi-item comparison"
+            ))
+        elif any(kw in combined for kw in ["share", "percentage", "breakdown", "distribution", "proportion"]):
+            recommendations.append(ChartRecommendation(
+                chart_type="pie",
+                confidence=0.85,
+                reason="Composition keywords detected in content"
+            ))
+            recommendations.append(ChartRecommendation(
+                chart_type="doughnut",
+                confidence=0.75,
+                reason="Doughnut as alternative for composition"
+            ))
+        elif any(kw in combined for kw in ["map", "state", "region", "geographic", "location"]):
+            recommendations.append(ChartRecommendation(
+                chart_type="d3_choropleth_usa",
+                confidence=0.85,
+                reason="Geographic keywords detected in content"
+            ))
+        else:
+            # Default recommendation for general data
+            recommendations.append(ChartRecommendation(
+                chart_type="bar_vertical",
+                confidence=0.60,
+                reason="Default recommendation for general numerical data"
+            ))
+            recommendations.append(ChartRecommendation(
+                chart_type="line",
+                confidence=0.50,
+                reason="Line chart as versatile alternative"
+            ))
+
+    # Sort by confidence (highest first)
+    recommendations.sort(key=lambda x: x.confidence, reverse=True)
+
+    return RecommendChartResponse(
+        recommended_charts=recommendations[:5]  # Return top 5
+    )
 
 
 # ========================================
