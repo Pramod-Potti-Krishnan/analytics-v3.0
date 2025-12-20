@@ -186,13 +186,25 @@ class JobManager:
         Get job manager statistics.
 
         Returns:
-            Statistics dictionary
+            Statistics dictionary with counts and average completion time
         """
+        completed_jobs = [j for j in self.jobs.values() if j.status == JobStatus.COMPLETED]
+
+        # Calculate average completion time for completed jobs
+        average_time_ms = 0
+        if completed_jobs:
+            total_time = sum(
+                (j.updated_at - j.created_at).total_seconds() * 1000
+                for j in completed_jobs
+            )
+            average_time_ms = int(total_time / len(completed_jobs))
+
         stats = {
             "total_jobs": len(self.jobs),
             "queued": sum(1 for j in self.jobs.values() if j.status == JobStatus.QUEUED),
             "processing": sum(1 for j in self.jobs.values() if j.status == JobStatus.PROCESSING),
-            "completed": sum(1 for j in self.jobs.values() if j.status == JobStatus.COMPLETED),
+            "completed": len(completed_jobs),
             "failed": sum(1 for j in self.jobs.values() if j.status == JobStatus.FAILED),
+            "average_time_ms": average_time_ms,
         }
         return stats

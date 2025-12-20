@@ -466,18 +466,43 @@ class SyntheticDataGenerator:
         num_points: int,
         context: dict
     ) -> List[str]:
-        """Generate time-based labels (Q1, Jan, Week 1, etc.)."""
+        """Generate time-based labels (Q1, Jan, Week 1, etc.).
+
+        v3.1.6 fix: Respect num_points parameter instead of hard-limiting.
+        When num_points exceeds natural time period, extend with additional years.
+        """
         timeframe = context.get('timeframe', 'quarter')
         year = context.get('year', 2024)
 
         if timeframe == 'quarter':
-            return [f"Q{i+1} {year}" for i in range(min(num_points, 4))]
+            # Generate quarters, extending to additional years if needed
+            labels = []
+            for i in range(num_points):
+                q_num = (i % 4) + 1  # Q1-Q4
+                y = year + (i // 4)   # Increment year every 4 quarters
+                labels.append(f"Q{q_num} {y}")
+            return labels
         elif timeframe == 'month':
             months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            return [f"{months[i]} {year}" for i in range(min(num_points, 12))]
+            # Generate months, extending to additional years if needed
+            labels = []
+            for i in range(num_points):
+                m_idx = i % 12
+                y = year + (i // 12)
+                labels.append(f"{months[m_idx]} {y}")
+            return labels
         elif timeframe == 'week':
-            return [f"Week {i+1}" for i in range(min(num_points, 52))]
+            # Generate weeks, extending to additional years if needed
+            labels = []
+            for i in range(num_points):
+                w_num = (i % 52) + 1
+                y = year + (i // 52)
+                if i >= 52:
+                    labels.append(f"Week {w_num} {y}")
+                else:
+                    labels.append(f"Week {w_num}")
+            return labels
         else:
             return [f"Period {i+1}" for i in range(num_points)]
 
