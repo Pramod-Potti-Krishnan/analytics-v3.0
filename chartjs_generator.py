@@ -219,7 +219,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",  # "inline_script" (Layout Builder) or "revealchart" (legacy)
-        semantic_chart_type: Optional[str] = None  # Semantic type for editor (e.g., "area_stacked")
+        semantic_chart_type: Optional[str] = None,  # Semantic type for editor (e.g., "area_stacked")
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js line chart.
@@ -287,7 +288,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,  # Pass through output mode
-            semantic_chart_type  # Pass semantic type for editor
+            semantic_chart_type,  # Pass semantic type for editor
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_area_chart(
@@ -299,7 +301,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js area chart (line chart with fill).
@@ -324,7 +327,8 @@ class ChartJSGenerator:
 
         return self.generate_line_chart(
             data, height, chart_id, options,
-            enable_editor, presentation_id, api_base_url, output_mode
+            enable_editor, presentation_id, api_base_url, output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_stacked_area_chart(
@@ -336,7 +340,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js stacked area chart.
@@ -379,7 +384,8 @@ class ChartJSGenerator:
         return self.generate_line_chart(
             chart_data, height, chart_id, merged_options,
             enable_editor, presentation_id, api_base_url, output_mode,
-            semantic_chart_type="area_stacked"  # Tell editor this is stacked area
+            semantic_chart_type="area_stacked",  # Tell editor this is stacked area
+            chart_title=chart_title  # v3.4.11
         )
 
     # ========================================
@@ -396,7 +402,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js bar chart (vertical or horizontal).
@@ -411,6 +418,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            chart_title: Optional title for visual alignment
 
         Returns:
             HTML canvas element with Chart.js config
@@ -455,7 +463,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_horizontal_bar_chart(
@@ -467,13 +476,15 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """Generate horizontal bar chart."""
         return self.generate_bar_chart(
             data, height, horizontal=True, chart_id=chart_id, options=options,
             enable_editor=enable_editor, presentation_id=presentation_id,
-            api_base_url=api_base_url, output_mode=output_mode
+            api_base_url=api_base_url, output_mode=output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_grouped_bar_chart(
@@ -485,7 +496,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate grouped bar chart (multiple series side-by-side).
@@ -501,7 +513,8 @@ class ChartJSGenerator:
         return self.generate_bar_chart(
             chart_data, height, horizontal=False, chart_id=chart_id, options=options,
             enable_editor=enable_editor, presentation_id=presentation_id,
-            api_base_url=api_base_url, output_mode=output_mode
+            api_base_url=api_base_url, output_mode=output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_stacked_bar_chart(
@@ -514,7 +527,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate stacked bar chart.
@@ -535,7 +549,8 @@ class ChartJSGenerator:
         return self.generate_bar_chart(
             chart_data, height, horizontal, chart_id, merged_options,
             enable_editor=enable_editor, presentation_id=presentation_id,
-            api_base_url=api_base_url, output_mode=output_mode
+            api_base_url=api_base_url, output_mode=output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_waterfall_chart(
@@ -547,7 +562,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js waterfall chart using native floating bars.
@@ -645,7 +661,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     # ========================================
@@ -661,7 +678,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js pie chart.
@@ -677,7 +695,8 @@ class ChartJSGenerator:
         """
         return self._generate_circular_chart(
             "pie", data, height, chart_id, options,
-            enable_editor, presentation_id, api_base_url, output_mode
+            enable_editor, presentation_id, api_base_url, output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_doughnut_chart(
@@ -689,7 +708,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js doughnut chart.
@@ -705,7 +725,8 @@ class ChartJSGenerator:
         """
         return self._generate_circular_chart(
             "doughnut", data, height, chart_id, options,
-            enable_editor, presentation_id, api_base_url, output_mode
+            enable_editor, presentation_id, api_base_url, output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def _generate_circular_chart(
@@ -718,7 +739,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """Internal method for pie/doughnut charts."""
         labels = data.get("labels", [])
@@ -779,7 +801,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     # ========================================
@@ -795,7 +818,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js scatter plot.
@@ -827,7 +851,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_bubble_chart(
@@ -839,7 +864,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js bubble chart.
@@ -886,7 +912,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     # ========================================
@@ -902,7 +929,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js radar chart.
@@ -965,7 +993,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_polar_area_chart(
@@ -977,7 +1006,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js polar area chart.
@@ -1040,7 +1070,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     def generate_treemap_chart(
@@ -1052,7 +1083,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js treemap chart using chartjs-chart-treemap plugin.
@@ -1154,11 +1186,24 @@ class ChartJSGenerator:
 
         # Build HTML with treemap plugin loaded
         chart_id_safe = chart_id or f"treemap-{id(data)}"
+
+        # v3.4.11: Build title HTML if chart_title is provided
+        title_html = ""
+        canvas_style = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+    </div>'''
+            canvas_style = 'style="flex: 1; min-height: 0;"'
+
         treemap_html = f"""<!-- Treemap Chart with Chart.js Treemap Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <canvas id="{chart_id_safe}"></canvas>
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+    {title_html}
+    <div {canvas_style}>
+      <canvas id="{chart_id_safe}"></canvas>
+    </div>
     <script>
         (function() {{
             function initTreemap() {{
@@ -1182,6 +1227,7 @@ class ChartJSGenerator:
             }}
         }})();
     </script>
+  </div>
 </div>"""
 
         return treemap_html
@@ -1195,7 +1241,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js heatmap/matrix chart using chartjs-chart-matrix plugin.
@@ -1336,11 +1383,24 @@ class ChartJSGenerator:
 
         # Build HTML with matrix plugin
         chart_id_safe = chart_id or f"heatmap-{id(data)}"
+
+        # v3.4.11: Build title HTML if chart_title is provided
+        title_html = ""
+        canvas_style = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+    </div>'''
+            canvas_style = 'style="flex: 1; min-height: 0;"'
+
         heatmap_html = f"""<!-- Heatmap/Matrix Chart with Chart.js Matrix Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@3.0.0/dist/chartjs-chart-matrix.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <canvas id="{chart_id_safe}"></canvas>
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+    {title_html}
+    <div {canvas_style}>
+      <canvas id="{chart_id_safe}"></canvas>
+    </div>
     <script>
         (function() {{
             function initHeatmap() {{
@@ -1364,6 +1424,7 @@ class ChartJSGenerator:
             }}
         }})();
     </script>
+  </div>
 </div>"""
 
         return heatmap_html
@@ -1377,7 +1438,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js boxplot chart using chartjs-chart-boxplot plugin.
@@ -1485,11 +1547,24 @@ class ChartJSGenerator:
 
         # Build HTML with boxplot plugin
         chart_id_safe = chart_id or f"boxplot-{id(data)}"
+
+        # v3.4.11: Build title HTML if chart_title is provided
+        title_html = ""
+        canvas_style = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+    </div>'''
+            canvas_style = 'style="flex: 1; min-height: 0;"'
+
         boxplot_html = f"""<!-- Boxplot Chart with Chart.js Boxplot Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.4.5/build/index.umd.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <canvas id="{chart_id_safe}"></canvas>
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+    {title_html}
+    <div {canvas_style}>
+      <canvas id="{chart_id_safe}"></canvas>
+    </div>
     <script>
         (function() {{
             function initBoxplot() {{
@@ -1513,6 +1588,7 @@ class ChartJSGenerator:
             }}
         }})();
     </script>
+  </div>
 </div>"""
 
         return boxplot_html
@@ -1526,7 +1602,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js candlestick/financial chart using chartjs-chart-financial plugin.
@@ -1674,14 +1751,26 @@ class ChartJSGenerator:
         # Generate unique chart ID
         chart_id_safe = chart_id or f"candlestick-{id(data)}"
 
+        # v3.4.11: Build title HTML if chart_title is provided
+        title_html = ""
+        canvas_style = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+    </div>'''
+            canvas_style = 'style="flex: 1; min-height: 0;"'
+
         # Build HTML with financial plugin and Chart.js date adapter
         candlestick_html = f"""<!-- Candlestick/Financial Chart with Chart.js Financial Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <canvas id="{chart_id_safe}"></canvas>
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+    {title_html}
+    <div {canvas_style}>
+      <canvas id="{chart_id_safe}"></canvas>
+    </div>
     <script>
         (function() {{
             function initCandlestick() {{
@@ -1725,6 +1814,7 @@ class ChartJSGenerator:
             }}
         }})();
     </script>
+  </div>
 </div>"""
 
         logger.info(f"Generated candlestick chart {chart_id_safe}")
@@ -1739,7 +1829,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate Chart.js sankey diagram using chartjs-chart-sankey plugin.
@@ -1866,12 +1957,24 @@ class ChartJSGenerator:
         # Generate unique chart ID
         chart_id_safe = chart_id or f"sankey-{id(data)}"
 
+        # v3.4.11: Build title HTML if chart_title is provided
+        title_html = ""
+        canvas_style = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+    </div>'''
+            canvas_style = 'style="flex: 1; min-height: 0;"'
+
         # Build HTML with sankey plugin
         sankey_html = f"""<!-- Sankey Diagram with Chart.js Sankey Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@0.12.0/dist/chartjs-chart-sankey.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <canvas id="{chart_id_safe}"></canvas>
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+    {title_html}
+    <div {canvas_style}>
+      <canvas id="{chart_id_safe}"></canvas>
+    </div>
     <script>
         (function() {{
             function initSankey() {{
@@ -1915,6 +2018,7 @@ class ChartJSGenerator:
             }}
         }})();
     </script>
+  </div>
 </div>"""
 
         logger.info(f"Generated sankey diagram {chart_id_safe}")
@@ -1933,7 +2037,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate mixed chart (e.g., line + bar).
@@ -1992,7 +2097,8 @@ class ChartJSGenerator:
             enable_editor,
             presentation_id,
             api_base_url,
-            output_mode
+            output_mode,
+            chart_title=chart_title  # v3.4.11
         )
 
     # ========================================
@@ -2008,7 +2114,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",  # "revealchart" or "inline_script"
-        semantic_chart_type: Optional[str] = None  # Semantic type for editor
+        semantic_chart_type: Optional[str] = None,  # Semantic type for editor
+        chart_title: Optional[str] = None  # v3.4.11: Chart title for visual alignment
     ) -> str:
         """
         Wrap Chart.js config in canvas element.
@@ -2025,6 +2132,7 @@ class ChartJSGenerator:
             presentation_id: Required if enable_editor=True
             api_base_url: Base URL for chart API endpoints
             output_mode: Output format ("revealchart" or "inline_script")
+            chart_title: Optional chart title for visual alignment with Key Insights
 
         Returns:
             HTML with chart, optionally with interactive editor
@@ -2038,7 +2146,8 @@ class ChartJSGenerator:
                 enable_editor,
                 presentation_id,
                 api_base_url,
-                semantic_chart_type  # Pass semantic type for editor
+                semantic_chart_type,  # Pass semantic type for editor
+                chart_title  # v3.4.11: Pass chart title
             )
 
         # Legacy RevealChart mode
@@ -2079,7 +2188,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        semantic_chart_type: Optional[str] = None  # Semantic type for editor
+        semantic_chart_type: Optional[str] = None,  # Semantic type for editor
+        chart_title: Optional[str] = None  # v3.4.11: Chart title for visual alignment
     ) -> str:
         """
         Generate Layout Builder-compliant HTML with inline Chart.js script.
@@ -2092,6 +2202,10 @@ class ChartJSGenerator:
         - Inline <script> tag with IIFE wrapper
         - maintainAspectRatio: false
 
+        v3.4.11: Added chart_title for visual alignment with Key Insights box.
+        - Title displays with 40px top margin to align with Key Insights panel
+        - Uses flexbox layout for proper canvas sizing
+
         Args:
             config: Complete Chart.js configuration
             height: Canvas height (1260px for L02, but can be overridden)
@@ -2099,6 +2213,7 @@ class ChartJSGenerator:
             enable_editor: If True, adds interactive data editor
             presentation_id: Required if enable_editor=True
             api_base_url: Base URL for chart API endpoints
+            chart_title: Optional title to display above chart
 
         Returns:
             Complete HTML with chart and optional editor, Layout Builder compliant
@@ -2186,9 +2301,21 @@ class ChartJSGenerator:
       }}
     }})();"""
 
+        # v3.4.11: Build title HTML if chart_title is provided
+        # Title uses 40px top margin to align with Key Insights panel
+        title_html = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+    <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+  </div>'''
+
         # Basic chart HTML (no editor) - Director L02 spec compliant
-        chart_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-  <canvas id="{chart_id}"></canvas>
+        # v3.4.11: Use flexbox for proper title + canvas layout
+        chart_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+  {title_html}
+  <div style="flex: 1; min-height: 0; position: relative;">
+    <canvas id="{chart_id}"></canvas>
+  </div>
   <script>
     {inline_script}
   </script>
@@ -3195,7 +3322,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate D3.js treemap chart using D3.js v7.
@@ -3408,7 +3536,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate D3.js sunburst chart for multi-level hierarchical data.
@@ -3622,7 +3751,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate D3.js choropleth map of USA states using D3.js v7.
@@ -3942,7 +4072,8 @@ class ChartJSGenerator:
         enable_editor: bool = False,
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
-        output_mode: str = "inline_script"
+        output_mode: str = "inline_script",
+        chart_title: Optional[str] = None  # v3.4.11
     ) -> str:
         """
         Generate D3.js Sankey diagram using D3.js v7.

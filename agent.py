@@ -757,6 +757,9 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Determine chart type: use explicit chart_type parameter if provided, otherwise use default (v3.4.3 fix)
         chart_type = request_data.get('chart_type') or get_chart_type(analytics_type)
 
+        # v3.4.11: Generate chart title from narrative for visual alignment with Key Insights box
+        chart_title = _generate_chart_title(narrative, chart_type)
+
         # Multi-series chart types that need original data structure preserved
         # Only Chart.js native multi-series types - plugin charts use different formats
         multi_series_chart_types = [
@@ -1222,6 +1225,53 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 "generated_at": datetime.utcnow().isoformat()
             }
         }
+
+
+def _generate_chart_title(narrative: str, chart_type: str) -> str:
+    """
+    v3.4.11: Generate a chart title from narrative for visual alignment.
+
+    Extracts meaningful phrases like "Show quarterly revenue" → "Quarterly Revenue".
+
+    Args:
+        narrative: User narrative/description
+        chart_type: Type of chart (bar, line, pie, etc.)
+
+    Returns:
+        Title string for the chart
+    """
+    if not narrative:
+        # Fallback titles based on chart type
+        type_titles = {
+            "line": "Trend Analysis",
+            "bar": "Category Comparison",
+            "bar_vertical": "Category Comparison",
+            "bar_horizontal": "Horizontal Comparison",
+            "pie": "Distribution Overview",
+            "doughnut": "Distribution Analysis",
+            "area": "Area Trends",
+            "scatter": "Correlation Analysis",
+            "bubble": "Multi-Dimensional View",
+            "radar": "Performance Radar",
+            "polarArea": "Polar Distribution"
+        }
+        return type_titles.get(chart_type, "Analytics Overview")
+
+    narrative_lower = narrative.lower()
+
+    # Extract from common patterns
+    for keyword in ["show", "display", "visualize", "present", "analyze"]:
+        if keyword in narrative_lower:
+            parts = narrative.split(keyword, 1)
+            if len(parts) > 1:
+                title = parts[1].strip()
+                # Limit to first 5 words and capitalize
+                words = title.split()[:5]
+                return " ".join(words).title()
+
+    # Fallback: Use first meaningful words of narrative
+    words = narrative.split()[:5]
+    return " ".join(words).title()
 
 
 def _infer_analytics_type(narrative: str, topics: list, data: list) -> str:

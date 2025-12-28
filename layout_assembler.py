@@ -129,7 +129,8 @@ class L02LayoutAssembler:
         # - Reverted to uniform padding: 32px
         # - Updated to pastel color palette
         # - CSS variable theming for colors (with fallbacks for backward compatibility)
-        html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 720px; min-height: 720px; margin-left: 30px; padding: 32px; background: var(--sidebar-bg, linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)); border-radius: 12px; border-left: 4px solid var(--accent-blue, #60A5FA); box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-y: auto; box-sizing: border-box;">
+        # v3.4.11: Added margin-top: 40px and reduced height to 680px for chart title alignment
+        html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 680px; min-height: 680px; margin-top: 40px; margin-left: 30px; padding: 32px; background: var(--sidebar-bg, linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)); border-radius: 12px; border-left: 4px solid var(--accent-blue, #60A5FA); box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-y: auto; box-sizing: border-box;">
     <h4 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 700; color: var(--accent-blue, #3B82F6); margin: 0 0 20px 0; line-height: 1.3; text-align: left;">
         {title}
     </h4>
