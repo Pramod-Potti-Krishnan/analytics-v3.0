@@ -2886,6 +2886,15 @@ class ChartJSGenerator:
         options = {
             "responsive": True,
             "maintainAspectRatio": False,
+            # v3.4.5: Add layout padding to prevent axis label cutoff
+            "layout": {
+                "padding": {
+                    "left": 15,
+                    "right": 25,
+                    "top": 15,
+                    "bottom": 40  # Extra space for rotated X-axis labels
+                }
+            },
             "animation": {
                 "duration": 1500,  # 1.5 seconds for smooth animation
                 "easing": "easeInOutQuart",  # Smooth acceleration/deceleration
@@ -2961,6 +2970,7 @@ class ChartJSGenerator:
                     # GUARANTEED: Always display Y-axis
                     "display": True,
                     "beginAtZero": True,  # Always start at zero
+                    "grace": "15%",  # v3.4.5: Add 15% headroom above max value for data labels
                     "grid": {
                         "display": True,  # Always show grid
                         "color": "rgba(0, 0, 0, 0.08)",
@@ -2985,10 +2995,11 @@ class ChartJSGenerator:
             # Horizontal bar charts - swap axis formatting
             if horizontal and chart_type == "bar":
                 options["indexAxis"] = "y"
-                # Move tick formatting to x-axis for horizontal bars
+                # Move tick formatting to x-axis for horizontal bars (value axis)
                 options["scales"]["x"]["ticks"].update(self._get_tick_config(format_type))
                 options["scales"]["x"]["title"]["text"] = self._get_axis_title(format_type)
-                # Remove tick config from y-axis
+                options["scales"]["x"]["grace"] = "15%"  # v3.4.5: Headroom for data labels
+                # Remove tick config and grace from y-axis (category axis)
                 options["scales"]["y"]["ticks"] = {
                     "display": True,
                     "font": {"size": 12, "weight": "500"},
@@ -2997,6 +3008,7 @@ class ChartJSGenerator:
                     "autoSkip": False
                 }
                 options["scales"]["y"]["title"]["text"] = ""
+                options["scales"]["y"].pop("grace", None)  # Remove grace from category axis
 
         # Merge custom options (but enforce critical settings)
         if custom_options:
