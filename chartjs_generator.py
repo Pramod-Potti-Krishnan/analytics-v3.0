@@ -1157,7 +1157,7 @@ class ChartJSGenerator:
         treemap_html = f"""<!-- Treemap Chart with Chart.js Treemap Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <canvas id="{chart_id_safe}"></canvas>
     <script>
         (function() {{
@@ -1339,7 +1339,7 @@ class ChartJSGenerator:
         heatmap_html = f"""<!-- Heatmap/Matrix Chart with Chart.js Matrix Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@3.0.0/dist/chartjs-chart-matrix.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <canvas id="{chart_id_safe}"></canvas>
     <script>
         (function() {{
@@ -1488,7 +1488,7 @@ class ChartJSGenerator:
         boxplot_html = f"""<!-- Boxplot Chart with Chart.js Boxplot Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.4.5/build/index.umd.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <canvas id="{chart_id_safe}"></canvas>
     <script>
         (function() {{
@@ -1680,7 +1680,7 @@ class ChartJSGenerator:
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <canvas id="{chart_id_safe}"></canvas>
     <script>
         (function() {{
@@ -1870,7 +1870,7 @@ class ChartJSGenerator:
         sankey_html = f"""<!-- Sankey Diagram with Chart.js Sankey Plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@0.12.0/dist/chartjs-chart-sankey.min.js"></script>
 
-<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: 1260px; height: {height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <canvas id="{chart_id_safe}"></canvas>
     <script>
         (function() {{
@@ -2187,7 +2187,7 @@ class ChartJSGenerator:
     }})();"""
 
         # Basic chart HTML (no editor) - Director L02 spec compliant
-        chart_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box;">
+        chart_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
   <canvas id="{chart_id}"></canvas>
   <script>
     {inline_script}
@@ -2536,7 +2536,7 @@ class ChartJSGenerator:
         service_base_url = api_base_url.replace('/api/charts', '') if '/api/charts' in api_base_url else api_base_url
 
         # v4.0: Streamlined HTML with Excel editor library
-        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box;">
+        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
   <canvas id="{chart_id}"></canvas>
 
   <!-- Edit Button (Pencil Icon) -->
@@ -3258,7 +3258,7 @@ class ChartJSGenerator:
         d3_html = f"""<!-- D3.js Treemap Chart -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <div id="{chart_id_safe}"></div>
     <script>
         (function() {{
@@ -3473,7 +3473,7 @@ class ChartJSGenerator:
         d3_html = f"""<!-- D3.js Sunburst Chart -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <div id="{chart_id_safe}"></div>
     <script>
         (function() {{
@@ -3717,7 +3717,7 @@ class ChartJSGenerator:
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <div id="{chart_id_safe}"></div>
     <script>
         (function() {{
@@ -4028,7 +4028,7 @@ class ChartJSGenerator:
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box;">
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
     <div id="{chart_id_safe}" style="width: 100%; height: 100%;"></div>
     <script>
         (function() {{
