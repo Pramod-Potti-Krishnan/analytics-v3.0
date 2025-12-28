@@ -1,6 +1,12 @@
 """
 REST API server for Analytics Microservice v3.
 FastAPI-based REST endpoints replacing WebSocket implementation.
+
+v3.4.5 (2025-12-28):
+- Monthly labels ("Jan '24") instead of "Period X"
+- Blue gradient Key Insights panel with blue heading/bullets
+- Chart layout padding and 15% Y-axis grace for data labels
+- Realistic category labels (departments, companies, metrics)
 """
 
 import logging
