@@ -848,7 +848,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "bar" or chart_type == "bar_vertical":
             chart_html = chart_gen.generate_bar_chart(
@@ -857,7 +858,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "bar_horizontal":
             chart_html = chart_gen.generate_horizontal_bar_chart(
@@ -866,7 +868,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "pie":
             chart_html = chart_gen.generate_pie_chart(
@@ -875,7 +878,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["donut", "doughnut"]:
             chart_html = chart_gen.generate_doughnut_chart(
@@ -884,7 +888,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "scatter":
             # Check if data is already in scatter format (from line 51-61)
@@ -921,7 +926,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 options=scatter_options,  # ✅ CORRECT LOCATION
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "bubble":
             # Check if data is already in bubble format (from line 51-61)
@@ -966,7 +972,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 options=bubble_options,  # ✅ CORRECT LOCATION
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "radar":
             # Convert label-value format to radar datasets format
@@ -985,7 +992,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "polar_area" or chart_type == "polarArea":
             chart_html = chart_gen.generate_polar_area_chart(
@@ -994,7 +1002,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         # NEW CHART TYPES (v3.4.0+)
         elif chart_type == "area":
@@ -1004,7 +1013,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["area_stacked", "stacked_area"]:
             chart_html = chart_gen.generate_stacked_area_chart(
@@ -1013,7 +1023,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["bar_grouped", "grouped_bar"]:
             chart_html = chart_gen.generate_grouped_bar_chart(
@@ -1022,7 +1033,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["bar_stacked", "stacked_bar"]:
             chart_html = chart_gen.generate_stacked_bar_chart(
@@ -1031,7 +1043,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "waterfall":
             chart_html = chart_gen.generate_waterfall_chart(
@@ -1040,7 +1053,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "d3_treemap":
             chart_html = chart_gen.generate_d3_treemap_chart(
@@ -1049,7 +1063,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,  # Now enabled for D3 charts
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["sunburst", "d3_sunburst"]:
             chart_html = chart_gen.generate_d3_sunburst_chart(
@@ -1058,7 +1073,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=False,  # Editor not yet implemented for D3 charts
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "d3_choropleth_usa":
             chart_html = chart_gen.generate_d3_choropleth_usa_chart(
@@ -1067,7 +1083,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=False,  # Editor not yet implemented for D3 charts
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "d3_sankey":
             chart_html = chart_gen.generate_d3_sankey_chart(
@@ -1076,7 +1093,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=False,  # Editor not yet implemented for D3 charts
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         # CHART.JS PLUGIN TYPES (v3.4.1+)
         elif chart_type == "treemap":
@@ -1086,7 +1104,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["heatmap", "matrix"]:
             chart_html = chart_gen.generate_heatmap_chart(
@@ -1095,7 +1114,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "boxplot":
             chart_html = chart_gen.generate_boxplot_chart(
@@ -1104,7 +1124,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["candlestick", "financial"]:
             chart_html = chart_gen.generate_candlestick_chart(
@@ -1113,7 +1134,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "sankey":
             chart_html = chart_gen.generate_sankey_chart(
@@ -1122,7 +1144,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type in ["mixed", "combo", "combination"]:
             chart_html = chart_gen.generate_mixed_chart(
@@ -1131,7 +1154,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         else:
             # Default to bar chart for unknown types
@@ -1142,7 +1166,8 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
-                api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
+                api_base_url="https://analytics-v30-production.up.railway.app/api/charts",
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
 
         if not chart_html:
