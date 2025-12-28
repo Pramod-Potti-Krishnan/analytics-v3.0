@@ -15,6 +15,7 @@ Version: 1.0.0
 
 import json
 import logging
+import re
 from typing import Dict, Any, List, Optional, Union
 
 # Initialize logger
@@ -42,26 +43,31 @@ class ChartJSGenerator:
     # THEMES
     # ========================================
 
+    # v3.4.7: Updated to pastel color palette for softer visual appearance
     THEMES = {
         "professional": {
-            "primary": "#FF6B6B",      # Coral Red
-            "secondary": "#4ECDC4",    # Turquoise
-            "tertiary": "#FFE66D",     # Yellow
-            "quaternary": "#95E1D3",   # Mint Green
-            "quinary": "#F38181",      # Light Red
-            "senary": "#AA96DA",       # Purple
-            "septenary": "#FCBAD3",    # Pink
-            "octonary": "#A8D8EA",     # Light Blue
+            "primary": "#93C5FD",      # Pastel Blue (Tailwind blue-300)
+            "secondary": "#A7F3D0",    # Pastel Mint (Tailwind emerald-200)
+            "tertiary": "#FDE68A",     # Pastel Yellow (Tailwind amber-200)
+            "quaternary": "#C4B5FD",   # Pastel Lavender (Tailwind violet-300)
+            "quinary": "#FBCFE8",      # Pastel Pink (Tailwind pink-200)
+            "senary": "#FED7AA",       # Pastel Orange (Tailwind orange-200)
+            "septenary": "#A5F3FC",    # Pastel Cyan (Tailwind cyan-200)
+            "octonary": "#FCA5A5",     # Pastel Coral (Tailwind red-300)
             "palette": [
-                "#FF6B6B", "#4ECDC4", "#FFE66D", "#95E1D3",
-                "#F38181", "#AA96DA", "#FCBAD3", "#A8D8EA"
+                "#93C5FD", "#A7F3D0", "#FDE68A", "#C4B5FD",
+                "#FBCFE8", "#FED7AA", "#A5F3FC", "#FCA5A5"
             ],
             "gradients": {
-                "red": ["rgba(255, 107, 107, 0.8)", "rgba(255, 107, 107, 0.2)"],
-                "turquoise": ["rgba(78, 205, 196, 0.8)", "rgba(78, 205, 196, 0.2)"],
-                "yellow": ["rgba(255, 230, 109, 0.8)", "rgba(255, 230, 109, 0.2)"],
-                "mint": ["rgba(149, 225, 211, 0.8)", "rgba(149, 225, 211, 0.2)"],
-                "purple": ["rgba(170, 150, 218, 0.8)", "rgba(170, 150, 218, 0.2)"]
+                "blue": ["rgba(147, 197, 253, 0.8)", "rgba(147, 197, 253, 0.2)"],
+                "mint": ["rgba(167, 243, 208, 0.8)", "rgba(167, 243, 208, 0.2)"],
+                "yellow": ["rgba(253, 230, 138, 0.8)", "rgba(253, 230, 138, 0.2)"],
+                "lavender": ["rgba(196, 181, 253, 0.8)", "rgba(196, 181, 253, 0.2)"],
+                "pink": ["rgba(251, 207, 232, 0.8)", "rgba(251, 207, 232, 0.2)"],
+                # Backward compatible aliases (old names map to pastel equivalents)
+                "red": ["rgba(252, 165, 165, 0.8)", "rgba(252, 165, 165, 0.2)"],  # Pastel coral
+                "turquoise": ["rgba(167, 243, 208, 0.8)", "rgba(167, 243, 208, 0.2)"],  # Same as mint
+                "purple": ["rgba(196, 181, 253, 0.8)", "rgba(196, 181, 253, 0.2)"]  # Same as lavender
             }
         },
         "corporate": {
@@ -2099,6 +2105,26 @@ class ChartJSGenerator:
         # Convert config to JSON string for inline script
         config_json = json.dumps(config)
 
+        # v3.4.7: Convert callback/formatter strings to actual JavaScript functions
+        # JSON serializes functions as strings, but Chart.js needs actual functions
+        # This uses a helper function to properly handle multiline functions
+        def convert_function_strings(match):
+            """Convert quoted function strings to unquoted JavaScript functions."""
+            key = match.group(1)  # "callback" or "formatter"
+            func_str = match.group(2)  # The function definition with quotes
+            # Remove the surrounding quotes and unescape any escaped characters
+            func_body = func_str[1:-1]  # Remove first and last quote
+            func_body = func_body.replace('\\n', '\n').replace('\\"', '"')
+            return f'"{key}": {func_body}'
+
+        # Match "callback": "function..." or "formatter": "function..."
+        # The pattern captures the entire quoted function string
+        config_json = re.sub(
+            r'"(callback|formatter)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
+            convert_function_strings,
+            config_json
+        )
+
         # Sanitize chart_id for JavaScript
         js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
 
@@ -2953,7 +2979,7 @@ class ChartJSGenerator:
                     "ticks": {
                         "display": True,  # Always show labels
                         "font": {"size": 12, "weight": "500"},
-                        "color": "#333",
+                        "color": "#6b7280",  # v3.4.7: Subtle gray (Tailwind gray-500)
                         "padding": 8,
                         "autoSkip": False,  # Show all labels
                         "maxRotation": 45,
@@ -2963,7 +2989,7 @@ class ChartJSGenerator:
                         "display": True,
                         "text": "",  # Will be set per chart if needed
                         "font": {"size": 13, "weight": "bold"},
-                        "color": "#333"
+                        "color": "#4b5563"  # v3.4.7: Tailwind gray-600 for title
                     }
                 },
                 y_axis: {
@@ -2979,7 +3005,7 @@ class ChartJSGenerator:
                     "ticks": {
                         "display": True,  # Always show labels
                         "font": {"size": 12, "weight": "500"},
-                        "color": "#333",
+                        "color": "#6b7280",  # v3.4.7: Subtle gray (Tailwind gray-500)
                         "padding": 8,
                         **self._get_tick_config(format_type)
                     },
@@ -2987,7 +3013,7 @@ class ChartJSGenerator:
                         "display": True,
                         "text": self._get_axis_title(format_type),  # Auto-set based on format
                         "font": {"size": 13, "weight": "bold"},
-                        "color": "#333"
+                        "color": "#4b5563"  # v3.4.7: Tailwind gray-600 for title
                     }
                 }
             }

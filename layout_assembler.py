@@ -113,25 +113,26 @@ class L02LayoutAssembler:
         bullets = bullets[:6]
 
         # v3.3.5: NO TRUNCATION - LLM generates complete bullets (95-133 chars each)
-        # v3.4.6: CSS variable theming for bullet colors (matches text_table_builder pattern)
+        # v3.4.7: CSS variable theming for bullet colors (pastel palette)
         # Build bullet list HTML with styled bullets
         bullets_html = ""
         for bullet in bullets:
             bullets_html += f"""      <li style="margin-bottom: 14px; padding-left: 28px; position: relative;">
-        <span style="position: absolute; left: 0; color: var(--accent-blue, #1a73e8); font-size: 20px;">•</span>
+        <span style="position: absolute; left: 0; color: var(--accent-blue, #60A5FA); font-size: 20px;">•</span>
         {bullet}
       </li>
 """
 
-        # v3.4.6: Key Insights panel improvements
-        # - Added 30px left padding (total 62px left)
-        # - min-height to ensure full 720px height
+        # v3.4.7: Key Insights panel improvements
+        # - FIXED: Use margin-left for external positioning (not internal padding)
+        # - Reverted to uniform padding: 32px
+        # - Updated to pastel color palette
         # - CSS variable theming for colors (with fallbacks for backward compatibility)
-        html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 720px; min-height: 720px; padding: 32px 32px 32px 62px; background: var(--sidebar-bg, linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)); border-radius: 12px; border-left: 4px solid var(--accent-blue, #1a73e8); box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-y: auto; box-sizing: border-box;">
-    <h4 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 700; color: var(--accent-blue, #1a73e8); margin: 0 0 20px 0; line-height: 1.3; text-align: left;">
+        html = f"""<div class="l02-observations-panel" style="width: {self.OBSERVATIONS_WIDTH}px; height: 720px; min-height: 720px; margin-left: 30px; padding: 32px; background: var(--sidebar-bg, linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)); border-radius: 12px; border-left: 4px solid var(--accent-blue, #60A5FA); box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-y: auto; box-sizing: border-box;">
+    <h4 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 700; color: var(--accent-blue, #3B82F6); margin: 0 0 20px 0; line-height: 1.3; text-align: left;">
         {title}
     </h4>
-    <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 18px; line-height: 1.6; color: var(--text-secondary, #374151);">
+    <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 18px; line-height: 1.6; color: var(--text-secondary, #4B5563);">
 {bullets_html}    </ul>
 </div>"""
 
