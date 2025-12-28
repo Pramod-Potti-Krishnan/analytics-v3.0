@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Treemap Test - local</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .chart-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .metadata {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-left: 4px solid #007bff;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>D3 Treemap Chart Test (LOCAL)</h1>
+
+        <div class="metadata">
+            <h3>Test Information</h3>
+            <p><strong>Environment:</strong> local</p>
+            <p><strong>Chart Type:</strong> d3_treemap</p>
+            <p><strong>Data Points:</strong> 6</p>
+            <p><strong>Test Time:</strong> 2025-11-20 22:39:51</p>
+        </div>
+
+        <div class="chart-section">
+            <h2>Chart Title</h2>
+            <h3>Subtitle</h3>
+            <!-- D3.js Treemap Chart (POC) -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <div id="chart-slide-d3-1"></div>
+    <script>
+        (function() {
+            function initD3Treemap() {
+                // Data
+                const data = {"name": "root", "children": [{"name": "Engineering", "value": 450000.0}, {"name": "Sales", "value": 320000.0}, {"name": "Marketing", "value": 180000.0}, {"name": "Operations", "value": 120000.0}, {"name": "HR", "value": 80000.0}, {"name": "Finance", "value": 60000.0}]};
+                const colors = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#95E1D3", "#F38181", "#AA96DA", "#FCBAD3", "#A8D8EA"];
+
+                // Dimensions
+                const width = 1220;
+                const height = 680;
+
+                // Create treemap layout
+                const treemap = d3.treemap()
+                    .size([width, height])
+                    .padding(2)
+                    .round(true);
+
+                // Create hierarchy and sum values
+                const root = d3.hierarchy(data)
+                    .sum(d => d.value)
+                    .sort((a, b) => b.value - a.value);
+
+                // Generate treemap layout
+                treemap(root);
+
+                // Clear existing SVG (for Reveal.js re-rendering)
+                d3.select('#chart-slide-d3-1').selectAll('*').remove();
+
+                // Create SVG
+                const svg = d3.select('#chart-slide-d3-1')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('font', '14px Arial, sans-serif');
+
+                // Create cells
+                const cell = svg.selectAll('g')
+                    .data(root.leaves())
+                    .enter().append('g')
+                    .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+                // Add rectangles
+                cell.append('rect')
+                    .attr('width', d => d.x1 - d.x0)
+                    .attr('height', d => d.y1 - d.y0)
+                    .attr('fill', (d, i) => colors[i % colors.length])
+                    .attr('fill-opacity', 0.85)
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2)
+                    .attr('rx', 3)
+                    .attr('ry', 3)
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).attr('fill-opacity', 1);
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this).attr('fill-opacity', 0.85);
+                    });
+
+                // Add labels (only if cell is large enough)
+                cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
+                    .append('text')
+                    .attr('x', 5)
+                    .attr('y', 20)
+                    .text(d => d.data.name)
+                    .attr('fill', '#fff')
+                    .attr('font-size', '14px')
+                    .attr('font-weight', 'bold')
+                    .style('pointer-events', 'none');
+
+                // Add value labels (only if cell is large enough)
+                cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 60)
+                    .append('text')
+                    .attr('x', 5)
+                    .attr('y', 40)
+                    .text(d => d.value.toLocaleString())
+                    .attr('fill', '#fff')
+                    .attr('font-size', '12px')
+                    .style('pointer-events', 'none');
+
+                // Store chart instance
+                window.chartInstances = window.chartInstances || {};
+                window.chartInstances['chart-slide-d3-1'] = {
+                    type: 'd3_treemap',
+                    data: data,
+                    destroy: function() {
+                        d3.select('#chart-slide-d3-1').selectAll('*').remove();
+                    }
+                };
+
+                console.log('✅ D3 Treemap chart-slide-d3-1 initialized');
+            }
+
+            // Reveal.js-aware initialization (matches Chart.js pattern)
+            if (typeof Reveal !== 'undefined') {
+                Reveal.on('ready', function() {
+                    try {
+                        const currentSlide = Reveal.getCurrentSlide();
+                        if (currentSlide && currentSlide.querySelector('#chart-slide-d3-1')) {
+                            setTimeout(initD3Treemap, 100);
+                        }
+                    } catch (e) {
+                        console.warn('D3 treemap init on ready failed:', e);
+                    }
+                });
+
+                Reveal.on('slidechanged', function(event) {
+                    try {
+                        if (event.currentSlide && event.currentSlide.querySelector('#chart-slide-d3-1')) {
+                            initD3Treemap();
+                        }
+                    } catch (e) {
+                        console.warn('D3 treemap init on slide change failed:', e);
+                    }
+                });
+            } else {
+                // Standalone mode (no Reveal.js)
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initD3Treemap);
+                } else {
+                    initD3Treemap();
+                }
+            }
+        })();
+    </script>
+</div>
+        </div>
+
+        <div class="metadata">
+            <h3>Observations</h3>
+            <div class="l02-observations-panel" style="width: 540px; height: 720px; padding: 40px 32px; background: #f8f9fa; border-radius: 8px; overflow-y: auto; box-sizing: border-box;">
+    <h3 style="font-family: 'Inter', -apple-system, sans-serif; font-size: 22px; font-weight: 600; color: #1f2937; margin: 0 0 18px 0; line-height: 1.3; text-align: left;">
+        Key Insights
+    </h3>
+    <ul style="margin: 0; padding-left: 20px; list-style-type: disc; text-align: left;">
+        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: #374151; margin: 0 0 10px 0; text-align: left;">
+            The d3 treemap illustrates budget allocation across departments, highlighting disparities in funding levels.
+        </li>
+        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: #374151; margin: 0 0 10px 0; text-align: left;">
+            Engineering dominates the budget with $450,000, representing a significant investment in innovation and development.
+        </li>
+        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: #374151; margin: 0 0 10px 0; text-align: left;">
+            In contrast, Finance receives only $60,000, indicating a potential underinvestment in financial oversight and strategy.
+        </li>
+        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: #374151; margin: 0 0 10px 0; text-align: left;">
+            The overall budget trend shows a decreasing pattern, which may impact departmental capabilities and future growth.
+        </li>
+        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: #374151; margin: 0 0 10px 0; text-align: left;">
+            The average budget across departments stands at $201,666.7, suggesting a need for reevaluation of resource distribution.
+        </li>
+        <li style="font-family: 'Inter', -apple-system, sans-serif; font-size: 19px; line-height: 1.65; color: #374151; margin: 0 0 10px 0; text-align: left;">
+            Executives should consider reallocating resources to ensure balanced support and address critical departmental needs effectively.
+        </li>
+    </ul>
+</div>
+        </div>
+
+        <div class="metadata">
+            <h3>Response Metadata</h3>
+            <pre>{
+  "analytics_type": "market_share",
+  "chart_type": "d3_treemap",
+  "layout": "L02",
+  "chart_library": "chartjs",
+  "model_used": "gpt-4o-mini",
+  "data_points": 6,
+  "generation_time_ms": 3109,
+  "theme": "professional",
+  "generated_at": "2025-11-21T03:39:51.436156",
+  "interactive_editor": true
+}</pre>
+        </div>
+    </div>
+</body>
+</html>

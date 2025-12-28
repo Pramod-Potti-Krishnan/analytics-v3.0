@@ -1,0 +1,29 @@
+<!-- Treemap Chart with Chart.js Treemap Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="chart-slide-treemap"></canvas>
+    <script>
+        (function() {
+            function initTreemap() {
+                const ctx = document.getElementById('chart-slide-treemap').getContext('2d');
+                const config = {"type": "treemap", "data": {"datasets": [{"tree": [{"label": "Enterprise", "value": 450.0, "color": "#FF6B6B"}, {"label": "SMB", "value": 200.0, "color": "#4ECDC4"}], "key": "value", "groups": ["label"], "spacing": 1, "borderWidth": 2, "borderColor": "#fff", "backgroundColor": function(ctx) { return ctx.raw.color || "#FF6B6B"; }, "labels": {"display": true, "formatter": function(ctx) { return ctx.raw.label; }, "color": "#fff", "font": {"size": 14, "weight": "bold"}}}]}, "options": {"responsive": true, "maintainAspectRatio": false, "plugins": {"legend": {"display": false}, "tooltip": {"callbacks": {"title": function(context) { return context[0].raw.label; }, "label": function(context) { return "number: " + context.raw.value; }}}}}};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {};
+                window.chartInstances['chart-slide-treemap'] = chart;
+
+                console.log('✅ Treemap chart-slide-treemap initialized');
+            }
+
+            // Initialize after treemap plugin loads
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTreemap);
+            } else {
+                initTreemap();
+            }
+        })();
+    </script>
+</div>

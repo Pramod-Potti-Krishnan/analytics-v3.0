@@ -1,0 +1,130 @@
+<!-- D3.js Treemap Chart (POC) -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <div id="chart-test2"></div>
+    <script>
+        (function() {
+            function initD3Treemap() {
+                // Data
+                const data = {"name": "root", "children": [{"name": "Engineering", "value": 450000.0}, {"name": "Sales", "value": 320000.0}]};
+                const colors = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#95E1D3", "#F38181", "#AA96DA", "#FCBAD3", "#A8D8EA"];
+
+                // Dimensions
+                const width = 1220;
+                const height = 680;
+
+                // Create treemap layout
+                const treemap = d3.treemap()
+                    .size([width, height])
+                    .padding(2)
+                    .round(true);
+
+                // Create hierarchy and sum values
+                const root = d3.hierarchy(data)
+                    .sum(d => d.value)
+                    .sort((a, b) => b.value - a.value);
+
+                // Generate treemap layout
+                treemap(root);
+
+                // Clear existing SVG (for Reveal.js re-rendering)
+                d3.select('#chart-test2').selectAll('*').remove();
+
+                // Create SVG
+                const svg = d3.select('#chart-test2')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('font', '14px Arial, sans-serif');
+
+                // Create cells
+                const cell = svg.selectAll('g')
+                    .data(root.leaves())
+                    .enter().append('g')
+                    .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+                // Add rectangles
+                cell.append('rect')
+                    .attr('width', d => d.x1 - d.x0)
+                    .attr('height', d => d.y1 - d.y0)
+                    .attr('fill', (d, i) => colors[i % colors.length])
+                    .attr('fill-opacity', 0.85)
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2)
+                    .attr('rx', 3)
+                    .attr('ry', 3)
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).attr('fill-opacity', 1);
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this).attr('fill-opacity', 0.85);
+                    });
+
+                // Add labels (only if cell is large enough)
+                cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
+                    .append('text')
+                    .attr('x', 5)
+                    .attr('y', 20)
+                    .text(d => d.data.name)
+                    .attr('fill', '#fff')
+                    .attr('font-size', '14px')
+                    .attr('font-weight', 'bold')
+                    .style('pointer-events', 'none');
+
+                // Add value labels (only if cell is large enough)
+                cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 60)
+                    .append('text')
+                    .attr('x', 5)
+                    .attr('y', 40)
+                    .text(d => d.value.toLocaleString())
+                    .attr('fill', '#fff')
+                    .attr('font-size', '12px')
+                    .style('pointer-events', 'none');
+
+                // Store chart instance
+                window.chartInstances = window.chartInstances || {};
+                window.chartInstances['chart-test2'] = {
+                    type: 'd3_treemap',
+                    data: data,
+                    destroy: function() {
+                        d3.select('#chart-test2').selectAll('*').remove();
+                    }
+                };
+
+                console.log('✅ D3 Treemap chart-test2 initialized');
+            }
+
+            // Reveal.js-aware initialization (matches Chart.js pattern)
+            if (typeof Reveal !== 'undefined') {
+                Reveal.on('ready', function() {
+                    try {
+                        const currentSlide = Reveal.getCurrentSlide();
+                        if (currentSlide && currentSlide.querySelector('#chart-test2')) {
+                            setTimeout(initD3Treemap, 100);
+                        }
+                    } catch (e) {
+                        console.warn('D3 treemap init on ready failed:', e);
+                    }
+                });
+
+                Reveal.on('slidechanged', function(event) {
+                    try {
+                        if (event.currentSlide && event.currentSlide.querySelector('#chart-test2')) {
+                            initD3Treemap();
+                        }
+                    } catch (e) {
+                        console.warn('D3 treemap init on slide change failed:', e);
+                    }
+                });
+            } else {
+                // Standalone mode (no Reveal.js)
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initD3Treemap);
+                } else {
+                    initD3Treemap();
+                }
+            }
+        })();
+    </script>
+</div>

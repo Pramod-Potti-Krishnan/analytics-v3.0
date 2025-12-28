@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body style="margin: 0; padding: 20px; background: #f5f5f5;">
+    <h1 style="font-family: Arial; color: #333;">Heatmap (heatmap)</h1>
+    <!-- Heatmap/Matrix Chart with Chart.js Matrix Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@3.0.0/dist/chartjs-chart-matrix.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="chart-slide-heatmap"></canvas>
+    <script>
+        (function() {
+            function initHeatmap() {
+                const ctx = document.getElementById('chart-slide-heatmap').getContext('2d');
+                const config = {"type": "matrix", "data": {"datasets": [{"label": "Heatmap", "data": [0], "backgroundColor": function(ctx) {
+                const value = ctx.dataset.data[ctx.dataIndex].v;
+                const normalized = (value - 0) / (0 - 0);
+                const r = Math.round(normalized * 255);
+                const b = Math.round((1 - normalized) * 255);
+                return `rgba(${r}, 100, ${b}, 0.8)`;
+            }, "borderWidth": 1, "borderColor": "#fff", "width": function(ctx) { return (ctx.chart.chartArea || {}).width / 5 - 1; }, "height": function(ctx) { return (ctx.chart.chartArea || {}).height / 4 - 1; }}]}, "options": {"responsive": true, "maintainAspectRatio": false, "plugins": {"legend": {"display": false}, "tooltip": {"callbacks": {"title": function(ctx) { return ctx[0].raw.y + " - " + ctx[0].raw.x; }, "label": function(ctx) { return "percentage: " + ctx.raw.v; }}}}, "scales": {"x": {"type": "category", "labels": [], "ticks": {"font": {"size": 12}}, "grid": {"display": false}}, "y": {"type": "category", "labels": [], "offset": true, "ticks": {"font": {"size": 12}}, "grid": {"display": false}}}}};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {};
+                window.chartInstances['chart-slide-heatmap'] = chart;
+
+                console.log('✅ Heatmap chart-slide-heatmap initialized');
+            }
+
+            // Initialize after matrix plugin loads
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initHeatmap);
+            } else {
+                initHeatmap();
+            }
+        })();
+    </script>
+</div>
+</body>
+</html>

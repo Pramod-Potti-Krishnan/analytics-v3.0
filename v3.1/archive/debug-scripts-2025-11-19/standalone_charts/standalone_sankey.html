@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body style="margin: 0; padding: 20px; background: #f5f5f5;">
+    <h1 style="font-family: Arial; color: #333;">Sankey Diagram (sankey)</h1>
+    <!-- Sankey Diagram with Chart.js Sankey Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@0.12.0/dist/chartjs-chart-sankey.min.js"></script>
+
+<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; background: white; padding: 20px; box-sizing: border-box;">
+    <canvas id="chart-slide-sankey"></canvas>
+    <script>
+        (function() {
+            function initSankey() {
+                // v3.3.4: Destroy existing chart to replay animation
+                if (window.chartInstances && window.chartInstances['chart-slide-sankey']) {
+                    console.log('Chart chart-slide-sankey exists, destroying to replay animation...');
+                    window.chartInstances['chart-slide-sankey'].destroy();
+                    delete window.chartInstances['chart-slide-sankey'];
+                }
+
+                const ctx = document.getElementById('chart-slide-sankey').getContext('2d');
+                const config = {"type": "sankey", "data": {"datasets": [{"data": [], "colorFrom": function(ctx) {
+            const nodeColors = {};
+            return nodeColors[ctx.dataset.data[ctx.dataIndex].from] || '#FF6B6B';
+        }, "colorTo": function(ctx) {
+            const nodeColors = {};
+            return nodeColors[ctx.dataset.data[ctx.dataIndex].to] || '#4ECDC4';
+        }, "colorMode": "gradient", "labels": {"display": true, "font": {"size": 12, "weight": "bold"}, "color": "#333"}, "size": "max", "borderWidth": 0}]}, "options": {"responsive": true, "maintainAspectRatio": false, "plugins": {"legend": {"display": false}, "tooltip": {"callbacks": {"label": function(ctx) {
+                const flow = ctx.dataset.data[ctx.dataIndex];
+                return flow.from + ' → ' + flow.to + ': ' + flow.flow.toFixed(1) + '%';
+            }}}, "title": {"display": false}}}};
+
+                const chart = new Chart(ctx, config);
+
+                // Store for editor access
+                window.chartInstances = window.chartInstances || {};
+                window.chartInstances['chart-slide-sankey'] = chart;
+
+                console.log('✅ Sankey chart-slide-sankey initialized');
+            }
+
+            // Initialize after sankey plugin loads
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initSankey);
+            } else {
+                initSankey();
+            }
+
+            // v3.3.4: Reinitialize on slide change for animation replay
+            if (typeof Reveal !== 'undefined') {
+                Reveal.on('slidechanged', function(event) {
+                    try {
+                        if (event.currentSlide && event.currentSlide.querySelector('#chart-slide-sankey')) {
+                            initSankey();
+                        }
+                    } catch (e) {
+                        console.warn('Sankey init on slide change failed:', e);
+                    }
+                });
+            }
+        })();
+    </script>
+</div>
+</body>
+</html>

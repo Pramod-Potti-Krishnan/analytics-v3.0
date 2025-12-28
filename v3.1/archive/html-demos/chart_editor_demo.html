@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Chart Editor - Proof of Concept</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .demo-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 30px;
+        }
+
+        .demo-info h3 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .demo-info ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .demo-info li {
+            margin: 4px 0;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        .chart-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* Edit Button */
+        .chart-edit-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        .chart-edit-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.05);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Modal Header */
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 32px;
+            color: #666;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        /* Modal Body */
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .chart-info {
+            background: #f5f5f5;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .chart-info p {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        /* Editable Table */
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        .editable-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .editable-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        .editable-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .editable-table input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .editable-table input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+        }
+
+        .delete-row-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .delete-row-btn:hover {
+            background: #cc0000;
+        }
+
+        /* Buttons */
+        .primary-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .primary-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .secondary-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .secondary-btn:hover {
+            background: #e0e0e0;
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        /* Success Toast */
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .success-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 100000;
+            font-size: 14px;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Interactive Chart Editor</h1>
+        <p class="subtitle">Proof of Concept - Click "Edit Data" to modify chart values</p>
+
+        <div class="demo-info">
+            <h3>🎯 How to Use:</h3>
+            <ul>
+                <li>Click the <strong>"📊 Edit Data"</strong> button on any chart</li>
+                <li>Edit the X-axis labels and Y-axis values in the table</li>
+                <li>Add new rows with <strong>"+ Add Row"</strong></li>
+                <li>Delete rows with the 🗑️ button</li>
+                <li>Click <strong>"💾 Save & Update Chart"</strong> to apply changes</li>
+                <li>Chart updates instantly!</li>
+            </ul>
+        </div>
+
+        <!-- Chart 1: Revenue Line Chart -->
+        <div class="chart-container">
+            <h3 class="chart-title">Quarterly Revenue Growth</h3>
+            <button class="chart-edit-btn" onclick="openEditor('revenueChart')">📊 Edit Data</button>
+            <div class="chart-wrapper">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 2: Market Share Bar Chart -->
+        <div class="chart-container">
+            <h3 class="chart-title">Market Share Distribution</h3>
+            <button class="chart-edit-btn" onclick="openEditor('marketChart')">📊 Edit Data</button>
+            <div class="chart-wrapper">
+                <canvas id="marketChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Popup -->
+    <div id="chart-data-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Edit Chart Data</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="chart-info">
+                    <p><strong>Chart:</strong> <span id="modal-chart-name">-</span></p>
+                    <p><strong>Type:</strong> <span id="modal-chart-type">-</span></p>
+                </div>
+
+                <div class="table-container">
+                    <table id="chart-data-table" class="editable-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Label (X-axis)</th>
+                                <th>Value (Y-axis)</th>
+                                <th style="width: 80px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <button id="add-row-btn" class="secondary-btn" onclick="addRow()">+ Add Row</button>
+            </div>
+
+            <div class="modal-footer">
+                <button class="secondary-btn" onclick="closeModal()">Cancel</button>
+                <button class="primary-btn" onclick="saveAndUpdate()">💾 Save & Update Chart</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register datalabels plugin
+        Chart.register(ChartDataLabels);
+
+        // Global variables
+        let currentChartId = null;
+        let currentChart = null;
+        let charts = {};
+
+        // Initialize charts
+        function initCharts() {
+            // Revenue Chart
+            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+            charts.revenueChart = new Chart(revenueCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'],
+                    datasets: [{
+                        label: 'Revenue',
+                        data: [125000, 145000, 178000, 195000],
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                        borderWidth: 4,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#FF6B6B',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        datalabels: {
+                            display: true,
+                            color: '#fff',
+                            font: { size: 14, weight: 'bold' },
+                            formatter: (value) => '$' + (value/1000).toFixed(0) + 'K',
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            borderRadius: 4,
+                            padding: 6
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => '$' + (value/1000).toFixed(0) + 'K'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Market Chart
+            const marketCtx = document.getElementById('marketChart').getContext('2d');
+            charts.marketChart = new Chart(marketCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Product A', 'Product B', 'Product C', 'Product D'],
+                    datasets: [{
+                        label: 'Market Share',
+                        data: [35.5, 28.3, 22.1, 14.1],
+                        backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3'],
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        datalabels: {
+                            display: true,
+                            color: '#fff',
+                            font: { size: 14, weight: 'bold' },
+                            formatter: (value) => value.toFixed(1) + '%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            borderRadius: 4,
+                            padding: 6,
+                            anchor: 'end',
+                            align: 'end'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => value.toFixed(1) + '%'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Open editor modal
+        function openEditor(chartId) {
+            currentChartId = chartId;
+            currentChart = charts[chartId];
+
+            if (!currentChart) {
+                alert('Chart not found!');
+                return;
+            }
+
+            // Populate modal
+            populateModal();
+
+            // Show modal
+            document.getElementById('chart-data-modal').style.display = 'flex';
+        }
+
+        // Populate modal with chart data
+        function populateModal() {
+            const labels = currentChart.data.labels;
+            const values = currentChart.data.datasets[0].data;
+            const chartName = currentChart.data.datasets[0].label;
+            const chartType = currentChart.config.type === 'line' ? 'Line Chart' : 'Bar Chart';
+
+            document.getElementById('modal-chart-name').textContent = chartName;
+            document.getElementById('modal-chart-type').textContent = chartType;
+
+            const tbody = document.getElementById('data-table-body');
+            tbody.innerHTML = '';
+
+            labels.forEach((label, index) => {
+                const row = createTableRow(index, label, values[index]);
+                tbody.appendChild(row);
+            });
+        }
+
+        // Create table row
+        function createTableRow(index, label, value) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><input type="text" class="label-input" value="${label}"></td>
+                <td><input type="number" class="value-input" value="${value}" step="any"></td>
+                <td><button class="delete-row-btn" onclick="deleteRow(this)">🗑️</button></td>
+            `;
+            return row;
+        }
+
+        // Add row
+        function addRow() {
+            const tbody = document.getElementById('data-table-body');
+            const currentRows = tbody.querySelectorAll('tr').length;
+            const row = createTableRow(currentRows, 'New Label', 0);
+            tbody.appendChild(row);
+            renumberRows();
+        }
+
+        // Delete row
+        function deleteRow(btn) {
+            btn.closest('tr').remove();
+            renumberRows();
+        }
+
+        // Renumber rows
+        function renumberRows() {
+            const rows = document.querySelectorAll('#data-table-body tr');
+            rows.forEach((row, index) => {
+                row.querySelector('td:first-child').textContent = index + 1;
+            });
+        }
+
+        // Save and update
+        function saveAndUpdate() {
+            // Collect data
+            const rows = document.querySelectorAll('#data-table-body tr');
+            const newLabels = [];
+            const newValues = [];
+
+            rows.forEach(row => {
+                const label = row.querySelector('.label-input').value;
+                const value = parseFloat(row.querySelector('.value-input').value);
+                newLabels.push(label);
+                newValues.push(value);
+            });
+
+            // Update chart
+            currentChart.data.labels = newLabels;
+            currentChart.data.datasets[0].data = newValues;
+            currentChart.update();
+
+            // Show success message
+            showSuccess('Chart updated successfully!');
+
+            // Close modal
+            closeModal();
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('chart-data-modal').style.display = 'none';
+            currentChartId = null;
+            currentChart = null;
+        }
+
+        // Show success toast
+        function showSuccess(message) {
+            const toast = document.createElement('div');
+            toast.className = 'success-toast';
+            toast.innerHTML = `✅ ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close modal on overlay click
+        document.getElementById('chart-data-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'chart-data-modal') {
+                closeModal();
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('load', initCharts);
+    </script>
+</body>
+</html>

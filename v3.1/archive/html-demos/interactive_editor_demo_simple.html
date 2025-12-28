@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Chart Editor - Simple Demo</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .info {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 500px;
+        }
+
+        .edit-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        .edit-btn:hover {
+            background: rgba(0,0,0,0.9);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close-btn {
+            font-size: 30px;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+        }
+
+        .cancel-btn {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+
+        .add-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            margin: 10px 0;
+        }
+
+        .delete-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Interactive Chart Editor Demo</h1>
+
+        <div class="info">
+            <strong>Try it out:</strong>
+            <ol>
+                <li>Click "📊 Edit Data" button on the chart</li>
+                <li>Modify labels and values in the table</li>
+                <li>Add or delete rows</li>
+                <li>Click "Save & Update Chart"</li>
+                <li>Watch the chart update instantly!</li>
+            </ol>
+        </div>
+
+        <div class="chart-container">
+            <button class="edit-btn" onclick="openEditor()">📊 Edit Data</button>
+
+            <div class="chart-wrapper">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Chart Data</h2>
+                <button class="close-btn" onclick="closeEditor()">&times;</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Label</th>
+                        <th>Value</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+
+            <button class="add-btn" onclick="addRow()">+ Add Row</button>
+
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="cancel-btn" onclick="closeEditor()">Cancel</button>
+                <button class="save-btn" onclick="saveAndUpdate()">💾 Save & Update Chart</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register Chart.js datalabels plugin
+        Chart.register(ChartDataLabels);
+
+        let myChart = null;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('myChart').getContext('2d');
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'],
+                    datasets: [{
+                        label: 'Quarterly Revenue',
+                        data: [125000, 145000, 178000, 195000],
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                        borderWidth: 4,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#FF6B6B',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        datalabels: {
+                            display: true,
+                            color: '#fff',
+                            font: { size: 14, weight: 'bold' },
+                            formatter: (value) => '$' + (value/1000).toFixed(0) + 'K',
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            borderRadius: 4,
+                            padding: 6
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => '$' + (value/1000).toFixed(0) + 'K'
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('✅ Chart initialized');
+        }
+
+        // Open editor modal
+        function openEditor() {
+            if (!myChart) {
+                alert('Chart not initialized yet!');
+                return;
+            }
+
+            // Populate table
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const labels = myChart.data.labels;
+            const values = myChart.data.datasets[0].data;
+
+            labels.forEach((label, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><input type="text" value="${label}" class="label-input"></td>
+                    <td><input type="number" value="${values[index]}" step="any" class="value-input"></td>
+                    <td><button class="delete-btn" onclick="deleteRow(this)">🗑️ Delete</button></td>
+                `;
+            });
+
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        // Close editor
+        function closeEditor() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // Add new row
+        function addRow() {
+            const tbody = document.getElementById('tableBody');
+            const index = tbody.rows.length;
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><input type="text" value="New Label" class="label-input"></td>
+                <td><input type="number" value="0" step="any" class="value-input"></td>
+                <td><button class="delete-btn" onclick="deleteRow(this)">🗑️ Delete</button></td>
+            `;
+        }
+
+        // Delete row
+        function deleteRow(btn) {
+            const row = btn.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+            renumberRows();
+        }
+
+        // Renumber rows
+        function renumberRows() {
+            const tbody = document.getElementById('tableBody');
+            for (let i = 0; i < tbody.rows.length; i++) {
+                tbody.rows[i].cells[0].textContent = i + 1;
+            }
+        }
+
+        // Save and update chart
+        function saveAndUpdate() {
+            const tbody = document.getElementById('tableBody');
+            const newLabels = [];
+            const newValues = [];
+
+            for (let i = 0; i < tbody.rows.length; i++) {
+                const row = tbody.rows[i];
+                newLabels.push(row.querySelector('.label-input').value);
+                newValues.push(parseFloat(row.querySelector('.value-input').value));
+            }
+
+            // Update chart
+            myChart.data.labels = newLabels;
+            myChart.data.datasets[0].data = newValues;
+            myChart.update();
+
+            // Show success (you would call API here)
+            alert('✅ Chart updated successfully!');
+
+            closeEditor();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', initChart);
+    </script>
+</body>
+</html>

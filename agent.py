@@ -531,6 +531,9 @@ async def process_analytics_slide(
                 "element_1": subtitle,
                 "element_4": chart_html,
                 "element_3": insight,
+                # Aliases for Director convenience
+                "chart_html": chart_html,  # For C3/V2 layouts
+                "body": insight,           # For V2 layout
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }
@@ -557,6 +560,10 @@ async def process_analytics_slide(
                 "element_1": subtitle,
                 "element_3": chart_html,  # Chart.js inline script (already Layout Builder compliant)
                 "element_2": formatted_observations,  # Styled observations panel
+                # Aliases for Director convenience
+                "chart_html": chart_html,         # For C3/V2 layouts
+                "element_4": chart_html,          # For L02 SPEC compliance (diagram slot)
+                "body": formatted_observations,   # For V2 layout
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }
@@ -607,6 +614,9 @@ async def process_analytics_slide(
                 "element_2": right_chart,
                 "element_3": left_desc,
                 "element_5": right_desc,
+                # Aliases for Director convenience (uses primary chart/text)
+                "chart_html": left_chart,   # Primary chart alias
+                "body": left_desc,          # Primary text alias
                 "presentation_name": context.get("presentation_name", ""),
                 "company_logo": context.get("company_logo", "📊")
             }
@@ -832,7 +842,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_line_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -841,7 +851,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_bar_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -850,7 +860,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_horizontal_bar_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -859,7 +869,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_pie_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -868,7 +878,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_doughnut_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -904,7 +914,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_scatter_plot(
                 data=scatter_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 options=scatter_options,  # ✅ CORRECT LOCATION
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
@@ -949,7 +959,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_bubble_chart(
                 data=bubble_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 options=bubble_options,  # ✅ CORRECT LOCATION
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
@@ -969,7 +979,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_radar_chart(
                 data=radar_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -978,7 +988,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_polar_area_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -988,7 +998,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_area_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -997,7 +1007,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_stacked_area_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1006,7 +1016,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_grouped_bar_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1015,7 +1025,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_stacked_bar_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1024,7 +1034,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_waterfall_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1033,7 +1043,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_d3_treemap_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,  # Now enabled for D3 charts
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1042,7 +1052,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_d3_sunburst_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=False,  # Editor not yet implemented for D3 charts
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1051,7 +1061,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_d3_choropleth_usa_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=False,  # Editor not yet implemented for D3 charts
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1060,7 +1070,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_d3_sankey_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=False,  # Editor not yet implemented for D3 charts
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1070,7 +1080,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_treemap_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1079,7 +1089,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_heatmap_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1088,7 +1098,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_boxplot_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1097,7 +1107,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_candlestick_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1106,7 +1116,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_sankey_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1115,7 +1125,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_mixed_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1126,7 +1136,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             chart_html = chart_gen.generate_bar_chart(
                 data=chart_data,
                 height=720,
-                chart_id=f"chart-{slide_id}",
+                chart_id=f"chart-slide-{slide_number}",
                 enable_editor=enable_editor,
                 presentation_id=presentation_id,
                 api_base_url="https://analytics-v30-production.up.railway.app/api/charts"
@@ -1151,7 +1161,7 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Assemble L02 layout (returns element_3 and element_2)
         l02_content = assemble_l02_layout(
             canvas_html=chart_html,
-            chart_id=f"chart-{slide_id}",
+            chart_id=f"chart-slide-{slide_number}",
             insights_text=insights_text,
             theme=theme,
             enable_editor=enable_editor

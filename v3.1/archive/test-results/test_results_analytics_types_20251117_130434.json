@@ -1,0 +1,52 @@
+{
+  "passed": 0,
+  "failed": 9,
+  "total": 9,
+  "details": [
+    {
+      "analytics_type": "revenue_over_time",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "quarterly_comparison",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "market_share",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "yoy_growth",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "kpi_metrics",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "category_ranking",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "correlation_analysis",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "multidimensional_analysis",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    },
+    {
+      "analytics_type": "multi_metric_comparison",
+      "status": "FAILED",
+      "error": "Response missing 'success: true'"
+    }
+  ]
+}

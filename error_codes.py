@@ -25,6 +25,13 @@ class ErrorCode(str, Enum):
     INVALID_CHART_TYPE = "INVALID_CHART_TYPE"
     DATA_RANGE_ERROR = "DATA_RANGE_ERROR"  # Too few or too many data points
 
+    # Layout Service Grid Errors (400 series)
+    INVALID_GRID_SIZE = "INVALID_GRID_SIZE"
+    GRID_TOO_SMALL = "GRID_TOO_SMALL"
+    MISSING_DATA = "MISSING_DATA"
+    INVALID_PALETTE = "INVALID_PALETTE"
+    DATA_LIMIT_EXCEEDED = "DATA_LIMIT_EXCEEDED"
+
     # Processing Errors (500 series)
     CHART_GENERATION_FAILED = "CHART_GENERATION_FAILED"
     INSIGHT_GENERATION_FAILED = "INSIGHT_GENERATION_FAILED"
@@ -192,6 +199,12 @@ ERROR_MESSAGES = {
     ErrorCode.CHART_GENERATION_FAILED: "Chart generation failed",
     ErrorCode.INSIGHT_GENERATION_FAILED: "Insight generation failed",
     ErrorCode.JOB_NOT_FOUND: "Job not found",
+    # Layout Service Grid Errors
+    ErrorCode.INVALID_GRID_SIZE: "Grid dimensions are outside valid range (width: 1-12, height: 1-8)",
+    ErrorCode.GRID_TOO_SMALL: "Grid size is too small for this chart type",
+    ErrorCode.MISSING_DATA: "No data provided and generateData is false",
+    ErrorCode.INVALID_PALETTE: "Invalid color palette specified",
+    ErrorCode.DATA_LIMIT_EXCEEDED: "Data points exceed limit for this grid size",
 }
 
 
