@@ -244,8 +244,19 @@ class SyntheticDataGenerator:
         context: dict,
         constraints: dict
     ) -> List[Dict[str, Any]]:
-        """Generate data for scatter plots with correlation."""
-        labels = [f"Point {i+1}" for i in range(num_points)]
+        """Generate data for scatter plots with correlation.
+
+        v3.4.5: Use realistic entity names instead of generic "Point X".
+        """
+        # Realistic entity names for scatter/bubble charts
+        entities = [
+            'Acme Corp', 'TechFlow', 'DataSync', 'CloudNine', 'InnovateLab',
+            'NextGen AI', 'QuantumBiz', 'Apex Tech', 'PrimeData', 'CoreSystems',
+            'BlueChip', 'GreenPath', 'RedShift', 'SilverLine', 'GoldStar',
+            'IronClad', 'SwiftEdge', 'BrightSpark', 'DeepMind', 'FastTrack'
+        ]
+        labels = entities[:num_points] if num_points <= len(entities) else \
+                 entities + [f"Company {i+1}" for i in range(num_points - len(entities))]
 
         # Generate correlated x,y pairs
         correlation = scenario.metadata.get('correlation', 0.7)
@@ -288,14 +299,21 @@ class SyntheticDataGenerator:
         context: dict,
         constraints: dict
     ) -> List[Dict[str, Any]]:
-        """Generate data for radar charts (normalized 0-100)."""
-        # Performance metrics labels
-        metrics = ['Speed', 'Power', 'Agility', 'Endurance', 'Accuracy', 'Efficiency']
+        """Generate data for radar charts (normalized 0-100).
+
+        v3.4.5: Extended with business-relevant performance metrics.
+        """
+        # Business performance metrics
+        metrics = [
+            'Customer Sat.', 'Quality Score', 'Delivery Speed', 'Cost Efficiency',
+            'Innovation', 'Market Share', 'Employee Eng.', 'Brand Value',
+            'Tech Adoption', 'Sustainability'
+        ]
         labels = metrics[:min(num_points, len(metrics))]
 
-        # Generate normalized values (0-100)
+        # Generate normalized values (0-100) with realistic distribution
         values = [
-            round(random.uniform(50, 100), 1)
+            round(random.uniform(55, 95), 1)
             for _ in range(len(labels))
         ]
 
@@ -331,23 +349,37 @@ class SyntheticDataGenerator:
         context: dict,
         constraints: dict
     ) -> List[Dict[str, Any]]:
-        """Generate data for waterfall charts (positive/negative changes)."""
+        """Generate data for waterfall charts (positive/negative changes).
+
+        v3.4.5: Use realistic business categories instead of generic "Change X".
+        """
+        # Realistic waterfall categories (revenues, costs, adjustments)
+        change_labels = [
+            'Product Sales', 'Service Revenue', 'Licensing Fees',
+            'COGS', 'Marketing', 'R&D', 'Operations',
+            'Tax Adjustment', 'Currency Gains', 'One-time Items'
+        ]
+
         labels = []
         values = []
 
         # Starting value
-        labels.append("Starting Balance")
+        labels.append("Opening Balance")
         values.append(scenario.base_value)
 
-        # Changes (positive and negative)
-        for i in range(num_points - 2):  # Reserve space for total
-            labels.append(f"Change {i+1}")
-            # Mix of positive and negative
-            change = scenario.base_value * random.uniform(-0.2, 0.3)
+        # Changes (positive and negative) with realistic labels
+        num_changes = min(num_points - 2, len(change_labels))
+        for i in range(num_changes):
+            labels.append(change_labels[i])
+            # Mix of positive and negative (first 3 typically positive revenue, rest costs)
+            if i < 3:
+                change = scenario.base_value * random.uniform(0.1, 0.4)
+            else:
+                change = scenario.base_value * random.uniform(-0.25, -0.05)
             values.append(round(change, 2))
 
         # Final total
-        labels.append("Final Total")
+        labels.append("Net Result")
         total = sum(values)
         values.append(round(total, 2))
 
@@ -504,30 +536,46 @@ class SyntheticDataGenerator:
                     labels.append(f"Week {w_num}")
             return labels
         else:
-            return [f"Period {i+1}" for i in range(num_points)]
+            # v3.4.5: Default to monthly format instead of generic "Period X"
+            # Use abbreviated year format like "Jan '25", "Feb '25"
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            labels = []
+            for i in range(num_points):
+                m_idx = i % 12
+                y = year + (i // 12)
+                y_short = str(y)[-2:]  # Get last 2 digits: 2024 -> "24"
+                labels.append(f"{months[m_idx]} '{y_short}")
+            return labels
 
     def _generate_category_labels(
         self,
         num_points: int,
         context: dict
     ) -> List[str]:
-        """Generate category labels based on domain."""
+        """Generate category labels based on domain.
+
+        v3.4.5: Improved default labels to use meaningful business terms.
+        """
         domain = context.get('domain', 'metrics')
 
         if domain == 'revenue':
-            categories = ['Product A', 'Product B', 'Product C', 'Product D', 'Product E',
-                         'Service 1', 'Service 2', 'Service 3', 'Other', 'Misc']
+            categories = ['Electronics', 'Software', 'Services', 'Hardware', 'Cloud',
+                         'Support', 'Training', 'Consulting', 'Licensing', 'Other']
         elif domain == 'market_share':
-            categories = ['Company A', 'Company B', 'Company C', 'Company D', 'Company E',
-                         'Competitor 1', 'Competitor 2', 'Others']
+            categories = ['Acme Corp', 'TechGiant', 'Innovate Inc', 'DataFlow', 'CloudFirst',
+                         'NextGen', 'Alpha Systems', 'Others']
         elif domain == 'performance':
-            categories = ['Metric 1', 'Metric 2', 'Metric 3', 'Metric 4', 'Metric 5',
-                         'KPI A', 'KPI B', 'KPI C']
+            # v3.4.5: Use meaningful performance metric names
+            categories = ['Revenue', 'Profit', 'Growth Rate', 'Customer Sat.', 'Retention',
+                         'Efficiency', 'Quality', 'Engagement']
         elif domain == 'customers':
-            categories = ['Segment A', 'Segment B', 'Segment C', 'Segment D',
-                         'Enterprise', 'SMB', 'Consumer', 'Other']
+            categories = ['Enterprise', 'Mid-Market', 'SMB', 'Startup',
+                         'Government', 'Education', 'Healthcare', 'Retail']
         else:
-            categories = [f"Category {chr(65+i)}" for i in range(20)]
+            # v3.4.5: Default to department/team names instead of generic categories
+            categories = ['Marketing', 'Sales', 'Engineering', 'Operations', 'Finance',
+                         'HR', 'Support', 'R&D', 'Product', 'Legal']
 
         return categories[:num_points]
 

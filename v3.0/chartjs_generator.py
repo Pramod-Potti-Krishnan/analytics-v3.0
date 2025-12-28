@@ -2886,6 +2886,15 @@ class ChartJSGenerator:
         options = {
             "responsive": True,
             "maintainAspectRatio": False,
+            # v3.4.5: Add layout padding to prevent axis label cutoff
+            "layout": {
+                "padding": {
+                    "left": 15,
+                    "right": 25,
+                    "top": 15,
+                    "bottom": 40  # Extra space for rotated X-axis labels
+                }
+            },
             "animation": {
                 "duration": 1500,  # 1.5 seconds for smooth animation
                 "easing": "easeInOutQuart",  # Smooth acceleration/deceleration
