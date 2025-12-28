@@ -18,9 +18,10 @@ class L02LayoutAssembler:
     """Assembles L02-specific HTML for charts and observations."""
 
     # L02 Template Dimensions (within L25 content area: 1800×720)
-    CHART_WIDTH = 1260  # 70% of content area
+    # v3.4.8: Widened observations panel (540→600) to reduce right-side gap
+    CHART_WIDTH = 1200  # ~67% of content area (was 1260)
     CHART_HEIGHT = 720
-    OBSERVATIONS_WIDTH = 540  # 30% of content area
+    OBSERVATIONS_WIDTH = 600  # ~33% of content area (was 540)
     OBSERVATIONS_HEIGHT = 720
 
     # Theme color palettes - Layout Builder standard colors
@@ -109,8 +110,8 @@ class L02LayoutAssembler:
                     line = line[1:].strip()
                 bullets.append(line)
 
-        # v3.3.5: Limit to 6 bullets max (reduced from 7 to fit on one page)
-        bullets = bullets[:6]
+        # v3.4.8: Increased to 7 bullets max (wider panel: 600px vs 540px)
+        bullets = bullets[:7]
 
         # v3.3.5: NO TRUNCATION - LLM generates complete bullets (95-133 chars each)
         # v3.4.7: CSS variable theming for bullet colors (pastel palette)
@@ -180,7 +181,7 @@ class L02LayoutAssembler:
         element_2 = self.assemble_observations_html(
             insights_text=insights_text,
             title=observations_title,
-            max_chars=800  # v3.3.5: Reduced to 800 to fit 5-6 bullets on one page
+            max_chars=1000  # v3.4.8: Increased to 1000 for wider panel (600px)
         )
 
         result = {

@@ -753,12 +753,13 @@ class ChartJSGenerator:
                         "position": "right",
                         "labels": {
                             "font": {"size": 14, "weight": "bold"},
-                            "padding": 15
+                            "padding": 15,
+                            "color": "#374151"  # v3.4.8: Dark gray for readability
                         }
                     },
                     "datalabels": {
                         "display": True,
-                        "color": "#fff",
+                        "color": "#374151",  # v3.4.8: Dark gray (was #fff - unreadable on pastel)
                         "font": {"size": 16, "weight": "bold"},
                         "formatter": "function(value, context) { return value + '%'; }",
                         "anchor": "center",
