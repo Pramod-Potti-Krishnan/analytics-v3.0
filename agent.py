@@ -1254,49 +1254,110 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
 
 def _generate_chart_title(narrative: str, chart_type: str) -> str:
     """
-    v3.4.11: Generate a chart title from narrative for visual alignment.
+    v3.4.13: Generate chart subtitle + takeaway in phrase format.
 
-    Extracts meaningful phrases like "Show quarterly revenue" → "Quarterly Revenue".
+    Format: "<strong>Descriptive Phrase:</strong> Explanatory sentence with <strong>key metric</strong> highlighted."
+
+    Total length: 75-120 characters for 2-line display at 18px font.
 
     Args:
         narrative: User narrative/description
         chart_type: Type of chart (bar, line, pie, etc.)
 
     Returns:
-        Title string for the chart
+        HTML string with bold subtitle and takeaway sentence
     """
-    if not narrative:
-        # Fallback titles based on chart type
-        type_titles = {
-            "line": "Trend Analysis",
-            "bar": "Category Comparison",
-            "bar_vertical": "Category Comparison",
-            "bar_horizontal": "Horizontal Comparison",
-            "pie": "Distribution Overview",
-            "doughnut": "Distribution Analysis",
-            "area": "Area Trends",
-            "scatter": "Correlation Analysis",
-            "bubble": "Multi-Dimensional View",
-            "radar": "Performance Radar",
-            "polarArea": "Polar Distribution"
+    # Chart type to descriptive templates
+    type_templates = {
+        "line": {
+            "subtitle": "Consistent Upward Trend",
+            "takeaway": "Performance shows <strong>steady growth</strong> across the reporting period with positive momentum."
+        },
+        "bar": {
+            "subtitle": "Clear Category Leaders",
+            "takeaway": "Analysis reveals <strong>significant variation</strong> between categories with top performers standing out."
+        },
+        "bar_vertical": {
+            "subtitle": "Department Performance Varies",
+            "takeaway": "Data shows <strong>notable differences</strong> across departments with clear leaders emerging."
+        },
+        "bar_horizontal": {
+            "subtitle": "Ranked Performance View",
+            "takeaway": "Horizontal comparison highlights <strong>top performers</strong> and areas needing attention."
+        },
+        "pie": {
+            "subtitle": "Market Share Distribution",
+            "takeaway": "The breakdown shows <strong>concentrated segments</strong> with key players dominating share."
+        },
+        "doughnut": {
+            "subtitle": "Composition Breakdown",
+            "takeaway": "Analysis reveals <strong>primary contributors</strong> accounting for majority of the total."
+        },
+        "area": {
+            "subtitle": "Cumulative Growth Pattern",
+            "takeaway": "Stacked view shows <strong>accelerating trends</strong> with compounding effects over time."
+        },
+        "scatter": {
+            "subtitle": "Strong Correlation Found",
+            "takeaway": "Data points reveal <strong>clear relationship</strong> between the measured variables."
+        },
+        "bubble": {
+            "subtitle": "Multi-Dimensional Insights",
+            "takeaway": "Bubble sizes indicate <strong>relative magnitude</strong> across three key dimensions."
+        },
+        "radar": {
+            "subtitle": "Balanced Performance Profile",
+            "takeaway": "Radar view shows <strong>strengths and gaps</strong> across all measured attributes."
+        },
+        "polarArea": {
+            "subtitle": "Proportional Distribution",
+            "takeaway": "Polar view highlights <strong>relative weights</strong> of each category in the mix."
         }
-        return type_titles.get(chart_type, "Analytics Overview")
+    }
 
-    narrative_lower = narrative.lower()
+    # Get template for chart type or use default
+    template = type_templates.get(chart_type, {
+        "subtitle": "Key Analytics Insight",
+        "takeaway": "Data analysis reveals <strong>important patterns</strong> worth noting in this view."
+    })
 
-    # Extract from common patterns
-    for keyword in ["show", "display", "visualize", "present", "analyze"]:
-        if keyword in narrative_lower:
-            parts = narrative.split(keyword, 1)
-            if len(parts) > 1:
-                title = parts[1].strip()
-                # Limit to first 5 words and capitalize
-                words = title.split()[:5]
-                return " ".join(words).title()
+    # If narrative contains specific keywords, try to customize
+    if narrative:
+        narrative_lower = narrative.lower()
 
-    # Fallback: Use first meaningful words of narrative
-    words = narrative.split()[:5]
-    return " ".join(words).title()
+        # Revenue-related
+        if any(word in narrative_lower for word in ["revenue", "sales", "income"]):
+            template = {
+                "subtitle": "Revenue Performance Highlights",
+                "takeaway": "Financial data shows <strong>notable trends</strong> in revenue generation and growth."
+            }
+        # Growth-related
+        elif any(word in narrative_lower for word in ["growth", "increase", "trend"]):
+            template = {
+                "subtitle": "Strong Growth Trajectory",
+                "takeaway": "Trend analysis indicates <strong>positive momentum</strong> with sustained improvement."
+            }
+        # Comparison-related
+        elif any(word in narrative_lower for word in ["compare", "comparison", "versus", "vs"]):
+            template = {
+                "subtitle": "Comparative Analysis Results",
+                "takeaway": "Side-by-side view reveals <strong>key differences</strong> between compared entities."
+            }
+        # Performance-related
+        elif any(word in narrative_lower for word in ["performance", "metric", "kpi"]):
+            template = {
+                "subtitle": "Performance Metrics Summary",
+                "takeaway": "KPI tracking shows <strong>measurable progress</strong> against established targets."
+            }
+        # Department/category ranking
+        elif any(word in narrative_lower for word in ["department", "category", "ranking"]):
+            template = {
+                "subtitle": "Category Rankings Revealed",
+                "takeaway": "Ranking analysis shows <strong>clear leaders</strong> with measurable gaps between tiers."
+            }
+
+    # Combine subtitle and takeaway
+    return f"<strong>{template['subtitle']}:</strong> {template['takeaway']}"
 
 
 def _infer_analytics_type(narrative: str, topics: list, data: list) -> str:

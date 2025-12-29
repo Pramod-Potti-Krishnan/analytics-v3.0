@@ -2302,11 +2302,11 @@ class ChartJSGenerator:
     }})();"""
 
         # v3.4.11: Build title HTML if chart_title is provided
-        # v3.4.12: Styling refinements - transparent bg, no border, flex center, CSS variable color
+        # v3.4.13: Phrase subtitle + takeaway format, 18px font (matches bullets), 2-line display
         title_html = ""
         if chart_title:
-            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 20px; padding-left: 20px; padding-right: 20px; flex-shrink: 0; display: flex; align-items: center; background: transparent; border: none;">
-    <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: var(--text-secondary, #4B5563); text-align: left;">{chart_title}</h3>
+            title_html = f'''<div class="chart-subtitle" style="height: 70px; padding: 15px 20px; flex-shrink: 0; background: transparent; border: none;">
+    <p style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 18px; font-weight: 400; color: var(--text-secondary, #4B5563); text-align: left; line-height: 1.5;">{chart_title}</p>
   </div>'''
 
         # Basic chart HTML (no editor) - Director L02 spec compliant
@@ -2666,11 +2666,11 @@ class ChartJSGenerator:
         service_base_url = api_base_url.replace('/api/charts', '') if '/api/charts' in api_base_url else api_base_url
 
         # v3.4.11: Build title HTML if chart_title is provided
-        # v3.4.12: Styling refinements - transparent bg, no border, flex center, CSS variable color
+        # v3.4.13: Phrase subtitle + takeaway format, 18px font (matches bullets), 2-line display
         title_html = ""
         if chart_title:
-            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 20px; padding-left: 20px; padding-right: 20px; flex-shrink: 0; display: flex; align-items: center; background: transparent; border: none;">
-    <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: var(--text-secondary, #4B5563); text-align: left;">{chart_title}</h3>
+            title_html = f'''<div class="chart-subtitle" style="height: 70px; padding: 15px 20px; flex-shrink: 0; background: transparent; border: none;">
+    <p style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 18px; font-weight: 400; color: var(--text-secondary, #4B5563); text-align: left; line-height: 1.5;">{chart_title}</p>
   </div>'''
 
         # v4.0: Streamlined HTML with Excel editor library
