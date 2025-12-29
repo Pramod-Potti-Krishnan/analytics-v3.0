@@ -757,8 +757,9 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
         # Determine chart type: use explicit chart_type parameter if provided, otherwise use default (v3.4.3 fix)
         chart_type = request_data.get('chart_type') or get_chart_type(analytics_type)
 
-        # v3.4.11: Generate chart title from narrative for visual alignment with Key Insights box
-        chart_title = _generate_chart_title(narrative, chart_type)
+        # v3.4.11: Chart title disabled per user feedback - titles didn't look good
+        # chart_title = _generate_chart_title(narrative, chart_type)
+        chart_title = None  # Disabled - keep infrastructure for future use
 
         # Multi-series chart types that need original data structure preserved
         # Only Chart.js native multi-series types - plugin charts use different formats
