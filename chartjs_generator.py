@@ -2332,7 +2332,8 @@ class ChartJSGenerator:
                 presentation_id,
                 api_base_url,
                 inline_script,
-                chart_type=chart_type_for_editor  # v3.2.1: Pass chart type for dynamic editor
+                chart_type=chart_type_for_editor,  # v3.2.1: Pass chart type for dynamic editor
+                chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
 
         return chart_html
@@ -2632,7 +2633,8 @@ class ChartJSGenerator:
         presentation_id: str,
         api_base_url: str,
         inline_script: str,
-        chart_type: str = "bar"
+        chart_type: str = "bar",
+        chart_title: Optional[str] = None  # v3.4.11: Chart title for layout alignment
     ) -> str:
         """
         Add Excel-like interactive editor to inline-script chart (Layout Builder mode).
@@ -2647,6 +2649,7 @@ class ChartJSGenerator:
             api_base_url: Base URL for chart API
             inline_script: The Chart.js initialization script
             chart_type: Type of chart (bar, scatter, bubble, d3_*, etc.)
+            chart_title: Optional title for chart (v3.4.11)
 
         Returns:
             Chart HTML with Excel-like editor controls
@@ -2662,18 +2665,29 @@ class ChartJSGenerator:
         #   - "" (local dev, becomes relative URL)
         service_base_url = api_base_url.replace('/api/charts', '') if '/api/charts' in api_base_url else api_base_url
 
-        # v4.0: Streamlined HTML with Excel editor library
-        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-  <canvas id="{chart_id}"></canvas>
+        # v3.4.11: Build title HTML if chart_title is provided
+        title_html = ""
+        if chart_title:
+            title_html = f'''<div class="chart-title" style="height: 80px; padding-top: 40px; padding-left: 20px; padding-right: 20px; flex-shrink: 0;">
+    <h3 style="margin: 0; font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 600; color: #1E3A5F; line-height: 40px;">{chart_title}</h3>
+  </div>'''
 
-  <!-- Edit Button (Pencil Icon) -->
-  <button class="chart-edit-btn"
-          onclick="openChartEditor_{js_safe_id}()"
-          style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 100; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap;"
-          onmouseover="this.style.width='80px'; this.style.borderRadius='20px'; this.innerHTML='✏️ <span style=&quot;margin-left: 6px; font-size: 13px;&quot;>edit</span>'; this.style.background='rgba(0,0,0,0.8)'"
-          onmouseout="this.style.width='36px'; this.style.borderRadius='50%'; this.innerHTML='✏️'; this.style.background='rgba(0,0,0,0.6)'">
-    ✏️
-  </button>
+        # v4.0: Streamlined HTML with Excel editor library
+        # v3.4.11: Use flexbox for proper title + canvas layout
+        editor_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+  {title_html}
+  <div style="flex: 1; min-height: 0; position: relative;">
+    <canvas id="{chart_id}"></canvas>
+
+    <!-- Edit Button (Pencil Icon) - v3.4.11: Moved inside canvas wrapper for proper positioning -->
+    <button class="chart-edit-btn"
+            onclick="openChartEditor_{js_safe_id}()"
+            style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 100; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap;"
+            onmouseover="this.style.width='80px'; this.style.borderRadius='20px'; this.innerHTML='✏️ <span style=&quot;margin-left: 6px; font-size: 13px;&quot;>edit</span>'; this.style.background='rgba(0,0,0,0.8)'"
+            onmouseout="this.style.width='36px'; this.style.borderRadius='50%'; this.innerHTML='✏️'; this.style.background='rgba(0,0,0,0.6)'">
+      ✏️
+    </button>
+  </div>
 
   <script>
     {inline_script}
