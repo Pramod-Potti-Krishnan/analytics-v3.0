@@ -1989,21 +1989,30 @@ class ChartSpreadsheetEditor {
     _exportData() {
         const chartType = this.chartType;
 
-        // Define multi-series chart types explicitly (no auto-detection)
+        // v3.4.24: Detect multi-series by BOTH chartType AND data structure
+        // This handles cases where chartType is 'bar' but we have multiple series columns
         const multiSeriesChartTypes = ['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'];
+        const seriesColumns = this.columnConfig.columns.filter(col => col !== 'Label');
+        const hasMultipleSeries = seriesColumns.length > 1;
+
+        // v3.4.24: Also detect by chartType being basic Chart.js type with multiple series
+        const isBasicMultiSeriesChart = ['bar', 'line', 'area'].includes(chartType) && hasMultipleSeries;
+        const isMultiSeriesFormat = multiSeriesChartTypes.includes(chartType) || isBasicMultiSeriesChart;
+
+        console.log(`📊 _exportData: chartType=${chartType}, seriesColumns=${seriesColumns.length}, isMultiSeriesFormat=${isMultiSeriesFormat}`);
 
         if (chartType === 'scatter') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y }));
         } else if (chartType === 'bubble') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y, r: row.Radius }));
-        } else if (multiSeriesChartTypes.includes(chartType)) {
-            // Multi-series format (ONLY for explicitly multi-series chart types)
+        } else if (isMultiSeriesFormat) {
+            // v3.4.24: Multi-series format - detect by chartType OR by having multiple series columns
             const labels = this.data.map(row => row.Label);
-            const seriesColumns = this.columnConfig.columns.filter(col => col !== 'Label');
             const datasets = seriesColumns.map(seriesName => ({
                 label: seriesName,
                 data: this.data.map(row => parseFloat(row[seriesName]) || 0)
             }));
+            console.log(`📊 Exporting multi-series: ${datasets.length} datasets with labels:`, datasets.map(d => d.label));
             return { labels, datasets };
         } else if (chartType === 'd3_sankey') {
             // Reconstitute arrow notation
