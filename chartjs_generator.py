@@ -2893,6 +2893,50 @@ class ChartJSGenerator:
                             const storageKey = 'chartData_' + chartId;
                             localStorage.setItem(storageKey, JSON.stringify(newData));
                             console.log('💾 Chart data saved to localStorage:', storageKey);
+
+                            // v3.4.26: Persist to Layout Service for cross-user persistence
+                            (async () => {{
+                                try {{
+                                    // Extract presentation_id from URL: /p/{{presentation_id}}
+                                    const pathParts = window.location.pathname.split('/');
+                                    const pIndex = pathParts.indexOf('p');
+                                    const presentationId = pIndex !== -1 ? pathParts[pIndex + 1] : null;
+
+                                    // Get slide index from Reveal.js
+                                    const slideIndex = typeof Reveal !== 'undefined' ? Reveal.getIndices().h : 0;
+
+                                    // Get chart ID from canvas element
+                                    const canvasElement = document.getElementById(chartId);
+                                    const layoutChartId = canvasElement ? canvasElement.id : chartId;
+
+                                    // Get updated chart HTML from DOM
+                                    const chartContainer = canvasElement ? canvasElement.closest('.l02-chart-container') : null;
+
+                                    if (presentationId && chartContainer) {{
+                                        const updatedHtml = chartContainer.outerHTML;
+
+                                        const layoutResponse = await fetch(
+                                            `https://web-production-f0d13.up.railway.app/api/presentations/${{presentationId}}/slides/${{slideIndex}}/charts/${{layoutChartId}}`,
+                                            {{
+                                                method: 'PUT',
+                                                headers: {{ 'Content-Type': 'application/json' }},
+                                                body: JSON.stringify({{ chart_html: updatedHtml }})
+                                            }}
+                                        );
+
+                                        if (layoutResponse.ok) {{
+                                            console.log('✅ Chart persisted to Layout Service');
+                                        }} else {{
+                                            console.warn('⚠️ Layout Service persistence failed:', layoutResponse.status);
+                                        }}
+                                    }} else {{
+                                        console.log('ℹ️ Skipping Layout Service (preview mode or no container)');
+                                    }}
+                                }} catch (layoutError) {{
+                                    console.warn('⚠️ Layout Service persistence error:', layoutError.message);
+                                    // Don't throw - localStorage save already succeeded
+                                }}
+                            }})();
                         }} else {{
                             console.warn('⚠️ Chart instance not found:', chartId);
                         }}

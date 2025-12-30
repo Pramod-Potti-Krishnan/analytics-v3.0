@@ -1,1124 +1,717 @@
-# Data Format Reference - Analytics Microservice v3.6.0
+# Analytics Service API Reference
 
-**Complete reference for data formats expected by all 17 chart types**
-
----
-
-## Overview
-
-The Analytics Microservice supports two main data format patterns:
-
-1. **Simple Format**: `[{label: string, value: number}, ...]` - For basic single-series charts
-2. **Complex Format**: Nested structures with specific schemas - For multi-series and plugin charts
+**Version**: 3.4.25
+**Base URL**: `http://localhost:8080` (local) | Production via Railway
+**Last Updated**: December 2024
 
 ---
 
-## 1. Simple Format Charts (9 types)
+## Production URL
 
-These charts accept straightforward `{label, value}` arrays:
+**Base URL**: `https://analytics-v30-production.up.railway.app`
 
-### 1.1 Line Chart (`line`)
+All endpoints below should be prefixed with this base URL in production.
 
-**Use Case**: Trends over time, time series data
+---
 
-**Data Format**:
-```json
-{
-  "data": [
-    {"label": "Jan 2024", "value": 125000},
-    {"label": "Feb 2024", "value": 145000},
-    {"label": "Mar 2024", "value": 162000},
-    {"label": "Apr 2024", "value": 178000}
-  ]
-}
+## GOLD STANDARD: 13 Tested & Approved Chart Types (V2-chart-text Layout)
+
+These 13 chart types have been **tested and approved** for production use. They generate analytics slides with Chart.js visualizations and AI-generated Key Insights.
+
+### Endpoint Summary
+
+| Chart Type | Endpoint | Analytics Type | Use Case |
+|------------|----------|----------------|----------|
+| **line** | `POST /api/v1/analytics/L02/revenue_over_time` | `revenue_over_time` | Time series trends |
+| **bar_vertical** | `POST /api/v1/analytics/L02/category_ranking` | `category_ranking` | Category comparisons |
+| **pie** | `POST /api/v1/analytics/L02/market_share` | `market_share` | Part-to-whole |
+| **bar_horizontal** | `POST /api/v1/analytics/L02/category_ranking` | `category_ranking` | Rankings with long labels |
+| **doughnut** | `POST /api/v1/analytics/L02/market_share` | `market_share` | Composition with center |
+| **scatter** | `POST /api/v1/analytics/L02/correlation_analysis` | `correlation_analysis` | X-Y correlation |
+| **bubble** | `POST /api/v1/analytics/L02/multidimensional_analysis` | `multidimensional_analysis` | 3-variable analysis |
+| **polar_area** | `POST /api/v1/analytics/L02/radial_composition` | `radial_composition` | Radial distribution |
+| **radar** | `POST /api/v1/analytics/L02/multi_metric_comparison` | `multi_metric_comparison` | Multi-dimensional comparison |
+| **area** | `POST /api/v1/analytics/L02/revenue_over_time` | `revenue_over_time` | Filled time series |
+| **area_stacked** | `POST /api/v1/analytics/L02/revenue_over_time` | `revenue_over_time` | Multi-series cumulative |
+| **bar_grouped** | `POST /api/v1/analytics/L02/category_ranking` | `category_ranking` | Side-by-side comparison |
+| **bar_stacked** | `POST /api/v1/analytics/L02/category_ranking` | `category_ranking` | Cumulative breakdown |
+
+### V2-chart-text Layout Structure
+
+```
++-------------------------------------------------------------+
+|                       V2-chart-text                          |
++-----------------------------+-------------------------------+
+|                             |                               |
+|        Chart HTML           |      Key Insights Panel       |
+|      (1260px x 720px)       |       (600px x 680px)         |
+|                             |                               |
+|   - Chart subtitle (20px)   |   - "Key Insights" header     |
+|   - Chart.js canvas         |   - 5 bullet points (18px)    |
+|   - Edit button (pencil)    |   - Blue accent border        |
+|                             |                               |
++-----------------------------+-------------------------------+
 ```
 
-**Example Request**:
+### Response Field Mapping
+
+| Field | Description | Alias |
+|-------|-------------|-------|
+| `chart_html` | Complete Chart.js canvas with initialization script | `element_3`, `element_4` |
+| `body` | Key Insights HTML panel | `element_2` |
+| `slide_title` | Slide title text | - |
+| `subtitle` | Slide subtitle text | - |
+
+---
+
+## Gold Standard Charts (13 Total)
+
+### Chart Set 1: Basic Charts (Validated in Round 1)
+
+#### 1. Line Chart
+**Chart Type**: `line`
+**Analytics Type**: `revenue_over_time`
+**Use Case**: Time series trends, temporal data
+
+**Request**:
 ```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time \
+curl -X POST "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time?use_synthetic=true" \
   -H "Content-Type: application/json" \
   -d '{
-    "presentation_id": "pres-001",
+    "presentation_id": "pres-123",
     "slide_id": "slide-1",
     "slide_number": 1,
-    "narrative": "Show monthly revenue trend",
-    "data": [
-      {"label": "Jan", "value": 125000},
-      {"label": "Feb", "value": 145000},
-      {"label": "Mar", "value": 162000}
-    ]
+    "narrative": "Show quarterly revenue growth highlighting strong Q3-Q4 performance",
+    "chart_type": "line"
   }'
 ```
 
----
-
-### 1.2 Vertical Bar Chart (`bar_vertical`)
-
-**Use Case**: Categorical comparisons, rankings
+**Response**:
+```json
+{
+  "content": {
+    "chart_html": "<div class=\"l02-chart-container\">...<canvas id=\"chart-slide-1\">...</canvas>...</div>",
+    "body": "<div class=\"l02-observations-panel\"><h3>Key Insights</h3><ul><li>Revenue grew 42%...</li></ul></div>",
+    "element_3": "...",
+    "element_2": "..."
+  },
+  "metadata": {
+    "service": "analytics_v3",
+    "chart_type": "line",
+    "layout": "L02",
+    "data_source": "synthetic",
+    "synthetic_data_used": true,
+    "data_points": 4,
+    "generation_time_ms": 1250
+  }
+}
+```
 
 **Data Format**:
 ```json
 {
-  "data": [
-    {"label": "Product A", "value": 450},
-    {"label": "Product B", "value": 320},
-    {"label": "Product C", "value": 280},
-    {"label": "Product D", "value": 150}
-  ]
+  "labels": ["Q1", "Q2", "Q3", "Q4"],
+  "values": [25, 35, 30, 40]
 }
 ```
+
+**Features**:
+- Smooth line with tension
+- Point markers with hover effects
+- Gradient fill option
+- Y-axis with grace padding
 
 ---
 
-### 1.3 Horizontal Bar Chart (`bar_horizontal`)
+#### 2. Vertical Bar Chart
+**Chart Type**: `bar_vertical` (or `bar`)
+**Analytics Type**: `category_ranking`
+**Use Case**: Category comparisons, rankings
 
-**Use Case**: Rankings with long labels, comparison
-
-**Data Format**: Same as `bar_vertical`
-```json
-{
-  "data": [
-    {"label": "Sales Department", "value": 850000},
-    {"label": "Marketing Department", "value": 620000},
-    {"label": "Engineering Department", "value": 450000}
-  ]
-}
-```
-
----
-
-### 1.4 Pie Chart (`pie`)
-
-**Use Case**: Part-to-whole relationships, proportions
-
-**Data Format**:
-```json
-{
-  "data": [
-    {"label": "North America", "value": 45},
-    {"label": "Europe", "value": 30},
-    {"label": "Asia", "value": 20},
-    {"label": "Other", "value": 5}
-  ]
-}
-```
-
----
-
-### 1.5 Doughnut Chart (`doughnut`)
-
-**Use Case**: Same as pie chart but with center cutout
-
-**Data Format**: Same as `pie`
-```json
-{
-  "data": [
-    {"label": "Direct Sales", "value": 65},
-    {"label": "Channel Partners", "value": 25},
-    {"label": "Online", "value": 10}
-  ]
-}
-```
-
----
-
-### 1.6 Scatter Plot (`scatter`)
-
-**Use Case**: Correlation analysis, data distribution
-
-**Data Format**:
-```json
-{
-  "data": [
-    {"label": "Point 1", "value": 25},
-    {"label": "Point 2", "value": 45},
-    {"label": "Point 3", "value": 35},
-    {"label": "Point 4", "value": 55}
-  ]
-}
-```
-
-**Note**: For true X-Y scatter plots, use `bubble` chart type with x, y, z coordinates.
-
----
-
-### 1.7 Radar Chart (`radar`)
-
-**Use Case**: Multivariate data, skill assessments, competitive analysis
-
-**Data Format**:
-```json
-{
-  "data": [
-    {"label": "Performance", "value": 85},
-    {"label": "Reliability", "value": 90},
-    {"label": "Features", "value": 75},
-    {"label": "Support", "value": 80},
-    {"label": "Price", "value": 70}
-  ]
-}
-```
-
----
-
-### 1.8 Polar Area Chart (`polar_area`)
-
-**Use Case**: Cyclical data, directional data
-
-**Data Format**: Same as `radar`
-```json
-{
-  "data": [
-    {"label": "Q1", "value": 45},
-    {"label": "Q2", "value": 55},
-    {"label": "Q3", "value": 60},
-    {"label": "Q4", "value": 50}
-  ]
-}
-```
-
----
-
-### 1.9 Area Chart (`area`)
-
-**Use Case**: Cumulative trends, volume over time
-
-**Data Format**: Same as `line`
-```json
-{
-  "data": [
-    {"label": "Week 1", "value": 1200},
-    {"label": "Week 2", "value": 1450},
-    {"label": "Week 3", "value": 1680},
-    {"label": "Week 4", "value": 1920}
-  ]
-}
-```
-
----
-
-## 2. Multi-Series Charts (5 types)
-
-These charts require `datasets` array for multiple series:
-
-### 2.1 Grouped Bar Chart (`bar_grouped`)
-
-**Use Case**: Side-by-side comparison of multiple series
-
-**Data Format**:
-```json
-{
-  "data": [{
-    "labels": ["Q1", "Q2", "Q3", "Q4"],
-    "datasets": [
-      {
-        "label": "2023 Revenue",
-        "data": [100, 120, 140, 160]
-      },
-      {
-        "label": "2024 Revenue",
-        "data": [125, 145, 170, 195]
-      }
-    ]
-  }]
-}
-```
-
-**Example Request**:
+**Request**:
 ```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/quarterly_comparison \
+curl -X POST "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/category_ranking?use_synthetic=true" \
   -H "Content-Type: application/json" \
   -d '{
-    "presentation_id": "pres-002",
+    "presentation_id": "pres-123",
     "slide_id": "slide-2",
     "slide_number": 2,
-    "narrative": "Compare 2023 vs 2024 quarterly revenue",
-    "chart_type": "bar_grouped",
-    "data": [{
-      "labels": ["Q1", "Q2", "Q3", "Q4"],
-      "datasets": [
-        {"label": "2023", "data": [100, 120, 140, 160]},
-        {"label": "2024", "data": [125, 145, 170, 195]}
-      ]
-    }]
+    "narrative": "Compare department performance rankings",
+    "chart_type": "bar_vertical"
   }'
 ```
-
----
-
-### 2.2 Stacked Bar Chart (`bar_stacked`)
-
-**Use Case**: Part-to-whole over categories, contribution breakdown
-
-**Data Format**: Same structure as `bar_grouped`
-```json
-{
-  "data": [{
-    "labels": ["Product A", "Product B", "Product C"],
-    "datasets": [
-      {
-        "label": "North America",
-        "data": [45, 35, 50]
-      },
-      {
-        "label": "Europe",
-        "data": [30, 45, 35]
-      },
-      {
-        "label": "Asia",
-        "data": [25, 20, 15]
-      }
-    ]
-  }]
-}
-```
-
----
-
-### 2.3 Stacked Area Chart (`area_stacked`)
-
-**Use Case**: Cumulative trends over time, composition changes
-
-**Data Format**: Same as `bar_grouped`
-```json
-{
-  "data": [{
-    "labels": ["Jan", "Feb", "Mar", "Apr", "May"],
-    "datasets": [
-      {
-        "label": "Direct Sales",
-        "data": [120, 135, 150, 165, 180]
-      },
-      {
-        "label": "Channel Sales",
-        "data": [80, 90, 100, 110, 120]
-      },
-      {
-        "label": "Online Sales",
-        "data": [40, 50, 60, 70, 80]
-      }
-    ]
-  }]
-}
-```
-
----
-
-### 2.4 Mixed/Combo Chart (`mixed`)
-
-**Use Case**: Combining different chart types (e.g., line + bar)
 
 **Data Format**:
 ```json
 {
-  "data": [{
-    "labels": ["Q1", "Q2", "Q3", "Q4"],
-    "datasets": [
-      {
-        "type": "line",
-        "label": "Revenue",
-        "data": [125, 145, 170, 195]
-      },
-      {
-        "type": "bar",
-        "label": "Costs",
-        "data": [80, 90, 110, 120]
-      }
-    ]
-  }]
+  "labels": ["Category A", "Category B", "Category C"],
+  "values": [100, 80, 60]
 }
 ```
 
-**Important**: Each dataset must specify its `type` (line, bar, etc.)
+**Features**:
+- Rounded corners (borderRadius: 10)
+- Individual bar colors from pastel palette
+- Data labels at bar ends
+- X-axis category labels
 
-**Example Request**:
+---
+
+#### 3. Pie Chart
+**Chart Type**: `pie`
+**Analytics Type**: `market_share`
+**Use Case**: Part-to-whole relationships, distribution
+
+**Request**:
 ```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/kpi_metrics \
+curl -X POST "https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share?use_synthetic=true" \
   -H "Content-Type: application/json" \
   -d '{
-    "presentation_id": "pres-003",
+    "presentation_id": "pres-123",
     "slide_id": "slide-3",
     "slide_number": 3,
-    "narrative": "Show revenue vs costs trend",
-    "chart_type": "mixed",
-    "data": [{
-      "labels": ["Q1", "Q2", "Q3", "Q4"],
-      "datasets": [
-        {"type": "line", "label": "Revenue", "data": [125, 145, 170, 195]},
-        {"type": "bar", "label": "Costs", "data": [80, 90, 110, 120]}
-      ]
-    }]
+    "narrative": "Show market share distribution across segments",
+    "chart_type": "pie"
   }'
 ```
 
+**Data Format**:
+```json
+{
+  "labels": ["Segment A", "Segment B", "Segment C"],
+  "values": [40, 35, 25]
+}
+```
+
+**Features**:
+- Offset on hover
+- Percentage labels on slices
+- Legend at top
+- Subtle border between segments
+
 ---
 
-### 2.5 Bubble Chart (`bubble`)
+### Chart Set 2: Next Charts (Validated in Round 1)
 
-**Use Case**: Three-variable relationships (x, y, size)
+#### 4. Horizontal Bar Chart
+**Chart Type**: `bar_horizontal`
+**Analytics Type**: `category_ranking`
+**Use Case**: Rankings with long labels, comparisons
 
 **Data Format**:
 ```json
 {
-  "data": [{
-    "labels": ["Product A", "Product B", "Product C"],
-    "datasets": [{
-      "label": "Product Performance",
-      "data": [
-        {"x": 45, "y": 85, "r": 15},
-        {"x": 60, "y": 75, "r": 20},
-        {"x": 70, "y": 90, "r": 25}
-      ]
-    }]
-  }]
+  "labels": ["Revenue", "Profit", "Growth Rate", "Customer Sat."],
+  "values": [48000, 44000, 43000, 40000]
 }
 ```
 
-**Note**: `r` represents bubble radius (size)
+**Features**:
+- `indexAxis: "y"` for horizontal orientation
+- Labels on Y-axis (left side)
+- Values on X-axis
+- Dollar formatting for financial data
 
 ---
 
-## 3. Waterfall Chart (1 type)
-
-### 3.1 Waterfall Chart (`waterfall`)
-
-**Use Case**: Incremental changes, profit bridges, variance analysis
+#### 5. Doughnut Chart
+**Chart Type**: `doughnut`
+**Analytics Type**: `market_share`
+**Use Case**: Part-to-whole with center space, percentages
 
 **Data Format**:
 ```json
 {
-  "data": [
-    {"label": "Starting Revenue", "value": 100000},
-    {"label": "Q1 Growth", "value": 25000},
-    {"label": "Q2 Growth", "value": 20000},
-    {"label": "Q3 Growth", "value": 50000},
-    {"label": "Q4 Growth", "value": 25000},
-    {"label": "Ending Revenue", "value": 220000}
-  ]
+  "labels": ["Product A", "Product B", "Product C"],
+  "values": [45, 30, 25]
 }
 ```
 
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-004",
-    "slide_id": "slide-4",
-    "slide_number": 4,
-    "narrative": "Show revenue bridge from Q1 to Q4",
-    "chart_type": "waterfall",
+**Features**:
+- Center cutout (50%)
+- Percentage labels
+- Interactive hover effects
+- Pastel color scheme
+
+---
+
+#### 6. Scatter Chart
+**Chart Type**: `scatter`
+**Analytics Type**: `correlation_analysis`
+**Use Case**: X-Y correlation, relationship analysis
+
+**Data Format**:
+```json
+{
+  "datasets": [{
+    "label": "Analytics",
     "data": [
-      {"label": "Q1 Starting", "value": 100000},
-      {"label": "Q1 Change", "value": 25000},
-      {"label": "Q2 Change", "value": 20000},
-      {"label": "Q3 Change", "value": 50000},
-      {"label": "Q4 Change", "value": 25000},
-      {"label": "Q4 Ending", "value": 220000}
+      {"x": 19.5, "y": 15.65, "label": "Point A"},
+      {"x": 37.21, "y": 28.45, "label": "Point B"}
     ]
-  }'
-```
-
----
-
-## 4. D3.js Charts (3 types)
-
-These charts use D3.js v7 for advanced visualizations with SVG rendering:
-
-### 4.1 D3 Treemap Chart (`d3_treemap`)
-
-**Use Case**: Hierarchical data visualization, budget breakdown, disk usage, market share distribution
-
-**Library**: D3.js v7 (SVG-based, not canvas)
-
-**Data Format**: Simple label-value format (internally transformed to hierarchical D3 structure)
-```json
-{
-  "data": [
-    {"label": "Engineering", "value": 450000},
-    {"label": "Sales", "value": 320000},
-    {"label": "Marketing", "value": 180000},
-    {"label": "Operations", "value": 120000}
-  ]
+  }]
 }
 ```
 
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-005",
-    "slide_id": "slide-5",
-    "slide_number": 5,
-    "narrative": "Show budget allocation by department",
-    "chart_type": "d3_treemap",
-    "data": [
-      {"label": "Engineering", "value": 450000},
-      {"label": "Sales", "value": 320000},
-      {"label": "Marketing", "value": 180000},
-      {"label": "Operations", "value": 120000}
-    ],
-    "context": {
-      "theme": "professional",
-      "slide_title": "Budget Allocation",
-      "subtitle": "FY 2024"
-    }
-  }'
-```
-
-**Key Features**:
-- SVG-based rendering with D3.js v7
-- Hierarchical layout with automatic sizing
-- Interactive hover effects (opacity changes on mouseover)
-- Conditional label rendering (only shows labels if cell is large enough)
-- Theme color palette integration
-- Reveal.js integration for slide animations
-- Responsive design (adapts to 1260×720px L02 container)
-
-**Visual Characteristics**:
-- Nested rectangles sized proportionally to value
-- Rounded corners (3px border-radius)
-- White stroke separating cells
-- Labels and values shown in white text
-- Hover effect increases opacity to 100%
-
-**Technical Implementation**:
-- Uses D3.js v7 CDN: `https://cdn.jsdelivr.net/npm/d3@7`
-- Transforms simple `{labels, values}` to D3 hierarchy format
-- Implements `d3.hierarchy()` and `d3.treemap()` layouts
-- Self-contained HTML with inline script and IIFE pattern
-- Integrates with Reveal.js via `slidechanged` events
+**Features**:
+- Circular point markers (pointRadius: 8)
+- White border on points
+- Tooltip with x, y, and label values
+- Both X and Y axes displayed
 
 ---
 
-### 4.2 D3 Sunburst Chart (`d3_sunburst`)
-
-**Use Case**: Multi-level hierarchical data visualization, organizational structures, nested budget breakdowns, file system hierarchies
-
-**Library**: D3.js v7 (SVG-based radial partition layout)
-
-**Data Format**: Simple label-value format (internally transformed to hierarchical D3 structure with partition layout)
-```json
-{
-  "data": [
-    {"label": "Engineering", "value": 800000},
-    {"label": "Sales", "value": 600000},
-    {"label": "Marketing", "value": 400000},
-    {"label": "Operations", "value": 350000},
-    {"label": "Finance", "value": 200000},
-    {"label": "HR", "value": 150000}
-  ]
-}
-```
-
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-006",
-    "slide_id": "slide-6",
-    "slide_number": 6,
-    "narrative": "Show FY2025 budget hierarchy across departments",
-    "chart_type": "d3_sunburst",
-    "data": [
-      {"label": "Engineering", "value": 800000},
-      {"label": "Sales", "value": 600000},
-      {"label": "Marketing", "value": 400000},
-      {"label": "Operations", "value": 350000},
-      {"label": "Finance", "value": 200000},
-      {"label": "HR", "value": 150000}
-    ],
-    "context": {
-      "theme": "professional",
-      "slide_title": "Budget Hierarchy",
-      "subtitle": "FY 2025 - Multi-Level Breakdown"
-    }
-  }'
-```
-
-**Key Features**:
-- SVG-based radial partition layout with D3.js v7
-- Concentric circles representing hierarchical levels
-- Interactive hover effects (opacity changes from 0.85 to 1.0)
-- Rotated labels following arc angles (only for arcs > 0.1 radians)
-- Theme color palette integration (8-color vibrant scheme)
-- Reveal.js integration for slide animations
-- Responsive square design (uses minimum of width/height)
-
-**Visual Characteristics**:
-- Concentric circular rings with inner-to-outer hierarchy
-- Arc angles proportional to values
-- White stroke (2px) separating segments
-- Labels rotated to follow arc direction
-- Hover effect increases opacity to 100%
-- Centered radial layout maximizing available space
-
-**Technical Implementation**:
-- Uses D3.js v7 CDN: `https://cdn.jsdelivr.net/npm/d3@7`
-- Implements `d3.partition()` for radial layout
-- Uses `d3.hierarchy()` for data structure
-- Implements `d3.arc()` for path generation
-- Self-contained HTML with inline script and IIFE pattern
-- Integrates with Reveal.js via `ready` and `slidechanged` events
-- Chart instance stored in `window.chartInstances` with destroy method
-
-**Current Implementation Notes**:
-- Supports single-level hierarchy (root → children)
-- Future enhancements: multi-level drill-down, interactive filtering
-- Editor integration deferred (POC phase)
-
----
-
-### 4.3 D3 Choropleth USA Map (`d3_choropleth_usa`)
-
-**Use Case**: Geographic data visualization for USA, regional sales analysis, state-by-state performance metrics, market penetration mapping
-
-**Library**: D3.js v7 + TopoJSON (SVG-based geographic projection)
-
-**Data Format**: Simple label-value format with US state names (supports both abbreviations and full names)
-```json
-{
-  "data": [
-    {"label": "CA", "value": 850000},
-    {"label": "TX", "value": 720000},
-    {"label": "New York", "value": 690000},
-    {"label": "FL", "value": 580000},
-    {"label": "Illinois", "value": 450000}
-  ]
-}
-```
-
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-007",
-    "slide_id": "slide-7",
-    "slide_number": 7,
-    "narrative": "Show regional sales performance across USA",
-    "chart_type": "d3_choropleth_usa",
-    "data": [
-      {"label": "CA", "value": 850000},
-      {"label": "TX", "value": 720000},
-      {"label": "NY", "value": 690000},
-      {"label": "FL", "value": 580000},
-      {"label": "IL", "value": 450000},
-      {"label": "PA", "value": 420000},
-      {"label": "OH", "value": 380000},
-      {"label": "GA", "value": 360000},
-      {"label": "NC", "value": 340000},
-      {"label": "MI", "value": 320000}
-    ],
-    "context": {
-      "theme": "professional",
-      "slide_title": "Regional Sales Performance",
-      "subtitle": "Top 10 States - FY 2024"
-    }
-  }'
-```
-
-**Key Features**:
-- SVG-based geographic projection with D3.js v7
-- US state boundaries from TopoJSON (us-atlas@3)
-- geoAlbersUsa projection for accurate USA map rendering
-- Color-coded choropleth with quantize scale (5 color bins)
-- Interactive tooltips showing state name and exact value
-- Gradient legend with min/max value indicators
-- State name normalization (handles both "CA" and "California")
-- Reveal.js integration for slide animations
-- Responsive design (fills available container space)
-
-**Visual Characteristics**:
-- US map with state boundaries as SVG paths
-- Quantize color scale from light to dark (5 bins)
-- Interactive hover tooltips positioned near cursor
-- Vertical gradient legend on right side
-- States without data shown in light gray (#e0e0e0)
-- White stroke (1px) separating states
-
-**Technical Implementation**:
-- Uses D3.js v7 CDN: `https://cdn.jsdelivr.net/npm/d3@7`
-- Uses TopoJSON client: `https://cdn.jsdelivr.net/npm/topojson-client@3`
-- Loads US state boundaries: `https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json`
-- Implements `d3.geoAlbersUsa()` projection
-- Uses `d3.scaleQuantize()` for color binning
-- Implements `d3.geoPath()` for SVG path generation
-- State name aliases for all 50 US states (abbreviation ↔ full name)
-- Self-contained HTML with inline script and IIFE pattern
-- Integrates with Reveal.js via `ready` and `slidechanged` events
-- Chart instance stored in `window.chartInstances` with destroy method
-
-**State Name Support**:
-- Accepts both abbreviations ("CA", "TX", "NY") and full names ("California", "Texas", "New York")
-- Automatically normalizes state names to match TopoJSON data
-- Supports all 50 US states plus DC
-- Case-insensitive matching
-
-**Current Implementation Notes**:
-- Editor integration not yet implemented for D3 charts
-- Future enhancements: drill-down to counties, zoom/pan interactions, multi-metric overlays
-
----
-
-## 5. Plugin Charts - Complex Formats (REMOVED in v3.4.3)
-
-**NOTE**: The following Chart.js plugin-based charts were removed due to rendering issues. The D3.js treemap (section 4.1) replaces the removed Chart.js plugin treemap.
-
-These charts required specialized data structures:
-
-### 5.1 Treemap Chart (`treemap`) - REMOVED
-
-**Use Case**: Hierarchical data, budget breakdown, disk usage, market share
-
-**Data Format**: Simple label-value format (plugin handles hierarchy visualization)
-```json
-{
-  "data": [
-    {"label": "Engineering", "value": 450000},
-    {"label": "Sales", "value": 320000},
-    {"label": "Marketing", "value": 180000},
-    {"label": "Operations", "value": 120000}
-  ]
-}
-```
-
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-005",
-    "slide_id": "slide-5",
-    "slide_number": 5,
-    "narrative": "Show budget allocation by department",
-    "chart_type": "treemap",
-    "data": [
-      {"label": "Engineering", "value": 450000},
-      {"label": "Sales", "value": 320000},
-      {"label": "Marketing", "value": 180000},
-      {"label": "Operations", "value": 120000}
-    ]
-  }'
-```
-
----
-
-### 5.2 Heatmap Chart (`heatmap` or `matrix`) - REMOVED
-
-**Use Case**: Correlation matrices, calendar patterns, 2D data relationships
+#### 7. Bubble Chart
+**Chart Type**: `bubble`
+**Analytics Type**: `multidimensional_analysis`
+**Use Case**: 3-variable visualization, sized comparisons
 
 **Data Format**:
 ```json
 {
-  "data": [{
-    "x_labels": ["Q1", "Q2", "Q3", "Q4"],
-    "y_labels": ["North", "South", "East", "West"],
-    "values": [
-      [100, 150, 200, 250],
-      [120, 160, 210, 260],
-      [110, 155, 205, 255],
-      [105, 145, 195, 245]
+  "datasets": [{
+    "label": "Analytics",
+    "data": [
+      {"x": 20, "y": 30, "r": 15, "label": "Item A"},
+      {"x": 40, "y": 50, "r": 25, "label": "Item B"}
     ]
   }]
 }
 ```
 
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/quarterly_comparison \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-006",
-    "slide_id": "slide-6",
-    "slide_number": 6,
-    "narrative": "Show regional performance by quarter",
-    "chart_type": "heatmap",
-    "data": [{
-      "x_labels": ["Q1", "Q2", "Q3", "Q4"],
-      "y_labels": ["North", "South", "East", "West"],
-      "values": [
-        [100, 150, 200, 250],
-        [120, 160, 210, 260],
-        [110, 155, 205, 255],
-        [105, 145, 195, 245]
-      ]
-    }]
-  }'
-```
-
-**Note**: `matrix` is an alias for `heatmap` - same data format
+**Features**:
+- Bubble size (`r`) represents third dimension
+- Semi-transparent fill
+- Tooltip shows x, y, r, and label
+- Scale respects bubble radii
 
 ---
 
-### 5.3 Boxplot Chart (`boxplot`) - REMOVED
-
-**Use Case**: Statistical distribution, outlier detection, quartile analysis
+#### 8. Polar Area Chart
+**Chart Type**: `polar_area`
+**Analytics Type**: `radial_composition`
+**Use Case**: Radial part-to-whole, categorical distribution
 
 **Data Format**:
 ```json
 {
-  "data": [{
-    "labels": ["Q1", "Q2", "Q3", "Q4"],
-    "datasets": [{
-      "label": "Sales Distribution",
-      "data": [
-        [100, 250, 350, 450, 600],
-        [120, 270, 380, 480, 650],
-        [110, 260, 370, 470, 640],
-        [130, 280, 390, 490, 660]
-      ]
-    }]
-  }]
+  "labels": ["Category A", "Category B", "Category C"],
+  "values": [50, 30, 20]
 }
 ```
 
-**Format**: Each data point is `[min, q1, median, q3, max]`
-
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/quarterly_comparison \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-007",
-    "slide_id": "slide-7",
-    "slide_number": 7,
-    "narrative": "Show quarterly sales distribution",
-    "chart_type": "boxplot",
-    "data": [{
-      "labels": ["Q1", "Q2", "Q3", "Q4"],
-      "datasets": [{
-        "label": "Sales Distribution",
-        "data": [
-          [100, 250, 350, 450, 600],
-          [120, 270, 380, 480, 650],
-          [110, 260, 370, 470, 640],
-          [130, 280, 390, 490, 660]
-        ]
-      }]
-    }]
-  }'
-```
+**Features**:
+- Radial segments from center
+- Equal angular width, varying radius
+- Pastel color scheme
+- Legend at top
 
 ---
 
-### 5.4 Candlestick Chart (`candlestick` or `financial`) - REMOVED
-
-**Use Case**: Financial OHLC data, stock prices, forex analysis
+#### 9. Radar Chart
+**Chart Type**: `radar`
+**Analytics Type**: `multi_metric_comparison`
+**Use Case**: Multi-dimensional performance comparison
 
 **Data Format**:
 ```json
 {
-  "data": [{
-    "labels": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
-    "datasets": [{
-      "label": "Stock Price",
-      "data": [
-        {"o": 100, "h": 110, "l": 95, "c": 105},
-        {"o": 105, "h": 115, "l": 100, "c": 112},
-        {"o": 112, "h": 120, "l": 108, "c": 118},
-        {"o": 118, "h": 125, "l": 115, "c": 122}
-      ]
-    }]
+  "labels": ["Customer Sat.", "Quality Score", "Delivery Speed", "Cost Efficiency"],
+  "datasets": [{
+    "label": "Performance",
+    "data": [100.0, 79.7, 80.6, 73.8]
   }]
 }
 ```
 
-**Format**: Each data point is `{o: open, h: high, l: low, c: close}`
-
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-008",
-    "slide_id": "slide-8",
-    "slide_number": 8,
-    "narrative": "Show stock price movement",
-    "chart_type": "candlestick",
-    "data": [{
-      "labels": ["Day 1", "Day 2", "Day 3", "Day 4"],
-      "datasets": [{
-        "label": "Stock Price",
-        "data": [
-          {"o": 100, "h": 110, "l": 95, "c": 105},
-          {"o": 105, "h": 115, "l": 100, "c": 112},
-          {"o": 112, "h": 120, "l": 108, "c": 118},
-          {"o": 118, "h": 125, "l": 115, "c": 122}
-        ]
-      }]
-    }]
-  }'
-```
-
-**Note**: `financial` is an alias for `candlestick` - same data format
+**Features**:
+- Normalized values (0-100 scale)
+- Semi-transparent fill
+- Point markers at vertices
+- Grid lines for scale reference
 
 ---
 
-### 5.5 Sankey Diagram (`sankey`) - REMOVED
+### Chart Set 3: Advanced Multi-Series Charts (Validated in Round 2 - v3.4.25)
 
-**Use Case**: Flow visualization, resource allocation, user journeys, budget flows
+#### 10. Area Chart
+**Chart Type**: `area`
+**Analytics Type**: `revenue_over_time`
+**Use Case**: Time series with filled area, cumulative trends
+**Validated**: v3.4.25 (December 2024)
 
 **Data Format**:
 ```json
 {
-  "data": [{
-    "nodes": [
-      {"id": "Traffic"},
-      {"id": "Organic"},
-      {"id": "Paid"},
-      {"id": "Conversions"}
-    ],
-    "links": [
-      {"source": "Traffic", "target": "Organic", "value": 450},
-      {"source": "Traffic", "target": "Paid", "value": 320},
-      {"source": "Organic", "target": "Conversions", "value": 180},
-      {"source": "Paid", "target": "Conversions", "value": 120}
-    ]
-  }]
+  "labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  "values": [30000, 35000, 32000, 40000, 38000, 45000]
 }
 ```
 
-**Example Request**:
-```bash
-curl -X POST https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/market_share \
-  -H "Content-Type: application/json" \
-  -d '{
-    "presentation_id": "pres-009",
-    "slide_id": "slide-9",
-    "slide_number": 9,
-    "narrative": "Show traffic flow from sources to conversions",
-    "chart_type": "sankey",
-    "data": [{
-      "nodes": [
-        {"id": "Total Traffic"},
-        {"id": "Organic"},
-        {"id": "Paid"},
-        {"id": "Conversions"}
-      ],
-      "links": [
-        {"source": "Total Traffic", "target": "Organic", "value": 450},
-        {"source": "Total Traffic", "target": "Paid", "value": 320},
-        {"source": "Organic", "target": "Conversions", "value": 180},
-        {"source": "Paid", "target": "Conversions", "value": 120}
-      ]
-    }]
-  }'
-```
+**Features**:
+- Filled area under line
+- Gradient fill effect
+- Smooth line with tension
+- Interactive spreadsheet editor with data persistence
+- Series name editing support
 
 ---
 
-## 6. Summary Table
+#### 11. Stacked Area Chart
+**Chart Type**: `area_stacked`
+**Analytics Type**: `revenue_over_time`
+**Use Case**: Multi-series cumulative trends, composition over time
+**Validated**: v3.4.25 (December 2024)
 
-| Chart Type | Category | Data Format | Example |
-|------------|----------|-------------|---------|
-| `line` | Simple | `[{label, value}]` | Time series, trends |
-| `bar_vertical` | Simple | `[{label, value}]` | Categorical comparison |
-| `bar_horizontal` | Simple | `[{label, value}]` | Rankings |
-| `pie` | Simple | `[{label, value}]` | Proportions |
-| `doughnut` | Simple | `[{label, value}]` | Proportions with center cutout |
-| `scatter` | Simple | `[{label, value}]` | Distribution |
-| `radar` | Simple | `[{label, value}]` | Multivariate data |
-| `polar_area` | Simple | `[{label, value}]` | Cyclical data |
-| `area` | Simple | `[{label, value}]` | Cumulative trends |
-| `bar_grouped` | Multi-Series | `[{labels, datasets}]` | Side-by-side comparison |
-| `bar_stacked` | Multi-Series | `[{labels, datasets}]` | Part-to-whole breakdown |
-| `area_stacked` | Multi-Series | `[{labels, datasets}]` | Cumulative composition |
-| `mixed` | Multi-Series | `[{labels, datasets}]` | Combined chart types |
-| `bubble` | Multi-Series | `[{labels, datasets}]` | 3-variable relationships |
-| `waterfall` | Special | `[{label, value}]` | Incremental changes |
-| `d3_treemap` | D3.js | `[{label, value}]` | Hierarchical data (SVG) |
-| `d3_sunburst` | D3.js | `[{label, value}]` | Multi-level hierarchy (SVG) |
-| `treemap` | Plugin (REMOVED) | `[{label, value}]` | Hierarchical data |
-| `heatmap` | Plugin (REMOVED) | `[{x_labels, y_labels, values}]` | 2D correlation |
-| `matrix` | Plugin (REMOVED) | `[{x_labels, y_labels, values}]` | Same as heatmap |
-| `boxplot` | Plugin (REMOVED) | `[{labels, datasets}]` | Statistical distribution |
-| `candlestick` | Plugin (REMOVED) | `[{labels, datasets}]` | Financial OHLC |
-| `financial` | Plugin (REMOVED) | `[{labels, datasets}]` | Same as candlestick |
-| `sankey` | Plugin (REMOVED) | `[{nodes, links}]` | Flow visualization |
-
----
-
-## 7. Common Patterns
-
-### Pattern 1: Simple Single-Series
-**Charts**: line, bar_vertical, bar_horizontal, pie, doughnut, scatter, radar, polar_area, area, waterfall, d3_treemap, d3_sunburst
-
+**Data Format**:
 ```json
 {
-  "data": [
-    {"label": "Category 1", "value": 100},
-    {"label": "Category 2", "value": 150},
-    {"label": "Category 3", "value": 200}
+  "labels": ["Q1", "Q2", "Q3", "Q4"],
+  "datasets": [
+    {"label": "Product A", "data": [50000, 55000, 60000, 65000]},
+    {"label": "Product B", "data": [30000, 35000, 40000, 45000]},
+    {"label": "Series C", "data": [20000, 25000, 30000, 35000]}
   ]
 }
 ```
 
-### Pattern 2: Multi-Series with Datasets
-**Charts**: bar_grouped, bar_stacked, area_stacked, mixed, bubble, boxplot, candlestick
+**Features**:
+- Multiple stacked series
+- Each series fills above previous
+- Multi-series color palette
+- Interactive spreadsheet editor
+- **Editable series names** (v3.4.24+)
+- Data persists across slide navigation (v3.4.25 localStorage)
 
+---
+
+#### 12. Grouped Bar Chart (Multi-Column)
+**Chart Type**: `bar_grouped`
+**Analytics Type**: `category_ranking`
+**Use Case**: Side-by-side category comparison across series
+**Validated**: v3.4.25 (December 2024)
+
+**Data Format**:
 ```json
 {
-  "data": [{
-    "labels": ["Cat 1", "Cat 2", "Cat 3"],
-    "datasets": [
-      {"label": "Series 1", "data": [100, 150, 200]},
-      {"label": "Series 2", "data": [120, 160, 210]}
-    ]
-  }]
+  "labels": ["Revenue", "Profit", "Growth Rate", "Customer Sat."],
+  "datasets": [
+    {"label": "Series A", "data": [52000, 48000, 51000, 54000]},
+    {"label": "Series B", "data": [49000, 37000, 50000, 44000]},
+    {"label": "Series C", "data": [54000, 61000, 29000, 45000]}
+  ]
 }
 ```
 
-### Pattern 3: Matrix/Grid Data
-**Charts**: heatmap, matrix
+**Features**:
+- Side-by-side bars for each category
+- Multiple series with distinct colors
+- Rounded corners (borderRadius: 10)
+- Interactive spreadsheet editor
+- **Editable series names** (v3.4.24+)
+- Data persists across slide navigation (v3.4.25 localStorage)
 
+---
+
+#### 13. Stacked Bar Chart
+**Chart Type**: `bar_stacked`
+**Analytics Type**: `category_ranking`
+**Use Case**: Cumulative category totals with component breakdown
+**Validated**: v3.4.25 (December 2024)
+
+**Data Format**:
 ```json
 {
-  "data": [{
-    "x_labels": ["Col 1", "Col 2", "Col 3"],
-    "y_labels": ["Row 1", "Row 2", "Row 3"],
-    "values": [
-      [10, 20, 30],
-      [15, 25, 35],
-      [12, 22, 32]
-    ]
-  }]
+  "labels": ["Revenue", "Profit", "Growth Rate", "Customer Sat."],
+  "datasets": [
+    {"label": "Series A", "data": [66000, 67000, 37000, 64000]},
+    {"label": "Series B", "data": [76000, 53000, 38000, 48000]},
+    {"label": "Series C", "data": [62000, 55000, 45000, 60000]}
+  ]
 }
 ```
 
-### Pattern 4: Flow Data
-**Charts**: sankey
+**Features**:
+- Stacked bars showing cumulative totals
+- Multiple series stacked vertically
+- X and Y axis stacked: true
+- Multi-series color palette
+- Interactive spreadsheet editor
+- **Editable series names** (v3.4.24+)
+- Data persists across slide navigation (v3.4.25 localStorage)
+
+---
+
+## API Contracts
+
+### Primary Endpoint
+
+```
+POST /api/v1/analytics/L02/{analytics_type}?use_synthetic=true
+```
+
+### Request Schema
 
 ```json
 {
-  "data": [{
-    "nodes": [{"id": "A"}, {"id": "B"}],
-    "links": [{"source": "A", "target": "B", "value": 100}]
-  }]
+  "presentation_id": "pres-123",
+  "slide_id": "slide-1",
+  "slide_number": 1,
+  "narrative": "Analysis description for data generation",
+  "chart_type": "line",
+  "data": [
+    {"label": "Q1 2024", "value": 125000},
+    {"label": "Q2 2024", "value": 145000}
+  ],
+  "context": {
+    "theme": "professional",
+    "audience": "Board of Directors"
+  }
+}
+```
+
+### Response Schema
+
+```json
+{
+  "content": {
+    "chart_html": "<div class=\"l02-chart-container\">...</div>",
+    "body": "<div class=\"l02-observations-panel\">...</div>",
+    "element_3": "...",
+    "element_2": "..."
+  },
+  "metadata": {
+    "service": "analytics_v3",
+    "chart_type": "line",
+    "layout": "L02",
+    "data_source": "synthetic",
+    "synthetic_data_used": true,
+    "data_points": 4,
+    "generation_time_ms": 1250
+  }
+}
+```
+
+### Layout Service Integration
+
+```json
+{
+  "layout": "V2-chart-text",
+  "content": {
+    "slide_title": "Quarterly Revenue Growth",
+    "subtitle": "FY 2024 Performance",
+    "chart_html": "...from Analytics Service response content.chart_html...",
+    "body": "...from Analytics Service response content.body...",
+    "logo": " "
+  }
 }
 ```
 
 ---
 
-## 7. Validation Rules
+## Director Integration
 
-### All Chart Types
-- ✅ Minimum: 1 data point (some charts require more - see specifics)
-- ✅ Maximum: 50 data points
-- ✅ Labels: Non-empty strings (max 100 characters)
-- ✅ Values: Finite numbers (no NaN, no Infinity)
+### Content Routing
 
-### Simple Format
-- ✅ Each point must have `label` and `value`
-- ✅ Labels should be unique (recommended)
+Use `POST /api/v1/analytics/can-handle` to determine if content should be routed to Analytics Service:
 
-### Multi-Series Format
-- ✅ Must have `labels` array
-- ✅ Must have `datasets` array with at least one dataset
-- ✅ Each dataset must have `label` and `data` array
-- ✅ All datasets must have same number of data points as labels array
+**Request**:
+```json
+{
+  "slide_content": {
+    "title": "Q4 Revenue Analysis",
+    "topics": ["Revenue grew 15%", "New markets +30%"],
+    "topic_count": 2
+  },
+  "content_hints": {
+    "has_numbers": true,
+    "is_time_based": true,
+    "detected_keywords": ["revenue", "growth"]
+  }
+}
+```
 
-### Heatmap/Matrix Format
-- ✅ Must have `x_labels`, `y_labels`, and `values`
-- ✅ `values` must be 2D array matching dimensions
-- ✅ `values[i].length` must equal `x_labels.length` for all rows
+**Response**:
+```json
+{
+  "can_handle": true,
+  "confidence": 0.95,
+  "reason": "contains numerical data | time series detected | keywords matched",
+  "suggested_approach": "chart"
+}
+```
 
-### Boxplot Format
-- ✅ Each data point must be array of 5 numbers: `[min, q1, median, q3, max]`
-- ✅ Must satisfy: `min ≤ q1 ≤ median ≤ q3 ≤ max`
+### Confidence Score Guidelines
 
-### Candlestick Format
-- ✅ Each data point must have `o`, `h`, `l`, `c` properties
-- ✅ Must satisfy: `l ≤ o, c ≤ h`
+| Score | Meaning | Action |
+|-------|---------|--------|
+| 0.90+ | Excellent fit | Use Analytics Service |
+| 0.70-0.89 | Good fit | Use Analytics Service |
+| 0.40-0.69 | Acceptable | Consider alternatives |
+| < 0.40 | Poor fit | Route to Text Service |
 
-### Sankey Format
-- ✅ Must have `nodes` and `links` arrays
-- ✅ Each node must have unique `id`
-- ✅ Each link must reference existing node IDs in `source` and `target`
-- ✅ Link `value` must be positive number
+### Chart Recommendation
 
----
+Use `POST /api/v1/analytics/recommend-chart` to get chart type recommendations:
 
-## 8. Testing Your Data Format
+**Request**:
+```json
+{
+  "slide_content": {
+    "title": "Revenue Trend",
+    "topics": ["Show revenue growth over 4 quarters"],
+    "topic_count": 1
+  },
+  "detected_patterns": ["time_series"]
+}
+```
 
-Use the test script to validate your data format:
-
-```python
-import requests
-
-def test_chart_data(chart_type, data):
-    """Test if data format is correct for chart type."""
-    response = requests.post(
-        f"https://analytics-v30-production.up.railway.app/api/v1/analytics/L02/revenue_over_time",
-        json={
-            "presentation_id": "test-format",
-            "slide_id": "test-slide",
-            "slide_number": 1,
-            "narrative": f"Test {chart_type} data format",
-            "chart_type": chart_type,
-            "data": data
-        },
-        timeout=30
-    )
-
-    if response.status_code == 200:
-        print(f"✅ {chart_type}: Data format valid")
-        return True
-    else:
-        print(f"❌ {chart_type}: {response.json()}")
-        return False
-
-# Test simple format
-test_chart_data("line", [
-    {"label": "Q1", "value": 100},
-    {"label": "Q2", "value": 150}
-])
-
-# Test multi-series format
-test_chart_data("bar_grouped", [{
-    "labels": ["Q1", "Q2"],
-    "datasets": [
-        {"label": "2023", "data": [100, 120]},
-        {"label": "2024", "data": [150, 180]}
-    ]
-}])
-
-# Test heatmap format
-test_chart_data("heatmap", [{
-    "x_labels": ["Q1", "Q2"],
-    "y_labels": ["North", "South"],
-    "values": [[100, 150], [120, 160]]
-}])
+**Response**:
+```json
+{
+  "recommended_charts": [
+    {"chart_type": "line", "confidence": 0.95, "reason": "Time series data best shown as line chart"},
+    {"chart_type": "area", "confidence": 0.80, "reason": "Area chart also effective for trends"}
+  ]
+}
 ```
 
 ---
 
-## 9. Common Errors and Solutions
+## Typography & Color Standards
 
-### Error: "Field required: label"
-**Cause**: Using complex format for simple chart type
-**Solution**: Use `[{label, value}]` format for simple charts
+### Typography
 
-### Error: "Field required: datasets"
-**Cause**: Using simple format for multi-series chart
-**Solution**: Wrap data in `[{labels, datasets}]` structure
+| Element | Font | Size | Weight | Color |
+|---------|------|------|--------|-------|
+| Chart subtitle | Inter | 20px | 400 | #4B5563 |
+| Key Insights header | Inter | 24px | 700 | #3B82F6 |
+| Insight bullets | Inter | 18px | 400 | #4B5563 |
+| Axis labels | Inter | 12px | 500 | #6b7280 |
+| Axis titles | Inter | 13px | Bold | #4b5563 |
+| Legend labels | Inter | 14px | Bold | #6b7280 |
 
-### Error: "Field required: x_labels"
-**Cause**: Missing heatmap structure
-**Solution**: Provide `{x_labels, y_labels, values}` for heatmap/matrix
+### Color Standards (v3.4.15)
 
-### Error: "Boxplot data must be array of 5 numbers"
-**Cause**: Incorrect boxplot data format
-**Solution**: Use `[min, q1, median, q3, max]` for each data point
-
-### Error: "Candlestick data must have o, h, l, c properties"
-**Cause**: Missing OHLC properties
-**Solution**: Provide `{o, h, l, c}` for each candlestick
+- **Text/Axes/Labels**: #6b7280 (gray-500)
+- **Accent Blue**: #3B82F6 / #60A5FA
+- **Chart Colors**: Pastel palette (#93C5FD, #A7F3D0, #FDE68A, #C4B5FD, #FBCFE8, #FED7AA, #A5F3FC, #FCA5A5)
 
 ---
 
-**Last Updated**: November 19, 2025
-**Version**: 3.4.3
-**Status**: Complete - All 22 chart types documented
+## Interactive Spreadsheet Editor
+
+All L02 charts include an interactive Excel-like spreadsheet editor (v3.4.24+):
+
+### Features
+
+- **Edit Button**: Pencil icon on chart hover
+- **Series Name Editing**: Click series header to rename
+- **Data Editing**: Click cells to modify values
+- **Add/Remove Rows**: Dynamic row management
+- **Data Persistence**: Saves to localStorage (v3.4.25)
+
+### API Endpoint for Saving
+
+```
+POST /api/charts/update-data
+```
+
+**Request (Single-Series)**:
+```json
+{
+  "chart_id": "chart-slide-1",
+  "presentation_id": "pres-123",
+  "chart_type": "bar_vertical",
+  "labels": ["Q1", "Q2", "Q3", "Q4"],
+  "values": [100, 150, 200, 175]
+}
+```
+
+**Request (Multi-Series)**:
+```json
+{
+  "chart_id": "chart-slide-1",
+  "presentation_id": "pres-123",
+  "chart_type": "bar_grouped",
+  "labels": ["Q1", "Q2", "Q3", "Q4"],
+  "datasets": [
+    {"label": "Product A", "data": [100, 120, 140, 160]},
+    {"label": "Product B", "data": [80, 95, 110, 125]}
+  ]
+}
+```
+
+---
+
+## Test References
+
+### Round 1: Basic 9 Chart Types
+
+**Test Script**: `tests/test_v2_gold_standard_all.sh`
+
+```bash
+# Test all 9 basic gold standard charts
+./tests/test_v2_gold_standard_all.sh
+```
+
+**Charts Tested**:
+1. line (revenue_over_time)
+2. bar_vertical (category_ranking)
+3. pie (market_share)
+4. bar_horizontal (category_ranking)
+5. doughnut (market_share)
+6. scatter (correlation_analysis)
+7. bubble (multidimensional_analysis)
+8. polar_area (radial_composition)
+9. radar (multi_metric_comparison)
+
+**Result**: 9/9 PASSED
+
+### Round 2: Advanced Multi-Series Charts
+
+**Test Script**: `tests/test_v2_chartjs_remaining.sh`
+
+```bash
+# Test remaining Chart.js chart types
+./tests/test_v2_chartjs_remaining.sh
+```
+
+**Charts Tested**:
+1. area (revenue_over_time) - PASSED
+2. area_stacked (revenue_over_time) - PASSED
+3. bar_grouped (category_ranking) - PASSED
+4. bar_stacked (category_ranking) - PASSED
+5. waterfall (revenue_over_time) - FAILED (not yet implemented)
+
+**Result**: 4/5 PASSED (waterfall pending)
+
+### Test Output Location
+
+```
+test_outputs/v2_gold_standard_YYYYMMDD_HHMMSS/
+test_outputs/v2_chartjs_remaining_YYYYMMDD_HHMMSS/
+```
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v3.4.25 | 2024-12-30 | Added localStorage persistence for chart edits, validated area/area_stacked/bar_grouped/bar_stacked |
+| v3.4.24 | 2024-12-30 | Fixed multi-series detection in _exportData(), editable series names |
+| v3.4.17 | 2024-12-30 | Added radar to multi_series_chart_types, fixed radar data handling |
+| v3.4.16 | 2024-12-29 | Fixed validator to accept dict format for radar charts |
+| v3.4.15 | 2024-12-29 | Standardized #6b7280 color for all text elements |
+| v3.4.14 | 2024-12-29 | Changed chart subtitle font from 18px to 20px |
+| v3.4.11 | 2024-12-28 | Added chart title generation from narrative |
+| v3.1.0 | 2024-12 | Added Director coordination endpoints |
+
+---
+
+## Related Documents
+
+- [V2_GOLD_TEMPLATES.md](../../analytics_microservice/docs/V2_GOLD_TEMPLATES.md) - Detailed chart specifications
+- [TEXT_SERVICE_API_REFERENCE.md](./TEXT_SERVICE_API_REFERENCE.md) - Text Service integration
+- [SERVICE_CAPABILITIES_SPEC.md](./SERVICE_CAPABILITIES_SPEC.md) - Coordination endpoint specification
