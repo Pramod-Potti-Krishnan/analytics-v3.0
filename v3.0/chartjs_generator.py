@@ -630,8 +630,8 @@ class ChartJSGenerator:
         config["options"]["plugins"]["tooltip"] = {
             "callbacks": {
                 "label": """function(context) {
-                    const dataIndex = context.dataIndex;
-                    const value = context.parsed.y - context.parsed._custom;
+                    const raw = context.raw;
+                    const value = raw[1] - raw[0];
                     const label = context.dataset.label || '';
                     return label + ': ' + value.toFixed(2);
                 }"""
