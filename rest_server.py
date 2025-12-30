@@ -1625,7 +1625,8 @@ class ChartDataUpdate(BaseModel):
                 raise ValueError("Cannot mix datasets with values or data")
 
             labels = values.get('labels', [])
-            for i, ds in enumerate(v if has_datasets else []):
+            # v3.4.22: Fix bug - iterate over datasets, not 'data' field (v is None for multi-series)
+            for i, ds in enumerate(values.get('datasets', [])):
                 if len(ds.data) != len(labels):
                     raise ValueError(
                         f"Dataset {i} ('{ds.label}'): data length ({len(ds.data)}) "
