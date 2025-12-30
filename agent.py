@@ -762,10 +762,12 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
 
         # Multi-series chart types that need original data structure preserved
         # Only Chart.js native multi-series types - plugin charts use different formats
+        # v3.4.17: Added radar - synthetic data returns {labels, datasets} format
         multi_series_chart_types = [
             "bar_grouped", "grouped_bar",
             "bar_stacked", "stacked_bar",
-            "area_stacked", "stacked_area"
+            "area_stacked", "stacked_area",
+            "radar"
         ]
 
         # Convert data format for Chart.js (v3.4.3 fix: preserve structure for multi-series charts)
@@ -773,7 +775,17 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
             # Pass data directly for multi-series charts (they handle their own format)
             chart_data = data
             # But create simple format for insight generator
-            if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+            # v3.4.17: Handle both dict format (radar) and list format (grouped bars)
+            if isinstance(data, dict) and "labels" in data:
+                # Dict format with labels/datasets (radar, etc.)
+                datasets = data.get("datasets", [])
+                insight_data = {
+                    "labels": data.get("labels", []),
+                    "values": datasets[0].get("data", []) if datasets else [],
+                    "series_name": slide_title,
+                    "format": "radar" if chart_type == "radar" else "multi_series"
+                }
+            elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
                 if "labels" in data[0]:
                     # Multi-series: use labels from first dataset
                     insight_data = {
@@ -976,16 +988,20 @@ async def generate_l02_analytics(request_data: Dict[str, Any]) -> Dict[str, Any]
                 chart_title=chart_title  # v3.4.11: Pass chart title for layout alignment
             )
         elif chart_type == "radar":
-            # Convert label-value format to radar datasets format
-            # Radar charts need datasets array with data values
-            radar_data = {
-                "labels": chart_data["labels"],
-                "datasets": [{
-                    "label": slide_title,
-                    "data": chart_data["values"]
-                }],
-                "format": chart_data.get("format", "number")
-            }
+            # v3.4.17: Handle both synthetic data format (datasets) and legacy format (values)
+            if "datasets" in chart_data:
+                # Synthetic data already in correct format
+                radar_data = chart_data
+            else:
+                # Legacy format: convert label-value to datasets format
+                radar_data = {
+                    "labels": chart_data.get("labels", []),
+                    "datasets": [{
+                        "label": slide_title,
+                        "data": chart_data.get("values", [])
+                    }],
+                    "format": chart_data.get("format", "number")
+                }
             chart_html = chart_gen.generate_radar_chart(
                 data=radar_data,
                 height=720,
