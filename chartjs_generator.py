@@ -280,6 +280,15 @@ class ChartJSGenerator:
             "options": self._build_chart_options(format_type, "line", options, dataset_count=len(datasets))
         }
 
+        # v3.4.19: Stacked area - show data labels only every 3rd point to reduce clutter
+        if semantic_chart_type == "area_stacked":
+            if "plugins" not in config["options"]:
+                config["options"]["plugins"] = {}
+            if "datalabels" not in config["options"]["plugins"]:
+                config["options"]["plugins"]["datalabels"] = {}
+            # Function shows label only for dataIndex % 3 === 0 (every 3rd point)
+            config["options"]["plugins"]["datalabels"]["display"] = "function(context) { return context.dataIndex % 3 === 0; }"
+
         return self._wrap_in_canvas(
             config,
             height,

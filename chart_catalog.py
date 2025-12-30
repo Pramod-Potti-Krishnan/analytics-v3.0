@@ -400,7 +400,7 @@ CHARTJS_TYPES = [
         supported_layouts=[SupportedLayout.L02],
         min_data_points=3,
         max_data_points=40,
-        optimal_data_points="3 points",  # v3.4.19: Reduced from 5-20 to 3 for cleaner stacked visualization
+        optimal_data_points="5-20 points",
         use_cases=[
             "Multi-series cumulative trends",
             "Category composition over time",
