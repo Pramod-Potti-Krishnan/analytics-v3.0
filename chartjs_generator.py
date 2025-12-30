@@ -1524,7 +1524,7 @@ class ChartJSGenerator:
                     "y": {
                         "beginAtZero": False,
                         "ticks": {"font": {"size": 12}},
-                        "grid": {"color": "rgba(0, 0, 0, 0.1)"}
+                        "grid": {"color": "rgba(107, 114, 128, 0.15)"}  # v3.4.18: gray-500 at 15%
                     },
                     "x": {
                         "ticks": {"font": {"size": 12}},
@@ -1720,7 +1720,7 @@ class ChartJSGenerator:
                             "font": {"size": 12},
                             "callback": "placeholder_y_callback"
                         },
-                        "grid": {"color": "rgba(0, 0, 0, 0.1)"}
+                        "grid": {"color": "rgba(107, 114, 128, 0.15)"}  # v3.4.18: gray-500 at 15%
                     }
                 }
             }
@@ -3129,7 +3129,7 @@ class ChartJSGenerator:
                     "display": True,
                     "grid": {
                         "display": True,  # Always show grid
-                        "color": "rgba(0, 0, 0, 0.08)",
+                        "color": "rgba(107, 114, 128, 0.15)",  # v3.4.18: gray-500 at 15% opacity
                         "lineWidth": 1
                     },
                     "ticks": {
@@ -3155,7 +3155,7 @@ class ChartJSGenerator:
                     "grace": "15%",  # v3.4.5: Add 15% headroom above max value for data labels
                     "grid": {
                         "display": True,  # Always show grid
-                        "color": "rgba(0, 0, 0, 0.08)",
+                        "color": "rgba(107, 114, 128, 0.15)",  # v3.4.18: gray-500 at 15% opacity
                         "lineWidth": 1
                     },
                     "ticks": {
