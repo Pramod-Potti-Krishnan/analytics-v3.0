@@ -663,6 +663,31 @@ class ChartJSGenerator:
             }
         }
 
+        # Waterfall-specific datalabels formatter (data is [start, end] array, not single value)
+        config["options"]["plugins"]["datalabels"] = {
+            "display": True,
+            "color": "#fff",
+            "font": {"size": 12, "weight": "bold"},
+            "formatter": """function(value) {
+                if (Array.isArray(value)) {
+                    const diff = value[1] - value[0];
+                    if (Math.abs(diff) >= 1000000) {
+                        return (diff >= 0 ? '+' : '') + (diff/1000000).toFixed(1) + 'M';
+                    } else if (Math.abs(diff) >= 1000) {
+                        return (diff >= 0 ? '+' : '') + (diff/1000).toFixed(0) + 'K';
+                    } else {
+                        return (diff >= 0 ? '+' : '') + diff.toFixed(0);
+                    }
+                }
+                return value;
+            }""",
+            "anchor": "end",
+            "align": "end",
+            "backgroundColor": "rgba(0, 0, 0, 0.7)",
+            "borderRadius": 4,
+            "padding": 4
+        }
+
         return self._wrap_in_canvas(
             config,
             height,
