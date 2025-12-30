@@ -776,7 +776,7 @@ class ChartJSGenerator:
                         "labels": {
                             "font": {"size": 14, "weight": "bold"},
                             "padding": 15,
-                            "color": "#374151"  # v3.4.8: Dark gray for readability
+                            "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                         }
                     },
                     "datalabels": {
@@ -962,7 +962,10 @@ class ChartJSGenerator:
                     "legend": {
                         "display": True,
                         "position": "top",
-                        "labels": {"font": {"size": 14, "weight": "bold"}}
+                        "labels": {
+                            "font": {"size": 14, "weight": "bold"},
+                            "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
+                        }
                     },
                     "datalabels": {
                         "display": True,
@@ -976,7 +979,7 @@ class ChartJSGenerator:
                         "beginAtZero": True,
                         "ticks": {
                             "font": {"size": 11},
-                            "color": "#666"
+                            "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                         }
                     }
                 }
@@ -1043,7 +1046,10 @@ class ChartJSGenerator:
                     "legend": {
                         "display": True,
                         "position": "right",
-                        "labels": {"font": {"size": 14, "weight": "bold"}}
+                        "labels": {
+                            "font": {"size": 14, "weight": "bold"},
+                            "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
+                        }
                     },
                     "datalabels": {
                         "display": True,
@@ -1503,7 +1509,10 @@ class ChartJSGenerator:
                 "plugins": {
                     "legend": {
                         "display": len(datasets) > 1,
-                        "position": "top"
+                        "position": "top",
+                        "labels": {
+                            "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
+                        }
                     },
                     "tooltip": {
                         "callbacks": {
@@ -1677,7 +1686,10 @@ class ChartJSGenerator:
                     "legend": {
                         "display": len(datasets) > 1,
                         "position": "top",
-                        "labels": {"font": {"size": 14}}
+                        "labels": {
+                            "font": {"size": 14},
+                            "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
+                        }
                     },
                     "tooltip": {
                         "mode": "index",
@@ -1889,7 +1901,7 @@ class ChartJSGenerator:
                     "labels": {
                         "display": True,
                         "font": {"size": 12, "weight": "bold"},
-                        "color": "#333"
+                        "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                     },
                     "size": "max",
                     "borderWidth": 0
@@ -3079,7 +3091,8 @@ class ChartJSGenerator:
                     "labels": {
                         "font": {"size": 14, "weight": "bold"},
                         "padding": 15,
-                        "usePointStyle": True
+                        "usePointStyle": True,
+                        "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                     }
                 },
                 "datalabels": {
@@ -3132,7 +3145,7 @@ class ChartJSGenerator:
                         "display": True,
                         "text": "",  # Will be set per chart if needed
                         "font": {"size": 13, "weight": "bold"},
-                        "color": "#4b5563"  # v3.4.7: Tailwind gray-600 for title
+                        "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                     }
                 },
                 y_axis: {
@@ -3156,7 +3169,7 @@ class ChartJSGenerator:
                         "display": True,
                         "text": self._get_axis_title(format_type),  # Auto-set based on format
                         "font": {"size": 13, "weight": "bold"},
-                        "color": "#4b5563"  # v3.4.7: Tailwind gray-600 for title
+                        "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                     }
                 }
             }
@@ -3172,7 +3185,7 @@ class ChartJSGenerator:
                 options["scales"]["y"]["ticks"] = {
                     "display": True,
                     "font": {"size": 12, "weight": "500"},
-                    "color": "#333",
+                    "color": "#6b7280",  # v3.4.15: Standardized gray-500 for all text
                     "padding": 8,
                     "autoSkip": False
                 }
