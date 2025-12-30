@@ -2269,6 +2269,7 @@ class ChartJSGenerator:
         # Build inline script with IIFE wrapper and Reveal.js-aware initialization
         # v3.3.4: Destroy and recreate chart on every slide visit to replay animations
         # This follows Layout Builder specification with Reveal.js timing fix
+        # v3.4.25: Check localStorage for saved chart data to persist edits across slide navigation
         inline_script = f"""(function() {{
       function initChart() {{
         // v3.3.4: Destroy existing chart instance to force animation replay
@@ -2280,6 +2281,30 @@ class ChartJSGenerator:
 
         const ctx = document.getElementById('{chart_id}').getContext('2d');
         const chartConfig = {config_json};
+
+        // v3.4.25: Check localStorage for saved chart data (persists edits across navigation)
+        const storageKey = 'chartData_' + '{chart_id}';
+        const savedData = localStorage.getItem(storageKey);
+        if (savedData) {{
+          try {{
+            const parsed = JSON.parse(savedData);
+            console.log('📂 Loading saved chart data from localStorage for {chart_id}');
+            // Merge saved data with original config (preserve styling, update data)
+            if (parsed.labels) chartConfig.data.labels = parsed.labels;
+            if (parsed.datasets) {{
+              parsed.datasets.forEach((savedDs, i) => {{
+                if (chartConfig.data.datasets[i]) {{
+                  // Preserve styling, update label and data
+                  chartConfig.data.datasets[i].label = savedDs.label;
+                  chartConfig.data.datasets[i].data = savedDs.data;
+                }}
+              }});
+            }}
+          }} catch (e) {{
+            console.warn('Failed to load saved chart data:', e);
+          }}
+        }}
+
         const chart = new Chart(ctx, chartConfig);
 
         // Store reference for editor access
@@ -2863,6 +2888,11 @@ class ChartJSGenerator:
                         if (chartInstance) {{
                             updateChartData_{js_safe_id}(chartInstance, newData, '{chart_type}');
                             console.log('✅ Chart visual updated');
+
+                            // v3.4.25: Save to localStorage for persistence across slide navigation
+                            const storageKey = 'chartData_' + chartId;
+                            localStorage.setItem(storageKey, JSON.stringify(newData));
+                            console.log('💾 Chart data saved to localStorage:', storageKey);
                         }} else {{
                             console.warn('⚠️ Chart instance not found:', chartId);
                         }}
