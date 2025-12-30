@@ -2895,7 +2895,7 @@ class ChartJSGenerator:
                             console.log('💾 Chart data saved to localStorage:', storageKey);
 
                             // v3.4.28: Persist to Layout Service for cross-user persistence
-                            // Fixed: Use PUT /slides/{index} to update slide.content.chart_html directly
+                            // Fixed: Use PUT /slides/{{index}} to update slide.content.chart_html directly
                             // V2-chart-text stores chart in content.chart_html, not in charts[] array
                             (async () => {{
                                 try {{
