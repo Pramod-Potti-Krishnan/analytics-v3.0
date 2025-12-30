@@ -2894,8 +2894,9 @@ class ChartJSGenerator:
                             localStorage.setItem(storageKey, JSON.stringify(newData));
                             console.log('💾 Chart data saved to localStorage:', storageKey);
 
-                            // v3.4.27: Persist to Layout Service for cross-user persistence
-                            // Fixed: Query for actual chart ID first (Layout uses different ID format)
+                            // v3.4.28: Persist to Layout Service for cross-user persistence
+                            // Fixed: Use PUT /slides/{index} to update slide.content.chart_html directly
+                            // V2-chart-text stores chart in content.chart_html, not in charts[] array
                             (async () => {{
                                 try {{
                                     // Extract presentation_id from URL: /p/{{presentation_id}}
@@ -2911,33 +2912,13 @@ class ChartJSGenerator:
                                     const chartContainer = canvasElement ? canvasElement.closest('.l02-chart-container') : null;
 
                                     if (presentationId && chartContainer) {{
-                                        // v3.4.27: First, GET the charts list to find the actual Layout Service chart ID
-                                        const chartsListResponse = await fetch(
-                                            `https://web-production-f0d13.up.railway.app/api/presentations/${{presentationId}}/slides/${{slideIndex}}/charts`
-                                        );
-
-                                        if (!chartsListResponse.ok) {{
-                                            console.warn('⚠️ Could not fetch charts list:', chartsListResponse.status);
-                                            return;
-                                        }}
-
-                                        const chartsList = await chartsListResponse.json();
-
-                                        // Find the first chart on this slide (typically only one chart per slide in L02 layout)
-                                        const layoutChart = chartsList.charts && chartsList.charts[0];
-
-                                        if (!layoutChart) {{
-                                            console.warn('⚠️ No charts found on slide', slideIndex);
-                                            return;
-                                        }}
-
-                                        const layoutChartId = layoutChart.id;
-                                        console.log('🔍 Found Layout Service chart ID:', layoutChartId);
-
-                                        // Now PUT with the correct ID
                                         const updatedHtml = chartContainer.outerHTML;
+                                        console.log('📤 Persisting chart to Layout Service (slide ' + slideIndex + ')');
+
+                                        // v3.4.28: PUT to slide content directly (not /charts endpoint)
+                                        // V2-chart-text layout stores chart_html in slide.content.chart_html
                                         const layoutResponse = await fetch(
-                                            `https://web-production-f0d13.up.railway.app/api/presentations/${{presentationId}}/slides/${{slideIndex}}/charts/${{layoutChartId}}`,
+                                            `https://web-production-f0d13.up.railway.app/api/presentations/${{presentationId}}/slides/${{slideIndex}}`,
                                             {{
                                                 method: 'PUT',
                                                 headers: {{ 'Content-Type': 'application/json' }},
@@ -2948,7 +2929,8 @@ class ChartJSGenerator:
                                         if (layoutResponse.ok) {{
                                             console.log('✅ Chart persisted to Layout Service');
                                         }} else {{
-                                            console.warn('⚠️ Layout Service persistence failed:', layoutResponse.status);
+                                            const errText = await layoutResponse.text();
+                                            console.warn('⚠️ Layout Service persistence failed:', layoutResponse.status, errText);
                                         }}
                                     }} else {{
                                         console.log('ℹ️ Skipping Layout Service (preview mode or no container)');
