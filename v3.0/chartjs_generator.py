@@ -2109,19 +2109,21 @@ class ChartJSGenerator:
         # v3.4.7: Convert callback/formatter strings to actual JavaScript functions
         # JSON serializes functions as strings, but Chart.js needs actual functions
         # This uses a helper function to properly handle multiline functions
+        # v3.4.x: Added label|title for tooltip callbacks (waterfall chart fix)
         def convert_function_strings(match):
             """Convert quoted function strings to unquoted JavaScript functions."""
-            key = match.group(1)  # "callback" or "formatter"
+            key = match.group(1)  # "callback", "formatter", "label", or "title"
             func_str = match.group(2)  # The function definition with quotes
             # Remove the surrounding quotes and unescape any escaped characters
             func_body = func_str[1:-1]  # Remove first and last quote
             func_body = func_body.replace('\\n', '\n').replace('\\"', '"')
             return f'"{key}": {func_body}'
 
-        # Match "callback": "function..." or "formatter": "function..."
+        # Match "callback|formatter|label|title": "function..."
         # The pattern captures the entire quoted function string
+        # Note: label/title are used by tooltip callbacks (e.g., waterfall charts)
         config_json = re.sub(
-            r'"(callback|formatter)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
+            r'"(callback|formatter|label|title)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
             convert_function_strings,
             config_json
         )
