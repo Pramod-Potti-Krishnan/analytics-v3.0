@@ -2254,10 +2254,11 @@ class ChartJSGenerator:
             func_body = func_body.replace('\\n', '\n').replace('\\"', '"')
             return f'"{key}": {func_body}'
 
-        # Match "callback": "function..." or "formatter": "function..."
+        # Match "callback": "function...", "formatter": "function...", or "display": "function..."
         # The pattern captures the entire quoted function string
+        # v3.4.19: Added "display" for datalabels.display function support (stacked area)
         config_json = re.sub(
-            r'"(callback|formatter)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
+            r'"(callback|formatter|display)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
             convert_function_strings,
             config_json
         )
