@@ -62,6 +62,12 @@ class DataValidator:
             errors.append("Data is empty")
             return errors
 
+        # v3.4.16: Accept multi-series dict format (radar, stacked area, etc.)
+        # These charts use {labels: [...], datasets: [...]} structure
+        if isinstance(data, dict) and "labels" in data and "datasets" in data:
+            # Multi-series format is valid - skip list check
+            return errors
+
         if not isinstance(data, list):
             errors.append(f"Data must be list, got {type(data)}")
             return errors
