@@ -941,6 +941,7 @@ class ChartSpreadsheetEditor {
             }
 
             /* v3.4.20: Editable series name input in column header */
+            /* v3.4.21: White background + visible border like regular cells */
             .spreadsheet-series-name-input {
                 width: calc(100% - 40px);
                 max-width: 150px;
@@ -948,17 +949,17 @@ class ChartSpreadsheetEditor {
                 font-weight: 600;
                 font-size: 14px;
                 font-family: inherit;
-                background: transparent;
-                border: 1px solid transparent;
+                background: white;
+                border: 1px solid #E0E0E0;
                 border-radius: 4px;
                 padding: 4px 8px;
                 cursor: pointer;
-                color: inherit;
+                color: #333;
             }
 
             .spreadsheet-series-name-input:hover {
-                background: rgba(255, 255, 255, 0.5);
-                border-color: #ddd;
+                background: #FAFAFA;
+                border-color: #BDBDBD;
             }
 
             .spreadsheet-series-name-input:focus {
@@ -2114,7 +2115,21 @@ class ChartSpreadsheetEditor {
                 chart.data.datasets[0].data = chartData.map(d => d.value);
             } else if (chartData.labels && chartData.datasets) {
                 chart.data.labels = chartData.labels;
-                chart.data.datasets = chartData.datasets;
+                // v3.4.21: Merge new data with existing datasets to preserve styling
+                chartData.datasets.forEach((newDS, i) => {
+                    if (chart.data.datasets[i]) {
+                        // Update label and data, preserve all other properties (colors, etc.)
+                        chart.data.datasets[i].label = newDS.label;
+                        chart.data.datasets[i].data = newDS.data;
+                    } else {
+                        // New dataset (e.g., if user added one)
+                        chart.data.datasets.push(newDS);
+                    }
+                });
+                // Remove excess datasets if user deleted some
+                if (chart.data.datasets.length > chartData.datasets.length) {
+                    chart.data.datasets.splice(chartData.datasets.length);
+                }
             }
             chart.update();
         }
