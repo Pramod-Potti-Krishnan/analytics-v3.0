@@ -2858,8 +2858,14 @@ class ChartJSGenerator:
                         console.log('✅ API save successful:', result);
 
                         // Update chart instance ONLY AFTER successful save
-                        updateChartData_{js_safe_id}(chart, newData, '{chart_type}');
-                        console.log('✅ Chart visual updated');
+                        // v3.4.23: Fix - get chart from window.chartInstances (chart was undefined)
+                        const chartInstance = window.chartInstances[chartId];
+                        if (chartInstance) {{
+                            updateChartData_{js_safe_id}(chartInstance, newData, '{chart_type}');
+                            console.log('✅ Chart visual updated');
+                        }} else {{
+                            console.warn('⚠️ Chart instance not found:', chartId);
+                        }}
 
                     }} catch (error) {{
                         console.error('❌ Error saving chart data:', error);
