@@ -655,8 +655,8 @@ class ChartJSGenerator:
         config["options"]["plugins"]["tooltip"] = {
             "callbacks": {
                 "label": """function(context) {
-                    const dataIndex = context.dataIndex;
-                    const value = context.parsed.y - context.parsed._custom;
+                    const raw = context.raw;
+                    const value = raw[1] - raw[0];
                     const label = context.dataset.label || '';
                     return label + ': ' + value.toFixed(2);
                 }"""
@@ -2254,11 +2254,13 @@ class ChartJSGenerator:
             func_body = func_body.replace('\\n', '\n').replace('\\"', '"')
             return f'"{key}": {func_body}'
 
-        # Match "callback": "function...", "formatter": "function...", or "display": "function..."
+        # Match "callback": "function...", "formatter": "function...", "display": "function...",
+        # "label": "function...", or "title": "function..."
         # The pattern captures the entire quoted function string
         # v3.4.19: Added "display" for datalabels.display function support (stacked area)
+        # v3.4.x: Added "label|title" for tooltip callbacks (waterfall chart fix)
         config_json = re.sub(
-            r'"(callback|formatter|display)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
+            r'"(callback|formatter|display|label|title)":\s*("function\([^)]*\)\s*\{[^"]*\}")',
             convert_function_strings,
             config_json
         )
