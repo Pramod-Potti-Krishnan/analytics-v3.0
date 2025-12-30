@@ -2894,7 +2894,8 @@ class ChartJSGenerator:
                             localStorage.setItem(storageKey, JSON.stringify(newData));
                             console.log('💾 Chart data saved to localStorage:', storageKey);
 
-                            // v3.4.26: Persist to Layout Service for cross-user persistence
+                            // v3.4.27: Persist to Layout Service for cross-user persistence
+                            // Fixed: Query for actual chart ID first (Layout uses different ID format)
                             (async () => {{
                                 try {{
                                     // Extract presentation_id from URL: /p/{{presentation_id}}
@@ -2905,16 +2906,36 @@ class ChartJSGenerator:
                                     // Get slide index from Reveal.js
                                     const slideIndex = typeof Reveal !== 'undefined' ? Reveal.getIndices().h : 0;
 
-                                    // Get chart ID from canvas element
-                                    const canvasElement = document.getElementById(chartId);
-                                    const layoutChartId = canvasElement ? canvasElement.id : chartId;
-
                                     // Get updated chart HTML from DOM
+                                    const canvasElement = document.getElementById(chartId);
                                     const chartContainer = canvasElement ? canvasElement.closest('.l02-chart-container') : null;
 
                                     if (presentationId && chartContainer) {{
-                                        const updatedHtml = chartContainer.outerHTML;
+                                        // v3.4.27: First, GET the charts list to find the actual Layout Service chart ID
+                                        const chartsListResponse = await fetch(
+                                            `https://web-production-f0d13.up.railway.app/api/presentations/${{presentationId}}/slides/${{slideIndex}}/charts`
+                                        );
 
+                                        if (!chartsListResponse.ok) {{
+                                            console.warn('⚠️ Could not fetch charts list:', chartsListResponse.status);
+                                            return;
+                                        }}
+
+                                        const chartsList = await chartsListResponse.json();
+
+                                        // Find the first chart on this slide (typically only one chart per slide in L02 layout)
+                                        const layoutChart = chartsList.charts && chartsList.charts[0];
+
+                                        if (!layoutChart) {{
+                                            console.warn('⚠️ No charts found on slide', slideIndex);
+                                            return;
+                                        }}
+
+                                        const layoutChartId = layoutChart.id;
+                                        console.log('🔍 Found Layout Service chart ID:', layoutChartId);
+
+                                        // Now PUT with the correct ID
+                                        const updatedHtml = chartContainer.outerHTML;
                                         const layoutResponse = await fetch(
                                             `https://web-production-f0d13.up.railway.app/api/presentations/${{presentationId}}/slides/${{slideIndex}}/charts/${{layoutChartId}}`,
                                             {{
