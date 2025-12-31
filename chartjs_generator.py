@@ -2310,15 +2310,27 @@ class ChartJSGenerator:
         const chartConfig = {config_json};
 
         // v3.4.25: Check localStorage for saved chart data (persists edits across navigation)
+        // v3.4.29: Fixed to handle BOTH formats: multi-series {{labels, datasets}} AND simple array [{{label, value}}]
         const storageKey = 'chartData_' + '{chart_id}';
         const savedData = localStorage.getItem(storageKey);
         if (savedData) {{
           try {{
             const parsed = JSON.parse(savedData);
             console.log('📂 Loading saved chart data from localStorage for {chart_id}');
-            // Merge saved data with original config (preserve styling, update data)
-            if (parsed.labels) chartConfig.data.labels = parsed.labels;
-            if (parsed.datasets) {{
+
+            // Check format: multi-series {{labels, datasets}} vs simple array [{{label, value}}]
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].label !== undefined) {{
+              // Simple array format: [{{label: "...", value: ...}}, ...]
+              // Used by single-series charts (line, bar, pie, waterfall, etc.)
+              console.log('📂 Applying simple array format from localStorage');
+              chartConfig.data.labels = parsed.map(d => d.label);
+              if (chartConfig.data.datasets[0]) {{
+                chartConfig.data.datasets[0].data = parsed.map(d => d.value);
+              }}
+            }} else if (parsed.labels && parsed.datasets) {{
+              // Multi-series format: {{labels: [...], datasets: [...]}}
+              console.log('📂 Applying multi-series format from localStorage');
+              chartConfig.data.labels = parsed.labels;
               parsed.datasets.forEach((savedDs, i) => {{
                 if (chartConfig.data.datasets[i]) {{
                   // Preserve styling, update label and data
