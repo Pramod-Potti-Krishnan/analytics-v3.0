@@ -3341,17 +3341,26 @@ class ChartJSGenerator:
             labels: newData.map(d => d.label),
             values: newData.map(d => d.value),
             chart_type: '{chart_type}',
-            timestamp: Date.now()
+            timestamp: new Date().toISOString()
           }})
         }});
 
         if (!response.ok) {{
           const errorData = await response.json().catch(() => ({{}}));
-          // v3.4.38: Improved error message extraction
-          const errorMsg = errorData.detail || errorData.message || errorData.error ||
-                           (typeof errorData === 'string' ? errorData :
-                            (Object.keys(errorData).length > 0 ? JSON.stringify(errorData) : null)) ||
-                           `HTTP ${{response.status}}: Save failed`;
+          // v3.4.40: Handle FastAPI's array-based validation errors
+          let errorMsg;
+          if (Array.isArray(errorData.detail)) {{
+            // FastAPI validation error: [{{loc: [...], msg: "...", type: "..."}}]
+            errorMsg = errorData.detail.map(e => e.msg || e.message || JSON.stringify(e)).join('; ');
+          }} else if (typeof errorData.detail === 'string') {{
+            errorMsg = errorData.detail;
+          }} else if (errorData.message) {{
+            errorMsg = errorData.message;
+          }} else if (errorData.error) {{
+            errorMsg = errorData.error;
+          }} else {{
+            errorMsg = `HTTP ${{response.status}}: Save failed`;
+          }}
           throw new Error(errorMsg);
         }}
 
