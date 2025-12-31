@@ -62,6 +62,8 @@ class ChartSpreadsheetEditor {
             return this._parseSankeyData(data);
         } else if (chartType === 'd3_choropleth_usa') {
             return this._parseChoroplethData(data);
+        } else if (chartType === 'waterfall') {
+            return this._parseWaterfallData(data);
         } else {
             return this._parseSimpleData(data);
         }
@@ -83,6 +85,30 @@ class ChartSpreadsheetEditor {
                         typeof item[key] === 'number'
                     );
                     value = numericKey ? item[numericKey] : 0;
+                }
+
+                return {
+                    id: `row-${idx}`,
+                    Label: label,
+                    Value: value
+                };
+            });
+        }
+        return [];
+    }
+
+    _parseWaterfallData(data) {
+        // Waterfall charts use floating bar format [start, end]
+        // Convert to incremental change values for editing
+        // v3.4.x: Fix for waterfall chart editor 422 error
+        if (Array.isArray(data)) {
+            return data.map((item, idx) => {
+                const label = item.label || item.Label || '';
+                let value = item.value || item.Value;
+
+                // If value is an array [start, end], convert to change value
+                if (Array.isArray(value)) {
+                    value = value[1] - value[0];  // Change = end - start
                 }
 
                 return {
