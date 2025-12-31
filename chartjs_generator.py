@@ -2311,7 +2311,11 @@ class ChartJSGenerator:
 
         // v3.4.25: Check localStorage for saved chart data (persists edits across navigation)
         // v3.4.29: Fixed to handle BOTH formats: multi-series {{labels, datasets}} AND simple array [{{label, value}}]
-        const storageKey = 'chartData_' + '{chart_id}';
+        // v3.4.30: Fixed key collision - now unique per presentation (presentationId + chartId)
+        const pathParts = window.location.pathname.split('/');
+        const pIndex = pathParts.indexOf('p');
+        const presentationId = pIndex !== -1 ? pathParts[pIndex + 1] : 'default';
+        const storageKey = 'chartData_' + presentationId + '_' + '{chart_id}';
         const savedData = localStorage.getItem(storageKey);
         if (savedData) {{
           try {{
@@ -2929,7 +2933,12 @@ class ChartJSGenerator:
                             console.log('✅ Chart visual updated');
 
                             // v3.4.25: Save to localStorage for persistence across slide navigation
-                            const storageKey = 'chartData_' + chartId;
+                            // v3.4.30: Fixed key collision - now unique per presentation (presentationId + chartId)
+                            // Extract presentation_id from URL: /p/{{presentation_id}}
+                            const pathParts = window.location.pathname.split('/');
+                            const pIndex = pathParts.indexOf('p');
+                            const presentationId = pIndex !== -1 ? pathParts[pIndex + 1] : 'default';
+                            const storageKey = 'chartData_' + presentationId + '_' + chartId;
                             localStorage.setItem(storageKey, JSON.stringify(newData));
                             console.log('💾 Chart data saved to localStorage:', storageKey);
 
@@ -2938,10 +2947,7 @@ class ChartJSGenerator:
                             // V2-chart-text stores chart in content.chart_html, not in charts[] array
                             (async () => {{
                                 try {{
-                                    // Extract presentation_id from URL: /p/{{presentation_id}}
-                                    const pathParts = window.location.pathname.split('/');
-                                    const pIndex = pathParts.indexOf('p');
-                                    const presentationId = pIndex !== -1 ? pathParts[pIndex + 1] : null;
+                                    // presentationId already extracted above for localStorage key
 
                                     // Get slide index from Reveal.js
                                     const slideIndex = typeof Reveal !== 'undefined' ? Reveal.getIndices().h : 0;
