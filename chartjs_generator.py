@@ -3172,9 +3172,13 @@ class ChartJSGenerator:
         presentation_id: str,
         api_base_url: str
     ) -> str:
-        """Add editor overlay to D3 charts (read-only with refresh)"""
+        """
+        Add self-contained editor overlay to D3 charts.
+        v3.4.36: Made editor fully self-contained (no external JS dependencies)
+        """
 
         js_safe_id = chart_id.replace('-', '_').replace('.', '_').replace(' ', '_')
+        modal_id = f"d3-editor-modal-{js_safe_id}"
 
         # Convert data to simple format for editor
         if isinstance(data, list):
@@ -3197,49 +3201,168 @@ class ChartJSGenerator:
     ✏️
   </button>
 
-  <script src="/static/js/chart-spreadsheet-editor.js"></script>
+  <!-- Self-contained D3 Editor Modal (v3.4.36) -->
+  <div id="{modal_id}" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📊 Edit D3 {chart_type.replace('d3_', '').title()} Data</h3>
+          <p style="margin: 5px 0 0 0; font-size: 13px; opacity: 0.9;">Modify values and save to update the chart</p>
+        </div>
+        <button onclick="closeD3Editor_{js_safe_id}()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">&times;</button>
+      </div>
+
+      <!-- Table Container -->
+      <div style="padding: 20px; max-height: 400px; overflow-y: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <thead>
+            <tr style="background: #f8f9fa;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; width: 40px;">#</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Label</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; width: 120px;">Value</th>
+              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6; width: 50px;">Del</th>
+            </tr>
+          </thead>
+          <tbody id="d3-tbody-{js_safe_id}"></tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
+        <button onclick="addD3Row_{js_safe_id}()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">+ Add Row</button>
+        <div>
+          <button onclick="closeD3Editor_{js_safe_id}()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 10px;">Cancel</button>
+          <button onclick="saveD3Data_{js_safe_id}()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">💾 Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    function openD3Editor_{js_safe_id}() {{
-      const data = {json.dumps(editor_data)};
+    // v3.4.36: Self-contained D3 editor functions
+    var d3EditorData_{js_safe_id} = {json.dumps(editor_data)};
 
-      openChartEditor(
-        '{chart_id}',
-        '{chart_type}',
-        data,
-        {{
-          onSave: async (newData, chartId) => {{
-            console.log('💾 Saving D3 chart data:', newData);
+    window.openD3Editor_{js_safe_id} = function() {{
+      console.log('📊 Opening D3 editor for {chart_id}');
 
-            // Save to backend API
-            try {{
-              const response = await fetch('{api_base_url}/update-data', {{
-                method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }},
-                body: JSON.stringify({{
-                  chart_id: chartId,
-                  presentation_id: '{presentation_id}',
-                  data: newData,
-                  chart_type: '{chart_type}',
-                  timestamp: Date.now()
-                }})
-              }});
+      // Populate table
+      const tbody = document.getElementById('d3-tbody-{js_safe_id}');
+      tbody.innerHTML = '';
 
-              if (!response.ok) {{
-                throw new Error('Save failed');
-              }}
+      d3EditorData_{js_safe_id}.forEach((item, index) => {{
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${{index + 1}}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+            <input type="text" class="d3-label-input-{js_safe_id}" value="${{item.label || ''}}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+            <input type="number" class="d3-value-input-{js_safe_id}" value="${{item.value || 0}}" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">
+            <button onclick="deleteD3Row_{js_safe_id}(this)" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      }});
 
-              // Show refresh message (D3 charts need full re-render)
-              alert('✅ Chart data saved successfully!\\n\\n⚠️ D3 charts require a page refresh to display updates.\\n\\nPlease refresh the page to see your changes.');
+      // Show modal
+      document.getElementById('{modal_id}').style.display = 'flex';
+    }};
 
-            }} catch (error) {{
-              console.error('❌ Error saving D3 chart data:', error);
-              alert('❌ Failed to save chart data. Please try again.');
-              throw error;
-            }}
-          }}
-        }}
-      );
+    window.closeD3Editor_{js_safe_id} = function() {{
+      document.getElementById('{modal_id}').style.display = 'none';
+    }};
+
+    window.addD3Row_{js_safe_id} = function() {{
+      const tbody = document.getElementById('d3-tbody-{js_safe_id}');
+      const rowCount = tbody.querySelectorAll('tr').length;
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${{rowCount + 1}}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+          <input type="text" class="d3-label-input-{js_safe_id}" value="" placeholder="New Label" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+        </td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+          <input type="number" class="d3-value-input-{js_safe_id}" value="0" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+        </td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">
+          <button onclick="deleteD3Row_{js_safe_id}(this)" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+      renumberD3Rows_{js_safe_id}();
+    }};
+
+    window.deleteD3Row_{js_safe_id} = function(btn) {{
+      btn.closest('tr').remove();
+      renumberD3Rows_{js_safe_id}();
+    }};
+
+    function renumberD3Rows_{js_safe_id}() {{
+      const rows = document.querySelectorAll('#d3-tbody-{js_safe_id} tr');
+      rows.forEach((row, index) => {{
+        row.querySelector('td:first-child').textContent = index + 1;
+      }});
     }}
+
+    window.saveD3Data_{js_safe_id} = async function() {{
+      // Collect data from table
+      const labels = document.querySelectorAll('.d3-label-input-{js_safe_id}');
+      const values = document.querySelectorAll('.d3-value-input-{js_safe_id}');
+
+      const newData = [];
+      labels.forEach((labelInput, i) => {{
+        newData.push({{
+          label: labelInput.value,
+          value: parseFloat(values[i].value) || 0
+        }});
+      }});
+
+      console.log('💾 Saving D3 chart data:', newData);
+
+      // Save to backend API
+      try {{
+        const response = await fetch('{api_base_url}/update-data', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
+            chart_id: '{chart_id}',
+            presentation_id: '{presentation_id}',
+            labels: newData.map(d => d.label),
+            values: newData.map(d => d.value),
+            chart_type: '{chart_type}',
+            timestamp: Date.now()
+          }})
+        }});
+
+        if (!response.ok) {{
+          const errorData = await response.json().catch(() => ({{}}));
+          throw new Error(errorData.detail || 'Save failed');
+        }}
+
+        const result = await response.json();
+        console.log('✅ Save result:', result);
+
+        // Update local data
+        d3EditorData_{js_safe_id} = newData;
+
+        // Close modal and show success
+        closeD3Editor_{js_safe_id}();
+
+        // Show toast notification
+        const toast = document.createElement('div');
+        toast.innerHTML = '✅ Chart data saved! Refresh page to see D3 chart updates.';
+        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; z-index: 10001; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+
+      }} catch (error) {{
+        console.error('❌ Error saving D3 chart data:', error);
+        alert('❌ Failed to save: ' + error.message);
+      }}
+    }};
   </script>
 </div>"""
 
