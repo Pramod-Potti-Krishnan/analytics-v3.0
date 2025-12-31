@@ -87,6 +87,12 @@ class ChartSpreadsheetEditor {
                     value = numericKey ? item[numericKey] : 0;
                 }
 
+                // v3.4.x: Handle waterfall chart [start, end] array values
+                // Waterfall uses floating bars stored as [start, end], convert to change value
+                if (Array.isArray(value)) {
+                    value = value[1] - value[0];  // Change = end - start
+                }
+
                 return {
                     id: `row-${idx}`,
                     Label: label,
