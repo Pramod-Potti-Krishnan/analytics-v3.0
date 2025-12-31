@@ -104,23 +104,28 @@ class ChartSpreadsheetEditor {
     }
 
     _parseWaterfallData(data) {
-        // Waterfall charts use floating bar format [start, end]
-        // Convert to incremental change values for editing
-        // v3.4.x: Fix for waterfall chart editor 422 error
+        // v3.4.33: Waterfall charts use Start/End columns for explicit bar positioning
+        // Floating bar format [start, end] maps directly to Start/End columns
         if (Array.isArray(data)) {
             return data.map((item, idx) => {
                 const label = item.label || item.Label || '';
                 let value = item.value || item.Value;
 
-                // If value is an array [start, end], convert to change value
+                // Parse [start, end] array into separate columns
+                let start = 0, end = 0;
                 if (Array.isArray(value)) {
-                    value = value[1] - value[0];  // Change = end - start
+                    start = value[0];
+                    end = value[1];
+                } else if (typeof value === 'number') {
+                    // Legacy: single value - treat as end with start=0
+                    end = value;
                 }
 
                 return {
                     id: `row-${idx}`,
                     Label: label,
-                    Value: value
+                    Start: start,
+                    End: end
                 };
             });
         }
@@ -279,11 +284,12 @@ class ChartSpreadsheetEditor {
                 canAddColumns: false,
                 columnTypes: { Label: 'text', Value: 'number' }
             },
+            // v3.4.33: Waterfall uses Start/End columns for explicit bar positioning
             'waterfall': {
-                columns: ['Label', 'Value'],
-                activeColumns: ['Label', 'Value'],
+                columns: ['Label', 'Start', 'End'],
+                activeColumns: ['Label', 'Start', 'End'],
                 canAddColumns: false,
-                columnTypes: { Label: 'text', Value: 'number' }
+                columnTypes: { Label: 'text', Start: 'number', End: 'number' }
             },
 
             // Scatter chart
@@ -2060,6 +2066,16 @@ class ChartSpreadsheetEditor {
             return this.data.map(row => {
                 const numValue = parseFloat(row.Value);
                 return { label: row.State, value: isNaN(numValue) ? 0 : numValue };
+            });
+        } else if (chartType === 'waterfall') {
+            // v3.4.33: Waterfall exports Start/End as floating bar arrays [start, end]
+            return this.data.map(row => {
+                const start = parseFloat(row.Start) || 0;
+                const end = parseFloat(row.End) || 0;
+                return {
+                    label: String(row.Label || '').trim(),
+                    value: [start, end]  // Floating bar format
+                };
             });
         } else {
             // Simple label-value format - use actual column names from columnConfig

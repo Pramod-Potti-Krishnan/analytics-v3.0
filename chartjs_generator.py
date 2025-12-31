@@ -2876,6 +2876,18 @@ class ChartJSGenerator:
                             }};
                         }}
 
+                        // v3.4.33: Waterfall format: [{{label, value: [start, end]}}]
+                        // Value is an array representing floating bar positions
+                        if (chartType === 'waterfall' && Array.isArray(data) && data.length > 0 &&
+                            data[0].value !== undefined && Array.isArray(data[0].value)) {{
+                            console.log('✅ Waterfall Start/End format detected');
+                            return {{
+                                chart_type: chartType,
+                                labels: data.map(d => String(d.label).trim()),
+                                values: data.map(d => d.value)  // Keep as [start, end] arrays
+                            }};
+                        }}
+
                         // Multi-series format: {{labels: [...], datasets: [...]}}
                         if (data && data.labels && data.datasets) {{
                             console.log('✅ Multi-series format detected - adding chart_type');
@@ -3098,32 +3110,45 @@ class ChartJSGenerator:
             // Simple label-value format
             chart.data.labels = newData.map(d => d.label);
 
-            // v3.4.32: Special handling for waterfall charts - reconstruct floating bars
+            // v3.4.33: Waterfall charts use Start/End format with dynamic colors
             if (chartType === 'waterfall') {{
-                console.log('🌊 Waterfall chart detected - reconstructing floating bars');
+                console.log('🌊 Waterfall chart - using Start/End format');
                 const floatingBars = [];
-                let cumulative = 0;
+                const newColors = [];
 
                 newData.forEach((d, i) => {{
-                    const value = parseFloat(d.value) || 0;
-
-                    if (i === 0) {{
-                        // Opening balance: bar from 0 to value
-                        floatingBars.push([0, value]);
-                        cumulative = value;
-                    }} else if (i === newData.length - 1) {{
-                        // Final total: bar from 0 to cumulative result
-                        floatingBars.push([0, cumulative]);
+                    let start, end;
+                    if (Array.isArray(d.value)) {{
+                        // New format: value is [start, end] array
+                        start = d.value[0];
+                        end = d.value[1];
                     }} else {{
-                        // Intermediate values: incremental changes (positive or negative)
-                        const start = cumulative;
-                        cumulative += value;
-                        floatingBars.push([Math.min(start, cumulative), Math.max(start, cumulative)]);
+                        // Legacy fallback: single value treated as end with start=0
+                        start = 0;
+                        end = parseFloat(d.value) || 0;
+                    }}
+
+                    // Floating bar format: [min, max] for Chart.js
+                    floatingBars.push([Math.min(start, end), Math.max(start, end)]);
+
+                    // Dynamic colors based on direction
+                    const isIncrease = end > start;
+                    const isTotal = (i === 0 || i === newData.length - 1) && start === 0;
+
+                    if (isTotal) {{
+                        newColors.push('#93C5FD'); // Blue for totals (opening/closing)
+                    }} else if (isIncrease) {{
+                        newColors.push('#A7F3D0'); // Green for increases
+                    }} else {{
+                        newColors.push('#FBCFE8'); // Pink for decreases
                     }}
                 }});
 
                 console.log('📊 Floating bars:', floatingBars);
+                console.log('🎨 Colors:', newColors);
                 chart.data.datasets[0].data = floatingBars;
+                chart.data.datasets[0].backgroundColor = newColors;
+                chart.data.datasets[0].borderColor = newColors;
             }} else {{
                 chart.data.datasets[0].data = newData.map(d => d.value);
             }}
