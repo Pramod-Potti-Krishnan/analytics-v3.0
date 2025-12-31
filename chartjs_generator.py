@@ -688,6 +688,7 @@ class ChartJSGenerator:
             "padding": 4
         }
 
+        # v3.4.32: Pass semantic_chart_type='waterfall' so editor can reconstruct floating bars
         return self._wrap_in_canvas(
             config,
             height,
@@ -696,6 +697,7 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
+            semantic_chart_type='waterfall',  # v3.4.32: Tell editor this is a waterfall chart
             chart_title=chart_title  # v3.4.11
         )
 
