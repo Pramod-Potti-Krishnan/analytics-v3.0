@@ -1554,7 +1554,13 @@ class ChartDataUpdate(BaseModel):
 
     # Simple charts: labels + values
     labels: Optional[List[str]] = Field(default=None, min_items=2, max_items=50, description="X-axis labels (simple charts)")
-    values: Optional[List[float]] = Field(default=None, min_items=2, max_items=50, description="Y-axis values (simple charts)")
+    # v3.4.34: Support both flat numbers and [start,end] arrays for waterfall charts
+    values: Optional[Union[List[float], List[List[float]]]] = Field(
+        default=None,
+        min_items=2,
+        max_items=50,
+        description="Y-axis values - numbers for simple charts, [start,end] arrays for waterfall"
+    )
 
     # Multi-series charts: labels + datasets
     datasets: Optional[List[DatasetSchema]] = Field(default=None, min_items=1, max_items=20, description="Multiple data series (multi-series charts)")
@@ -1646,6 +1652,24 @@ class ChartDataUpdate(BaseModel):
             if len(vals) != len(labels):
                 raise ValueError(f"Number of values ({len(vals)}) must match number of labels ({len(labels)})")
 
+            chart_type = values.get('chart_type', '')
+
+            # v3.4.34: Waterfall charts use [start, end] arrays for floating bars
+            if chart_type == 'waterfall':
+                for i, val in enumerate(vals):
+                    if not isinstance(val, list) or len(val) != 2:
+                        raise ValueError(f"Waterfall value at index {i} must be [start, end] array")
+                    if not all(isinstance(x, (int, float)) for x in val):
+                        raise ValueError(f"Waterfall value at index {i} must contain numbers")
+                    # NaN/infinity check for both start and end
+                    for j, x in enumerate(val):
+                        if x != x:  # NaN check
+                            raise ValueError(f"Waterfall value at index {i}[{j}] cannot be NaN")
+                        if abs(x) == float('inf'):
+                            raise ValueError(f"Waterfall value at index {i}[{j}] cannot be infinity")
+                return v
+
+            # Simple charts use flat numbers
             for i, val in enumerate(vals):
                 if not isinstance(val, (int, float)):
                     raise ValueError(f"Value at index {i} must be a number, got {type(val).__name__}")
