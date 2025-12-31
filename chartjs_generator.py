@@ -3616,18 +3616,18 @@ class ChartJSGenerator:
         # Safe chart ID
         chart_id_safe = chart_id or f"d3-treemap-{id(data)}"
 
-        # Dimensions
-        container_width = 1260
+        # Dimensions - v3.4.35: Reduced width to fit V2-chart-text layout with Key Insights panel
+        container_width = 850  # Fits alongside ~400px Key Insights panel
         container_height = height
         svg_width = container_width - 40  # Account for padding
-        svg_height = container_height - 40
+        svg_height = container_height - 60  # Leave room for potential title
 
         # Build D3 treemap HTML
         d3_html = f"""<!-- D3.js Treemap Chart -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <div id="{chart_id_safe}"></div>
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; overflow: hidden;">
+    <div id="{chart_id_safe}" style="padding: 10px;"></div>
     <script>
         (function() {{
             function initD3Treemap() {{
@@ -3832,8 +3832,8 @@ class ChartJSGenerator:
         # Safe chart ID
         chart_id_safe = chart_id or f"d3-sunburst-{id(data)}"
 
-        # Dimensions (square for radial layout)
-        container_width = 1260
+        # Dimensions (square for radial layout) - v3.4.35: Reduced width for V2 layout
+        container_width = 850  # Fits alongside ~400px Key Insights panel
         container_height = height
         size = min(container_width - 40, container_height - 40)
         radius = size / 2
@@ -3842,8 +3842,8 @@ class ChartJSGenerator:
         d3_html = f"""<!-- D3.js Sunburst Chart -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <div id="{chart_id_safe}"></div>
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; overflow: hidden;">
+    <div id="{chart_id_safe}" style="display: flex; justify-content: center; padding: 10px;"></div>
     <script>
         (function() {{
             function initD3Sunburst() {{
@@ -4068,10 +4068,10 @@ class ChartJSGenerator:
         # Safe chart ID
         chart_id_safe = chart_id or f"d3-choropleth-{id(data)}"
 
-        # Dimensions
-        container_width = 1260
+        # Dimensions - v3.4.35: Reduced width to fit V2-chart-text layout with Key Insights panel
+        container_width = 850  # Fits alongside ~400px Key Insights panel
         container_height = height
-        map_width = container_width - 100  # Leave room for legend
+        map_width = container_width - 80  # Leave room for legend
         map_height = container_height - 40
 
         # Calculate value domain for color scale
@@ -4087,8 +4087,8 @@ class ChartJSGenerator:
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
-    <div id="{chart_id_safe}"></div>
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; overflow: hidden;">
+    <div id="{chart_id_safe}" style="padding: 10px;"></div>
     <script>
         (function() {{
             function initD3Choropleth() {{
@@ -4326,7 +4326,8 @@ class ChartJSGenerator:
         OR: [{"source": "A", "target": "B", "value": 100}, ...]
         """
         chart_id_safe = chart_id or f"sankey-{int(datetime.now().timestamp())}"
-        container_width = 1260
+        # Dimensions - v3.4.35: Reduced width to fit V2-chart-text layout with Key Insights panel
+        container_width = 850  # Fits alongside ~400px Key Insights panel
         container_height = height
 
         # Parse data into nodes and links
@@ -4399,7 +4400,7 @@ class ChartJSGenerator:
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12"></script>
 
-<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0;">
+<div class="l02-chart-container" style="width: {container_width}px; height: {container_height}px; position: relative; box-sizing: border-box; border: none; border-radius: 0; overflow: hidden;">
     <div id="{chart_id_safe}" style="width: 100%; height: 100%;"></div>
     <script>
         (function() {{
