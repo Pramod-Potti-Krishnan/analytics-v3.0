@@ -3201,8 +3201,8 @@ class ChartJSGenerator:
     ✏️
   </button>
 
-  <!-- Self-contained D3 Editor Modal (v3.4.37: added pointer-events for interactivity) -->
-  <div id="{modal_id}" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; pointer-events: auto;">
+  <!-- Self-contained D3 Editor Modal (v3.4.38: increased z-index for proper layering) -->
+  <div id="{modal_id}" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999999; justify-content: center; align-items: center; pointer-events: auto;">
     <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: auto; position: relative;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
@@ -3339,7 +3339,12 @@ class ChartJSGenerator:
 
         if (!response.ok) {{
           const errorData = await response.json().catch(() => ({{}}));
-          throw new Error(errorData.detail || 'Save failed');
+          // v3.4.38: Improved error message extraction
+          const errorMsg = errorData.detail || errorData.message || errorData.error ||
+                           (typeof errorData === 'string' ? errorData :
+                            (Object.keys(errorData).length > 0 ? JSON.stringify(errorData) : null)) ||
+                           `HTTP ${{response.status}}: Save failed`;
+          throw new Error(errorMsg);
         }}
 
         const result = await response.json();
@@ -3354,7 +3359,7 @@ class ChartJSGenerator:
         // Show toast notification
         const toast = document.createElement('div');
         toast.innerHTML = '✅ Chart data saved! Refresh page to see D3 chart updates.';
-        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; z-index: 10001; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; z-index: 1000000; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
 
