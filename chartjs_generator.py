@@ -3095,7 +3095,36 @@ class ChartJSGenerator:
         }} else if (Array.isArray(newData)) {{
             // Simple label-value format
             chart.data.labels = newData.map(d => d.label);
-            chart.data.datasets[0].data = newData.map(d => d.value);
+
+            // v3.4.32: Special handling for waterfall charts - reconstruct floating bars
+            if (chartType === 'waterfall') {{
+                console.log('🌊 Waterfall chart detected - reconstructing floating bars');
+                const floatingBars = [];
+                let cumulative = 0;
+
+                newData.forEach((d, i) => {{
+                    const value = parseFloat(d.value) || 0;
+
+                    if (i === 0) {{
+                        // Opening balance: bar from 0 to value
+                        floatingBars.push([0, value]);
+                        cumulative = value;
+                    }} else if (i === newData.length - 1) {{
+                        // Final total: bar from 0 to cumulative result
+                        floatingBars.push([0, cumulative]);
+                    }} else {{
+                        // Intermediate values: incremental changes (positive or negative)
+                        const start = cumulative;
+                        cumulative += value;
+                        floatingBars.push([Math.min(start, cumulative), Math.max(start, cumulative)]);
+                    }}
+                }});
+
+                console.log('📊 Floating bars:', floatingBars);
+                chart.data.datasets[0].data = floatingBars;
+            }} else {{
+                chart.data.datasets[0].data = newData.map(d => d.value);
+            }}
         }}
 
         chart.update();
