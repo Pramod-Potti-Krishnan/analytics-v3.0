@@ -2047,23 +2047,34 @@ class ChartSpreadsheetEditor {
             console.log(`📊 Exporting multi-series: ${datasets.length} datasets with labels:`, datasets.map(d => d.label));
             return { labels, datasets };
         } else if (chartType === 'd3_sankey') {
-            // Reconstitute arrow notation
-            return this.data.map(row => ({
-                label: `${row.Source} → ${row.Target}`,
-                value: row.Value
-            }));
+            // v3.4.31: Reconstitute arrow notation, ensure value is number
+            return this.data.map(row => {
+                const numValue = parseFloat(row.Value);
+                return {
+                    label: `${row.Source} → ${row.Target}`,
+                    value: isNaN(numValue) ? 0 : numValue
+                };
+            });
         } else if (chartType === 'd3_choropleth_usa') {
-            return this.data.map(row => ({ label: row.State, value: row.Value }));
+            // v3.4.31: Ensure value is number
+            return this.data.map(row => {
+                const numValue = parseFloat(row.Value);
+                return { label: row.State, value: isNaN(numValue) ? 0 : numValue };
+            });
         } else {
             // Simple label-value format - use actual column names from columnConfig
+            // v3.4.31: Ensure values are numbers, labels are strings for API compatibility
             const columns = this.columnConfig.columns;
             const labelCol = columns[0]; // Usually 'Label'
             const valueCol = columns[1]; // Usually 'Value' or other numeric column
 
-            return this.data.map(row => ({
-                label: row[labelCol],
-                value: row[valueCol]
-            }));
+            return this.data.map(row => {
+                const numValue = parseFloat(row[valueCol]);
+                return {
+                    label: String(row[labelCol] || '').trim(),
+                    value: isNaN(numValue) ? 0 : numValue
+                };
+            });
         }
     }
 

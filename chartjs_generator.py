@@ -2885,12 +2885,19 @@ class ChartJSGenerator:
                         }}
 
                         // Simple charts: [{{label, value}}] → {{labels: [...], values: [...]}}
+                        // v3.4.31: Fix 422 error - ensure values are numbers, labels are strings
                         if (Array.isArray(data) && data.length > 0 && data[0].label !== undefined && data[0].value !== undefined) {{
                             console.log('✅ Simple chart format detected - converting to labels/values');
+                            const labels = data.map(d => String(d.label).trim());
+                            const values = data.map(d => {{
+                                const num = parseFloat(d.value);
+                                return isNaN(num) ? 0 : num;
+                            }});
+                            console.log('📊 Transformed - labels:', labels.length, 'values:', values.length);
                             return {{
                                 chart_type: chartType,
-                                labels: data.map(d => d.label),
-                                values: data.map(d => d.value)
+                                labels: labels,
+                                values: values
                             }};
                         }}
 
@@ -2918,7 +2925,18 @@ class ChartJSGenerator:
 
                         if (!response.ok) {{
                             const errorData = await response.json().catch(() => ({{}}));
-                            const errorMsg = errorData.detail || `API request failed: ${{response.status}}`;
+                            // v3.4.31: Better error logging for debugging 422 errors
+                            console.error('❌ API Error Response:', errorData);
+                            let errorMsg = `API request failed: ${{response.status}}`;
+                            if (errorData.detail) {{
+                                if (Array.isArray(errorData.detail)) {{
+                                    // Pydantic validation errors are arrays
+                                    errorMsg = errorData.detail.map(e => e.msg || e.message || JSON.stringify(e)).join('; ');
+                                }} else {{
+                                    errorMsg = String(errorData.detail);
+                                }}
+                            }}
+                            console.error('❌ Error message:', errorMsg);
                             throw new Error(errorMsg);
                         }}
 

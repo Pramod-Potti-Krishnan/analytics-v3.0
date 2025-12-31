@@ -62,6 +62,8 @@ class ChartSpreadsheetEditor {
             return this._parseSankeyData(data);
         } else if (chartType === 'd3_choropleth_usa') {
             return this._parseChoroplethData(data);
+        } else if (chartType === 'waterfall') {
+            return this._parseWaterfallData(data);
         } else {
             return this._parseSimpleData(data);
         }
@@ -83,6 +85,36 @@ class ChartSpreadsheetEditor {
                         typeof item[key] === 'number'
                     );
                     value = numericKey ? item[numericKey] : 0;
+                }
+
+                // v3.4.x: Handle waterfall chart [start, end] array values
+                // Waterfall uses floating bars stored as [start, end], convert to change value
+                if (Array.isArray(value)) {
+                    value = value[1] - value[0];  // Change = end - start
+                }
+
+                return {
+                    id: `row-${idx}`,
+                    Label: label,
+                    Value: value
+                };
+            });
+        }
+        return [];
+    }
+
+    _parseWaterfallData(data) {
+        // Waterfall charts use floating bar format [start, end]
+        // Convert to incremental change values for editing
+        // v3.4.x: Fix for waterfall chart editor 422 error
+        if (Array.isArray(data)) {
+            return data.map((item, idx) => {
+                const label = item.label || item.Label || '';
+                let value = item.value || item.Value;
+
+                // If value is an array [start, end], convert to change value
+                if (Array.isArray(value)) {
+                    value = value[1] - value[0];  // Change = end - start
                 }
 
                 return {
@@ -432,6 +464,7 @@ class ChartSpreadsheetEditor {
                                         <li><strong>Add Row:</strong> Click "+ Add Row" button</li>
                                         <li><strong>Delete Row:</strong> Click 🗑️ icon in Actions column</li>
                                         <li><strong>Add Column:</strong> Click "+ Add Series" button (multi-series charts only)</li>
+                                        <li><strong>Rename Series:</strong> Double-click series name header to edit (multi-series charts)</li>
                                         <li><strong>Delete Column:</strong> Hover column header, click 🗑️ icon</li>
                                         <li><strong>Paste from Excel:</strong> Ctrl/Cmd + V (copies multiple cells)</li>
                                     </ul>
@@ -544,10 +577,18 @@ class ChartSpreadsheetEditor {
                          onclick="window.chartEditor_${this.safeChartId}.deleteSeriesColumn('${col}')"
                          title="Delete series">🗑️</button>` : '';
 
+            // v3.4.20: Series names are editable (not Label column)
+            const isSeriesColumn = col !== 'Label' && this.columnConfig.canAddColumns;
+            const headerContent = isSeriesColumn
+                ? `<input type="text"
+                         class="spreadsheet-series-name-input"
+                         value="${col}"
+                         data-original-name="${col}"
+                         readonly />${activeIcon}`
+                : `<span class="col-header-content">${col} ${activeIcon}</span>`;
+
             html += `<th class="spreadsheet-col-header ${activeClass}" data-column="${col}">
-                <span class="col-header-content">
-                    ${col} ${activeIcon}
-                </span>
+                ${headerContent}
                 ${deleteBtn}
             </th>`;
         });
@@ -931,6 +972,39 @@ class ChartSpreadsheetEditor {
                 gap: 4px;
             }
 
+            /* v3.4.20: Editable series name input in column header */
+            /* v3.4.21: White background + visible border like regular cells */
+            .spreadsheet-series-name-input {
+                width: calc(100% - 40px);
+                max-width: 150px;
+                text-align: center;
+                font-weight: 600;
+                font-size: 14px;
+                font-family: inherit;
+                background: white;
+                border: 1px solid #E0E0E0;
+                border-radius: 4px;
+                padding: 4px 8px;
+                cursor: pointer;
+                color: #333;
+            }
+
+            .spreadsheet-series-name-input:hover {
+                background: #FAFAFA;
+                border-color: #BDBDBD;
+            }
+
+            .spreadsheet-series-name-input:focus {
+                background: white;
+                border: 2px solid #3B82F6;
+                cursor: text;
+                outline: none;
+            }
+
+            .spreadsheet-series-name-input[readonly] {
+                cursor: pointer;
+            }
+
             .spreadsheet-delete-col-btn {
                 background: transparent;
                 border: none;
@@ -1237,6 +1311,12 @@ class ChartSpreadsheetEditor {
                 const len = e.target.value.length;
                 e.target.setSelectionRange(len, len);
             }
+            // v3.4.20: Double-click on series name to edit
+            if (e.target.classList.contains('spreadsheet-series-name-input')) {
+                e.target.removeAttribute('readonly');
+                e.target.focus();
+                e.target.select();  // Select all text for easy replacement
+            }
         });
 
         // Cell navigation
@@ -1342,11 +1422,32 @@ class ChartSpreadsheetEditor {
             }
         });
 
+        // v3.4.20: Series name keyboard handling (Enter to save, Escape to cancel)
+        table.addEventListener('keydown', (e) => {
+            const input = e.target;
+            if (!input.classList.contains('spreadsheet-series-name-input')) return;
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();  // Trigger blur to save
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                input.value = input.dataset.originalName;  // Revert to original
+                input.setAttribute('readonly', 'readonly');
+                input.blur();
+            }
+        });
+
         // Auto-save on blur and restore readonly state
         table.addEventListener('blur', (e) => {
             if (e.target.classList.contains('spreadsheet-input')) {
                 this._updateCellValue(e.target);
                 // Restore readonly state (Excel-style: exit edit mode)
+                e.target.setAttribute('readonly', 'readonly');
+            }
+            // v3.4.20: Save series name on blur
+            if (e.target.classList.contains('spreadsheet-series-name-input')) {
+                this._updateSeriesName(e.target);
                 e.target.setAttribute('readonly', 'readonly');
             }
         }, true);
@@ -1530,6 +1631,96 @@ class ChartSpreadsheetEditor {
                 row[column] = value;
             }
         }
+    }
+
+    /**
+     * v3.4.20: Update series name (column header rename)
+     * Propagates name change across all data structures
+     */
+    _updateSeriesName(input) {
+        const oldName = input.dataset.originalName;
+        const newName = input.value.trim();
+
+        // Validation: empty name
+        if (!newName) {
+            input.value = oldName;
+            this._showToast('Series name cannot be empty', 'error');
+            return;
+        }
+
+        // No change
+        if (newName === oldName) return;
+
+        // Validation: duplicate name
+        if (this.columnConfig.columns.includes(newName)) {
+            input.value = oldName;
+            this._showToast('Series name already exists', 'error');
+            return;
+        }
+
+        // Validation: reserved name
+        if (newName === 'Label') {
+            input.value = oldName;
+            this._showToast('"Label" is a reserved column name', 'error');
+            return;
+        }
+
+        // 1. Update columnConfig.columns array
+        const colIndex = this.columnConfig.columns.indexOf(oldName);
+        if (colIndex > -1) {
+            this.columnConfig.columns[colIndex] = newName;
+        }
+
+        // 2. Update activeColumns if present
+        const activeIndex = this.columnConfig.activeColumns.indexOf(oldName);
+        if (activeIndex > -1) {
+            this.columnConfig.activeColumns[activeIndex] = newName;
+        }
+
+        // 3. Update columnTypes mapping
+        if (this.columnConfig.columnTypes[oldName]) {
+            this.columnConfig.columnTypes[newName] = this.columnConfig.columnTypes[oldName];
+            delete this.columnConfig.columnTypes[oldName];
+        }
+
+        // 4. Rename key in ALL rows of this.data
+        this.data.forEach(row => {
+            if (row.hasOwnProperty(oldName)) {
+                row[newName] = row[oldName];
+                delete row[oldName];
+            }
+        });
+
+        // 5. Update the input's data attribute for future edits
+        input.dataset.originalName = newName;
+
+        // 6. Update data-column attributes on header and all cells in this column
+        const table = document.getElementById(`spreadsheet-table-${this.chartId}`);
+        if (table) {
+            // Update header th
+            const header = table.querySelector(`th[data-column="${oldName}"]`);
+            if (header) {
+                header.dataset.column = newName;
+            }
+
+            // Update all cells in this column
+            const cells = table.querySelectorAll(`td[data-column="${oldName}"]`);
+            cells.forEach(cell => {
+                cell.dataset.column = newName;
+                const cellInput = cell.querySelector('input');
+                if (cellInput) {
+                    cellInput.dataset.column = newName;
+                }
+            });
+
+            // Update delete button onclick handler
+            const deleteBtn = header?.querySelector('.spreadsheet-delete-col-btn');
+            if (deleteBtn) {
+                deleteBtn.setAttribute('onclick', `window.chartEditor_${this.safeChartId}.deleteSeriesColumn('${newName}')`);
+            }
+        }
+
+        this._showToast(`Renamed "${oldName}" to "${newName}"`, 'success');
     }
 
     /**
@@ -1830,40 +2021,60 @@ class ChartSpreadsheetEditor {
     _exportData() {
         const chartType = this.chartType;
 
-        // Define multi-series chart types explicitly (no auto-detection)
+        // v3.4.24: Detect multi-series by BOTH chartType AND data structure
+        // This handles cases where chartType is 'bar' but we have multiple series columns
         const multiSeriesChartTypes = ['bar_grouped', 'bar_stacked', 'area_stacked', 'mixed', 'combo', 'combination'];
+        const seriesColumns = this.columnConfig.columns.filter(col => col !== 'Label');
+        const hasMultipleSeries = seriesColumns.length > 1;
+
+        // v3.4.24: Also detect by chartType being basic Chart.js type with multiple series
+        const isBasicMultiSeriesChart = ['bar', 'line', 'area'].includes(chartType) && hasMultipleSeries;
+        const isMultiSeriesFormat = multiSeriesChartTypes.includes(chartType) || isBasicMultiSeriesChart;
+
+        console.log(`📊 _exportData: chartType=${chartType}, seriesColumns=${seriesColumns.length}, isMultiSeriesFormat=${isMultiSeriesFormat}`);
 
         if (chartType === 'scatter') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y }));
         } else if (chartType === 'bubble') {
             return this.data.map(row => ({ label: row.Label, x: row.X, y: row.Y, r: row.Radius }));
-        } else if (multiSeriesChartTypes.includes(chartType)) {
-            // Multi-series format (ONLY for explicitly multi-series chart types)
+        } else if (isMultiSeriesFormat) {
+            // v3.4.24: Multi-series format - detect by chartType OR by having multiple series columns
             const labels = this.data.map(row => row.Label);
-            const seriesColumns = this.columnConfig.columns.filter(col => col !== 'Label');
             const datasets = seriesColumns.map(seriesName => ({
                 label: seriesName,
                 data: this.data.map(row => parseFloat(row[seriesName]) || 0)
             }));
+            console.log(`📊 Exporting multi-series: ${datasets.length} datasets with labels:`, datasets.map(d => d.label));
             return { labels, datasets };
         } else if (chartType === 'd3_sankey') {
-            // Reconstitute arrow notation
-            return this.data.map(row => ({
-                label: `${row.Source} → ${row.Target}`,
-                value: row.Value
-            }));
+            // v3.4.31: Reconstitute arrow notation, ensure value is number
+            return this.data.map(row => {
+                const numValue = parseFloat(row.Value);
+                return {
+                    label: `${row.Source} → ${row.Target}`,
+                    value: isNaN(numValue) ? 0 : numValue
+                };
+            });
         } else if (chartType === 'd3_choropleth_usa') {
-            return this.data.map(row => ({ label: row.State, value: row.Value }));
+            // v3.4.31: Ensure value is number
+            return this.data.map(row => {
+                const numValue = parseFloat(row.Value);
+                return { label: row.State, value: isNaN(numValue) ? 0 : numValue };
+            });
         } else {
             // Simple label-value format - use actual column names from columnConfig
+            // v3.4.31: Ensure values are numbers, labels are strings for API compatibility
             const columns = this.columnConfig.columns;
             const labelCol = columns[0]; // Usually 'Label'
             const valueCol = columns[1]; // Usually 'Value' or other numeric column
 
-            return this.data.map(row => ({
-                label: row[labelCol],
-                value: row[valueCol]
-            }));
+            return this.data.map(row => {
+                const numValue = parseFloat(row[valueCol]);
+                return {
+                    label: String(row[labelCol] || '').trim(),
+                    value: isNaN(numValue) ? 0 : numValue
+                };
+            });
         }
     }
 
@@ -1956,7 +2167,21 @@ class ChartSpreadsheetEditor {
                 chart.data.datasets[0].data = chartData.map(d => d.value);
             } else if (chartData.labels && chartData.datasets) {
                 chart.data.labels = chartData.labels;
-                chart.data.datasets = chartData.datasets;
+                // v3.4.21: Merge new data with existing datasets to preserve styling
+                chartData.datasets.forEach((newDS, i) => {
+                    if (chart.data.datasets[i]) {
+                        // Update label and data, preserve all other properties (colors, etc.)
+                        chart.data.datasets[i].label = newDS.label;
+                        chart.data.datasets[i].data = newDS.data;
+                    } else {
+                        // New dataset (e.g., if user added one)
+                        chart.data.datasets.push(newDS);
+                    }
+                });
+                // Remove excess datasets if user deleted some
+                if (chart.data.datasets.length > chartData.datasets.length) {
+                    chart.data.datasets.splice(chartData.datasets.length);
+                }
             }
             chart.update();
         }
