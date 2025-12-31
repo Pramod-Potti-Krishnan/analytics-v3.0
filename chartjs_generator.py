@@ -3240,11 +3240,19 @@ class ChartJSGenerator:
   </div>
 
   <script>
-    // v3.4.36: Self-contained D3 editor functions
+    // v3.4.39: Self-contained D3 editor functions with body-level modal
     var d3EditorData_{js_safe_id} = {json.dumps(editor_data)};
 
     window.openD3Editor_{js_safe_id} = function() {{
       console.log('📊 Opening D3 editor for {chart_id}');
+
+      const modal = document.getElementById('{modal_id}');
+
+      // v3.4.39: Move modal to document.body to escape parent stacking context
+      // This ensures the modal covers the entire viewport, not just the chart container
+      if (modal.parentElement !== document.body) {{
+        document.body.appendChild(modal);
+      }}
 
       // Populate table
       const tbody = document.getElementById('d3-tbody-{js_safe_id}');
@@ -3268,7 +3276,7 @@ class ChartJSGenerator:
       }});
 
       // Show modal
-      document.getElementById('{modal_id}').style.display = 'flex';
+      modal.style.display = 'flex';
     }};
 
     window.closeD3Editor_{js_safe_id} = function() {{
