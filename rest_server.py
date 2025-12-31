@@ -1720,17 +1720,28 @@ async def update_chart_data(data: ChartDataUpdate):
                 f"({len(data.labels)} labels, {len(data.values)} values)"
             )
 
-        # TODO: Save to database when ChartData model is available
-        # For now, just return success to allow client-side editing
-        # In production, you'd save to PostgreSQL or Supabase
+        # v3.4.41: Save to Supabase for persistence
+        saved = None
+        if not is_scatter_bubble and not is_multi_series:
+            # Single-series format - save to Supabase
+            saved = storage.save_chart_data(
+                chart_id=data.chart_id,
+                presentation_id=data.presentation_id,
+                labels=data.labels,
+                values=data.values,
+                chart_type=data.chart_type
+            )
+            if not saved:
+                logger.warning(f"Chart data save returned None for {data.chart_id}")
 
         response_data = {
             "success": True,
-            "message": f"Chart data updated successfully ({format_type})",
+            "message": f"Chart data saved successfully ({format_type})",
             "chart_id": data.chart_id,
             "presentation_id": data.presentation_id,
             "format": format_type,
-            "chart_type": data.chart_type
+            "chart_type": data.chart_type,
+            "persisted": saved is not None
         }
 
         if is_scatter_bubble:
@@ -1742,6 +1753,8 @@ async def update_chart_data(data: ChartDataUpdate):
         else:
             response_data["labels_count"] = len(data.labels)
             response_data["values_count"] = len(data.values)
+            if saved:
+                response_data["saved_at"] = saved.get('updated_at')
 
         return response_data
 
@@ -1751,27 +1764,38 @@ async def update_chart_data(data: ChartDataUpdate):
 
 
 @app.get("/api/charts/get-data/{presentation_id}", tags=["Interactive Editor"])
-async def get_chart_data(presentation_id: str):
+async def get_chart_data(presentation_id: str, chart_id: Optional[str] = None):
     """
-    Get all saved chart data for a presentation.
+    Get saved chart data for a presentation.
+
+    v3.4.41: Now retrieves from Supabase for persistence.
 
     Args:
         presentation_id: Presentation UUID
+        chart_id: Optional specific chart ID to retrieve
 
     Returns:
-        List of chart data edits
+        Chart data edit(s) from Supabase
     """
     try:
-        logger.info(f"Fetching chart data for presentation: {presentation_id}")
-
-        # TODO: Load from database when ChartData model is available
-        # For now, return empty list
-
-        return {
-            "success": True,
-            "presentation_id": presentation_id,
-            "charts": []
-        }
+        if chart_id:
+            logger.info(f"Fetching chart data for: {chart_id} in {presentation_id}")
+            data = storage.get_chart_data(chart_id, presentation_id)
+            return {
+                "success": True,
+                "presentation_id": presentation_id,
+                "chart_id": chart_id,
+                "data": data
+            }
+        else:
+            logger.info(f"Fetching all chart data for presentation: {presentation_id}")
+            charts = storage.get_presentation_chart_data(presentation_id)
+            return {
+                "success": True,
+                "presentation_id": presentation_id,
+                "charts": charts,
+                "count": len(charts)
+            }
 
     except Exception as e:
         logger.error(f"Failed to fetch chart data: {e}", exc_info=True)

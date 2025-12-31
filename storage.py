@@ -134,3 +134,96 @@ class SupabaseStorage:
         except Exception as e:
             logger.error(f"Failed to list charts: {e}")
             return []
+
+    # =========================================================================
+    # Chart Data Persistence (v3.4.41)
+    # =========================================================================
+
+    def save_chart_data(
+        self,
+        chart_id: str,
+        presentation_id: str,
+        labels: list,
+        values: list,
+        chart_type: str = None
+    ) -> Optional[dict]:
+        """
+        Save or update chart data edit to Supabase.
+
+        Args:
+            chart_id: Unique chart identifier
+            presentation_id: Presentation UUID
+            labels: List of X-axis labels
+            values: List of Y-axis values
+            chart_type: Type of chart (optional)
+
+        Returns:
+            Saved record dict, or None if save failed
+        """
+        try:
+            data = {
+                'chart_id': chart_id,
+                'presentation_id': presentation_id,
+                'labels': labels,
+                'values': values,
+                'chart_type': chart_type,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            result = self.client.table('chart_data_edits').upsert(
+                data,
+                on_conflict='chart_id,presentation_id'
+            ).execute()
+
+            logger.info(f"Chart data saved: {chart_id} in {presentation_id}")
+            return result.data[0] if result.data else None
+
+        except Exception as e:
+            logger.error(f"Failed to save chart data: {e}", exc_info=True)
+            return None
+
+    def get_chart_data(self, chart_id: str, presentation_id: str) -> Optional[dict]:
+        """
+        Get saved chart data edit.
+
+        Args:
+            chart_id: Unique chart identifier
+            presentation_id: Presentation UUID
+
+        Returns:
+            Chart data dict, or None if not found
+        """
+        try:
+            result = self.client.table('chart_data_edits').select('*').eq(
+                'chart_id', chart_id
+            ).eq('presentation_id', presentation_id).execute()
+
+            if result.data:
+                logger.info(f"Found saved chart data: {chart_id}")
+                return result.data[0]
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get chart data: {e}", exc_info=True)
+            return None
+
+    def get_presentation_chart_data(self, presentation_id: str) -> list:
+        """
+        Get all saved chart edits for a presentation.
+
+        Args:
+            presentation_id: Presentation UUID
+
+        Returns:
+            List of chart data dicts
+        """
+        try:
+            result = self.client.table('chart_data_edits').select('*').eq(
+                'presentation_id', presentation_id
+            ).execute()
+
+            logger.info(f"Found {len(result.data or [])} chart edits for {presentation_id}")
+            return result.data or []
+
+        except Exception as e:
+            logger.error(f"Failed to get presentation chart data: {e}", exc_info=True)
+            return []

@@ -3243,6 +3243,27 @@ class ChartJSGenerator:
     // v3.4.39: Self-contained D3 editor functions with body-level modal
     var d3EditorData_{js_safe_id} = {json.dumps(editor_data)};
 
+    // v3.4.41: Load saved edits from Supabase on chart init
+    (async function loadSavedEdits_{js_safe_id}() {{
+      try {{
+        const response = await fetch('{api_base_url}/get-data/{presentation_id}?chart_id={chart_id}');
+        const result = await response.json();
+        if (result.success && result.data && result.data.labels && result.data.values) {{
+          console.log('📊 Loaded saved edits for {chart_id}:', result.data);
+          // Update local data with saved values
+          d3EditorData_{js_safe_id} = result.data.labels.map((label, i) => ({{
+            label: label,
+            value: result.data.values[i] || 0
+          }}));
+          console.log('✅ Applied saved chart data:', d3EditorData_{js_safe_id}.length, 'items');
+        }} else {{
+          console.log('📊 No saved edits found for {chart_id}, using original data');
+        }}
+      }} catch (e) {{
+        console.log('📊 Could not load saved edits for {chart_id}:', e.message);
+      }}
+    }})();
+
     window.openD3Editor_{js_safe_id} = function() {{
       console.log('📊 Opening D3 editor for {chart_id}');
 
