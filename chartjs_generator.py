@@ -3201,9 +3201,9 @@ class ChartJSGenerator:
     ✏️
   </button>
 
-  <!-- Self-contained D3 Editor Modal (v3.4.36) -->
-  <div id="{modal_id}" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+  <!-- Self-contained D3 Editor Modal (v3.4.37: added pointer-events for interactivity) -->
+  <div id="{modal_id}" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; pointer-events: auto;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); pointer-events: auto; position: relative;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -3843,13 +3843,14 @@ class ChartJSGenerator:
                 console.log('✅ D3 Treemap {chart_id_safe} initialized');
             }}
 
-            // Reveal.js-aware initialization (matches Chart.js pattern)
+            // v3.4.37: Improved initialization for first-load rendering
+            // Reveal.js-aware initialization with fallback for cases where 'ready' has already fired
             if (typeof Reveal !== 'undefined') {{
                 Reveal.on('ready', function() {{
                     try {{
                         const currentSlide = Reveal.getCurrentSlide();
                         if (currentSlide && currentSlide.querySelector('#{chart_id_safe}')) {{
-                            setTimeout(initD3Treemap, 100);
+                            setTimeout(initD3Treemap, 300);  // Increased from 100ms
                         }}
                     }} catch (e) {{
                         console.warn('D3 treemap init on ready failed:', e);
@@ -3865,6 +3866,16 @@ class ChartJSGenerator:
                         console.warn('D3 treemap init on slide change failed:', e);
                     }}
                 }});
+
+                // v3.4.37: Fallback for cases where Reveal 'ready' already fired before script loaded
+                // This handles first-load rendering when the script executes after Reveal is ready
+                setTimeout(function() {{
+                    const container = document.getElementById('{chart_id_safe}');
+                    if (container && !container.querySelector('svg')) {{
+                        console.log('D3 Treemap fallback init - Reveal ready may have already fired');
+                        initD3Treemap();
+                    }}
+                }}, 500);
             }} else {{
                 // Standalone mode (no Reveal.js)
                 if (document.readyState === 'loading') {{
