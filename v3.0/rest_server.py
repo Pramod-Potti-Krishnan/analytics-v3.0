@@ -545,7 +545,7 @@ async def root():
     """Service information endpoint."""
     return {
         "service": "Analytics Microservice v3",
-        "version": "3.1.6",
+        "version": "3.5.0",
         "status": "running",
         "api_type": "REST",
         "endpoints": {
@@ -628,7 +628,7 @@ async def get_capabilities():
 
     return {
         "service": "analytics-service",
-        "version": "3.1.6",
+        "version": "3.5.0",
         "status": "healthy",
 
         "capabilities": {
