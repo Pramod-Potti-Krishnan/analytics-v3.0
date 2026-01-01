@@ -76,6 +76,9 @@ from layout_service_palette import (
     get_available_palettes
 )
 
+# v3.5.0: Atomic Chart Routes
+from api.atomic_routes import router as atomic_router
+
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
@@ -119,7 +122,7 @@ response = requests.post(
 - **Chart Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
 - **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
     """,
-    version="3.1.6",
+    version="3.5.0",
     contact={
         "name": "Analytics Service Team",
         "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
@@ -166,6 +169,10 @@ response = requests.post(
         {
             "name": "Service Coordination",
             "description": "Director Agent coordination endpoints for Strawman Service integration (Phase 1-3)"
+        },
+        {
+            "name": "Atomic Charts",
+            "description": "Generate atomic chart elements with synthetic data for frontend positioning (v3.5.0)"
         }
     ]
 )
@@ -181,6 +188,9 @@ app.add_middleware(
 
 # Mount static files for Excel-like chart editor
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# v3.5.0: Include atomic chart routes
+app.include_router(atomic_router)
 
 
 # Exception handlers
