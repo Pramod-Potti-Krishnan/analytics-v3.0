@@ -3244,6 +3244,7 @@ class ChartJSGenerator:
     var d3EditorData_{js_safe_id} = {json.dumps(editor_data)};
 
     // v3.4.41: Load saved edits from Supabase on chart init
+    // v3.4.42: Also re-render the chart with saved data
     (async function loadSavedEdits_{js_safe_id}() {{
       try {{
         const response = await fetch('{api_base_url}/get-data/{presentation_id}?chart_id={chart_id}');
@@ -3256,6 +3257,17 @@ class ChartJSGenerator:
             value: result.data.values[i] || 0
           }}));
           console.log('✅ Applied saved chart data:', d3EditorData_{js_safe_id}.length, 'items');
+
+          // v3.4.42: Re-render the D3 chart with saved data
+          // Wait for the chart init function to be available
+          setTimeout(() => {{
+            if (typeof window.initD3Treemap_{js_safe_id} === 'function') {{
+              console.log('🔄 Re-rendering D3 treemap with saved data...');
+              window.initD3Treemap_{js_safe_id}();
+            }} else {{
+              console.log('⚠️ D3 treemap init function not available yet');
+            }}
+          }}, 600);  // Wait for chart to initialize first
         }} else {{
           console.log('📊 No saved edits found for {chart_id}, using original data');
         }}
@@ -3394,12 +3406,18 @@ class ChartJSGenerator:
         // Close modal and show success
         closeD3Editor_{js_safe_id}();
 
+        // v3.4.42: Re-render chart immediately with saved data
+        if (typeof window.initD3Treemap_{js_safe_id} === 'function') {{
+          console.log('🔄 Re-rendering D3 treemap with saved data...');
+          window.initD3Treemap_{js_safe_id}();
+        }}
+
         // Show toast notification
         const toast = document.createElement('div');
-        toast.innerHTML = '✅ Chart data saved! Refresh page to see D3 chart updates.';
+        toast.innerHTML = '✅ Chart data saved and updated!';
         toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; z-index: 1000000; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
         document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 4000);
+        setTimeout(() => toast.remove(), 3000);
 
       }} catch (error) {{
         console.error('❌ Error saving D3 chart data:', error);
@@ -3796,9 +3814,26 @@ class ChartJSGenerator:
     <div id="{chart_id_safe}" style="padding: 10px;"></div>
     <script>
         (function() {{
+            // v3.4.42: Store original data for fallback
+            const originalData = {json.dumps(hierarchical_data)};
+
             function initD3Treemap() {{
-                // Data
-                const data = {json.dumps(hierarchical_data)};
+                // v3.4.42: Check for saved editor data first
+                let data;
+                if (typeof d3EditorData_{js_safe_id} !== 'undefined' && d3EditorData_{js_safe_id}.length > 0) {{
+                    // Convert editor format to hierarchical D3 format
+                    data = {{
+                        name: 'root',
+                        children: d3EditorData_{js_safe_id}.map(item => ({{
+                            name: item.label,
+                            value: parseFloat(item.value) || 0
+                        }}))
+                    }};
+                    console.log('📊 D3 Treemap using saved editor data');
+                }} else {{
+                    // Use original data
+                    data = originalData;
+                }}
                 const colors = {json.dumps(colors)};
 
                 // Dimensions
@@ -3885,6 +3920,9 @@ class ChartJSGenerator:
 
                 console.log('✅ D3 Treemap {chart_id_safe} initialized');
             }}
+
+            // v3.4.42: Expose initD3Treemap globally for re-rendering after edits
+            window.initD3Treemap_{js_safe_id} = initD3Treemap;
 
             // v3.4.37: Improved initialization for first-load rendering
             // Reveal.js-aware initialization with fallback for cases where 'ready' has already fired
