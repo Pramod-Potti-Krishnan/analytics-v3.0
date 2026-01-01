@@ -2,6 +2,11 @@
 REST API server for Analytics Microservice v3.
 FastAPI-based REST endpoints replacing WebSocket implementation.
 
+v3.5.0 (2026-01-01):
+- Added 14 atomic chart endpoints for gold standard charts
+- Each endpoint generates self-contained chart HTML with synthetic data
+- Optional Key Insights panel as separate element for frontend positioning
+
 v3.4.5 (2025-12-28):
 - Monthly labels ("Jan '24") instead of "Period X"
 - Blue gradient Key Insights panel with blue heading/bullets
