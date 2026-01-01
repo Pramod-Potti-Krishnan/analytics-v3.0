@@ -14,7 +14,9 @@ from .atomic_models import (
     ChartTypeId,
     GOLD_STANDARD_CHARTS
 )
-from .chart_data import ChartData
+
+# Note: ChartData (SQLAlchemy model) not imported - requires SQLAlchemy dependency
+# which is not currently needed for atomic chart endpoints
 
 __all__ = [
     'AtomicChartRequest',
@@ -24,6 +26,5 @@ __all__ = [
     'ChartTypeCatalogItem',
     'ChartDimensions',
     'ChartTypeId',
-    'GOLD_STANDARD_CHARTS',
-    'ChartData'
+    'GOLD_STANDARD_CHARTS'
 ]
