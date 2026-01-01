@@ -3799,6 +3799,8 @@ class ChartJSGenerator:
 
         # Safe chart ID
         chart_id_safe = chart_id or f"d3-treemap-{id(data)}"
+        # v3.4.42: JS-safe ID for global function names
+        js_safe_id = chart_id_safe.replace('-', '_').replace('.', '_').replace(' ', '_')
 
         # Dimensions - v3.4.35: Reduced width to fit V2-chart-text layout with Key Insights panel
         container_width = 850  # Fits alongside ~400px Key Insights panel
