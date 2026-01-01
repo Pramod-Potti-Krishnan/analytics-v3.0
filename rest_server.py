@@ -2,6 +2,11 @@
 REST API server for Analytics Microservice v3.
 FastAPI-based REST endpoints replacing WebSocket implementation.
 
+v3.5.0 (2026-01-01):
+- Added 14 atomic chart endpoints for gold standard charts
+- Each endpoint generates self-contained chart HTML with synthetic data
+- Optional Key Insights panel as separate element for frontend positioning
+
 v3.4.5 (2025-12-28):
 - Monthly labels ("Jan '24") instead of "Period X"
 - Blue gradient Key Insights panel with blue heading/bullets
@@ -76,6 +81,10 @@ from layout_service_palette import (
     get_available_palettes
 )
 
+# v3.5.0: Atomic Chart Routes
+from api.atomic_routes import router as atomic_router
+from api.chart_data_routes import router as chart_data_router
+
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
@@ -119,7 +128,7 @@ response = requests.post(
 - **Chart Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
 - **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
     """,
-    version="3.1.6",
+    version="3.5.0",
     contact={
         "name": "Analytics Service Team",
         "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
@@ -166,6 +175,10 @@ response = requests.post(
         {
             "name": "Service Coordination",
             "description": "Director Agent coordination endpoints for Strawman Service integration (Phase 1-3)"
+        },
+        {
+            "name": "Atomic Charts",
+            "description": "Generate atomic chart elements with synthetic data for frontend positioning (v3.5.0)"
         }
     ]
 )
@@ -181,6 +194,12 @@ app.add_middleware(
 
 # Mount static files for Excel-like chart editor
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# v3.5.0: Include atomic chart routes
+app.include_router(atomic_router)
+
+# Interactive Editor routes (chart data CRUD)
+app.include_router(chart_data_router)
 
 
 # Exception handlers
@@ -530,7 +549,7 @@ async def root():
     """Service information endpoint."""
     return {
         "service": "Analytics Microservice v3",
-        "version": "3.1.6",
+        "version": "3.5.0",
         "status": "running",
         "api_type": "REST",
         "endpoints": {
@@ -613,7 +632,7 @@ async def get_capabilities():
 
     return {
         "service": "analytics-service",
-        "version": "3.1.6",
+        "version": "3.5.0",
         "status": "healthy",
 
         "capabilities": {
@@ -1502,304 +1521,8 @@ async def generate_analytics_batch(request: BatchAnalyticsRequest):
 # ========================================
 # INTERACTIVE CHART EDITOR API
 # ========================================
-
-class DatasetSchema(BaseModel):
-    """Single dataset in multi-series format."""
-    label: str = Field(..., min_length=1, description="Series name/label")
-    data: List[float] = Field(..., min_items=2, max_items=50, description="Data points for this series")
-
-    @validator('data')
-    def validate_data(cls, v):
-        """Validate data array contains valid numbers."""
-        for i, val in enumerate(v):
-            if not isinstance(val, (int, float)):
-                raise ValueError(f"Data point at index {i} must be a number, got {type(val).__name__}")
-            if val != val:  # NaN check
-                raise ValueError(f"Data point at index {i} cannot be NaN")
-            if abs(val) == float('inf'):
-                raise ValueError(f"Data point at index {i} cannot be infinity")
-        return [float(val) for val in v]
-
-
-class ScatterBubbleDataPoint(BaseModel):
-    """Single data point for scatter/bubble charts."""
-    x: float = Field(..., description="X coordinate")
-    y: float = Field(..., description="Y coordinate")
-    r: Optional[float] = Field(default=None, description="Bubble radius (bubble charts only)")
-    label: str = Field(..., min_length=1, description="Point label")
-
-    @validator('x', 'y', 'r')
-    def validate_numeric(cls, v, values, **kwargs):
-        """Validate numeric values."""
-        # Get field name from kwargs (Pydantic V2 compatibility)
-        field_name = kwargs.get('field', {}).get('name', 'value')
-
-        if v is None:
-            # r is optional, x and y are required (handled by Field)
-            return v
-
-        if v != v:  # NaN check
-            raise ValueError(f"{field_name} cannot be NaN")
-        if abs(v) == float('inf'):
-            raise ValueError(f"{field_name} cannot be infinity")
-
-        return v
-
-
-class ChartDataUpdate(BaseModel):
-    """Request to update chart data - supports simple, multi-series, and scatter/bubble formats."""
-    chart_id: str = Field(..., min_length=1, description="Chart identifier")
-    presentation_id: str = Field(..., min_length=1, description="Presentation UUID")
-    chart_type: str = Field(..., description="Chart type (e.g., 'scatter', 'bubble', 'bar', etc.)")
-
-    # Simple charts: labels + values
-    labels: Optional[List[str]] = Field(default=None, min_items=2, max_items=50, description="X-axis labels (simple charts)")
-    # v3.4.34: Support both flat numbers and [start,end] arrays for waterfall charts
-    values: Optional[Union[List[float], List[List[float]]]] = Field(
-        default=None,
-        min_items=2,
-        max_items=50,
-        description="Y-axis values - numbers for simple charts, [start,end] arrays for waterfall"
-    )
-
-    # Multi-series charts: labels + datasets
-    datasets: Optional[List[DatasetSchema]] = Field(default=None, min_items=1, max_items=20, description="Multiple data series (multi-series charts)")
-
-    # Scatter/bubble charts: data points with x/y/r coordinates
-    data: Optional[List[ScatterBubbleDataPoint]] = Field(default=None, min_items=2, max_items=50, description="Data points for scatter/bubble charts")
-
-    timestamp: Optional[str] = Field(default=None, description="Update timestamp")
-
-    @validator('chart_id', 'presentation_id')
-    def validate_ids(cls, v):
-        """Ensure IDs are not empty or whitespace."""
-        if not v or not v.strip():
-            raise ValueError("ID cannot be empty or whitespace")
-        return v.strip()
-
-    @validator('labels')
-    def validate_labels(cls, v):
-        """Validate labels array (optional for scatter/bubble)."""
-        if v is None:
-            return v  # Optional for scatter/bubble charts
-
-        if len(v) < 2:
-            raise ValueError("At least 2 labels required")
-        if len(v) > 50:
-            raise ValueError("Maximum 50 labels allowed")
-
-        # Check for empty labels
-        for i, label in enumerate(v):
-            if not label or not str(label).strip():
-                raise ValueError(f"Label at index {i} cannot be empty")
-
-        # Check for duplicate labels
-        if len(v) != len(set(v)):
-            raise ValueError("Duplicate labels found. Each label must be unique")
-
-        return [str(label).strip() for label in v]
-
-    @validator('data', always=True)
-    def validate_format(cls, v, values):
-        """Validate that appropriate data format is provided based on chart type."""
-        chart_type = values.get('chart_type', '')
-        has_labels = values.get('labels') is not None
-        has_values = values.get('values') is not None
-        has_datasets = values.get('datasets') is not None
-        has_data = v is not None  # scatter/bubble data
-
-        # Scatter/bubble charts: require 'data' field
-        if chart_type in ['scatter', 'bubble']:
-            if not has_data:
-                raise ValueError(f"{chart_type} charts require 'data' field with x/y coordinates")
-            if has_labels or has_values or has_datasets:
-                raise ValueError(f"{chart_type} charts should only use 'data' field, not labels/values/datasets")
-
-            # Validate bubble charts have radius
-            if chart_type == 'bubble':
-                for i, point in enumerate(v):
-                    if point.r is None:
-                        raise ValueError(f"Bubble chart data point {i} missing radius 'r'")
-
-            return v
-
-        # Multi-series charts: require labels + datasets
-        if has_datasets:
-            if not has_labels:
-                raise ValueError("Multi-series charts require 'labels' field")
-            if has_values or has_data:
-                raise ValueError("Cannot mix datasets with values or data")
-
-            labels = values.get('labels', [])
-            # v3.4.22: Fix bug - iterate over datasets, not 'data' field (v is None for multi-series)
-            for i, ds in enumerate(values.get('datasets', [])):
-                if len(ds.data) != len(labels):
-                    raise ValueError(
-                        f"Dataset {i} ('{ds.label}'): data length ({len(ds.data)}) "
-                        f"must match labels length ({len(labels)})"
-                    )
-            return values.get('datasets')
-
-        # Simple charts: require labels + values
-        if has_values:
-            if not has_labels:
-                raise ValueError("Simple charts require 'labels' field")
-            if has_datasets or has_data:
-                raise ValueError("Cannot mix values with datasets or data")
-
-            labels = values.get('labels', [])
-            vals = values.get('values', [])
-            if len(vals) != len(labels):
-                raise ValueError(f"Number of values ({len(vals)}) must match number of labels ({len(labels)})")
-
-            chart_type = values.get('chart_type', '')
-
-            # v3.4.34: Waterfall charts use [start, end] arrays for floating bars
-            if chart_type == 'waterfall':
-                for i, val in enumerate(vals):
-                    if not isinstance(val, list) or len(val) != 2:
-                        raise ValueError(f"Waterfall value at index {i} must be [start, end] array")
-                    if not all(isinstance(x, (int, float)) for x in val):
-                        raise ValueError(f"Waterfall value at index {i} must contain numbers")
-                    # NaN/infinity check for both start and end
-                    for j, x in enumerate(val):
-                        if x != x:  # NaN check
-                            raise ValueError(f"Waterfall value at index {i}[{j}] cannot be NaN")
-                        if abs(x) == float('inf'):
-                            raise ValueError(f"Waterfall value at index {i}[{j}] cannot be infinity")
-                return v
-
-            # Simple charts use flat numbers
-            for i, val in enumerate(vals):
-                if not isinstance(val, (int, float)):
-                    raise ValueError(f"Value at index {i} must be a number, got {type(val).__name__}")
-                if val != val:  # NaN check
-                    raise ValueError(f"Value at index {i} cannot be NaN")
-                if abs(val) == float('inf'):
-                    raise ValueError(f"Value at index {i} cannot be infinity")
-            return v
-
-        # No valid format provided
-        raise ValueError("Must provide either: (1) labels+values for simple charts, (2) labels+datasets for multi-series, or (3) data for scatter/bubble")
-
-
-@app.post("/api/charts/update-data", tags=["Interactive Editor"])
-async def update_chart_data(data: ChartDataUpdate):
-    """
-    Save edited chart data (for interactive editor).
-
-    Supports both single-series (labels + values) and multi-series (labels + datasets) formats.
-
-    Args:
-        data: Chart data with labels and either values (single-series) or datasets (multi-series)
-
-    Returns:
-        Success status and message with format information
-    """
-    try:
-        # Determine format based on chart_type and available fields
-        is_scatter_bubble = data.chart_type in ['scatter', 'bubble'] and data.data is not None
-        is_multi_series = data.datasets is not None and not is_scatter_bubble
-
-        if is_scatter_bubble:
-            format_type = data.chart_type
-            logger.info(
-                f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
-                f"({len(data.data)} data points)"
-            )
-        elif is_multi_series:
-            format_type = "multi-series"
-            logger.info(
-                f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
-                f"({len(data.datasets)} series, {len(data.labels)} labels)"
-            )
-        else:
-            format_type = "single-series"
-            logger.info(
-                f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
-                f"({len(data.labels)} labels, {len(data.values)} values)"
-            )
-
-        # v3.4.41: Save to Supabase for persistence
-        saved = None
-        if not is_scatter_bubble and not is_multi_series:
-            # Single-series format - save to Supabase
-            saved = storage.save_chart_data(
-                chart_id=data.chart_id,
-                presentation_id=data.presentation_id,
-                labels=data.labels,
-                values=data.values,
-                chart_type=data.chart_type
-            )
-            if not saved:
-                logger.warning(f"Chart data save returned None for {data.chart_id}")
-
-        response_data = {
-            "success": True,
-            "message": f"Chart data saved successfully ({format_type})",
-            "chart_id": data.chart_id,
-            "presentation_id": data.presentation_id,
-            "format": format_type,
-            "chart_type": data.chart_type,
-            "persisted": saved is not None
-        }
-
-        if is_scatter_bubble:
-            response_data["data_points_count"] = len(data.data)
-        elif is_multi_series:
-            response_data["labels_count"] = len(data.labels)
-            response_data["series_count"] = len(data.datasets)
-            response_data["series_names"] = [ds.label for ds in data.datasets]
-        else:
-            response_data["labels_count"] = len(data.labels)
-            response_data["values_count"] = len(data.values)
-            if saved:
-                response_data["saved_at"] = saved.get('updated_at')
-
-        return response_data
-
-    except Exception as e:
-        logger.error(f"Failed to update chart data: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/charts/get-data/{presentation_id}", tags=["Interactive Editor"])
-async def get_chart_data(presentation_id: str, chart_id: Optional[str] = None):
-    """
-    Get saved chart data for a presentation.
-
-    v3.4.41: Now retrieves from Supabase for persistence.
-
-    Args:
-        presentation_id: Presentation UUID
-        chart_id: Optional specific chart ID to retrieve
-
-    Returns:
-        Chart data edit(s) from Supabase
-    """
-    try:
-        if chart_id:
-            logger.info(f"Fetching chart data for: {chart_id} in {presentation_id}")
-            data = storage.get_chart_data(chart_id, presentation_id)
-            return {
-                "success": True,
-                "presentation_id": presentation_id,
-                "chart_id": chart_id,
-                "data": data
-            }
-        else:
-            logger.info(f"Fetching all chart data for presentation: {presentation_id}")
-            charts = storage.get_presentation_chart_data(presentation_id)
-            return {
-                "success": True,
-                "presentation_id": presentation_id,
-                "charts": charts,
-                "count": len(charts)
-            }
-
-    except Exception as e:
-        logger.error(f"Failed to fetch chart data: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+# NOTE: Moved to api/chart_data_routes.py for modular architecture
+# Endpoints: POST /api/charts/update-data, GET /api/charts/get-data/{id}, DELETE /api/charts/delete-data
 
 
 # ========================================
