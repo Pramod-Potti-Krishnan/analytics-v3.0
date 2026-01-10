@@ -1,8 +1,11 @@
 """
-Atomic Chart Models for Analytics Microservice v3.5.0
+Atomic Chart Models for Analytics Microservice v3.5.1
 
 Request/response Pydantic models for atomic chart endpoints.
 Each endpoint generates a single chart element with synthetic data.
+
+v3.5.1 Changes:
+- Added enable_editor field to AtomicChartRequest for edit button support
 """
 
 from typing import List, Dict, Any, Optional
@@ -66,6 +69,10 @@ class AtomicChartRequest(BaseModel):
         None,
         description="Presentation UUID for editor integration"
     )
+    enable_editor: bool = Field(
+        False,
+        description="If True, adds interactive data editor button (requires presentation_id)"
+    )
     chart_title: Optional[str] = Field(
         None,
         max_length=200,
@@ -91,6 +98,8 @@ class AtomicChartRequest(BaseModel):
                 "num_points": 4,
                 "width": 850,
                 "height": 500,
+                "presentation_id": "abc123-def456",
+                "enable_editor": True,
                 "chart_title": "Revenue Growth Q1-Q4 2024",
                 "theme": "professional"
             }

@@ -1,5 +1,5 @@
 """
-Atomic Chart Routes for Analytics Microservice v3.5.0
+Atomic Chart Routes for Analytics Microservice v3.5.1
 
 14 atomic endpoints for gold standard chart types.
 Each endpoint generates a single chart element with synthetic data.
@@ -12,8 +12,13 @@ Usage Example:
         "narrative": "Show quarterly revenue growth for 2024",
         "include_insights": true,
         "width": 850,
-        "height": 500
+        "height": 500,
+        "enable_editor": true,
+        "presentation_id": "abc123-def456"
     }
+
+v3.5.1 Changes:
+- Pass enable_editor and presentation_id to generator for edit button support
 """
 
 import logging
@@ -148,7 +153,13 @@ async def generate_atomic_chart(
 
     try:
         generator = get_generator(theme)
-        response = await generator.generate(chart_id, request)
+        # v3.5.1: Pass enable_editor and presentation_id for edit button support
+        response = await generator.generate(
+            chart_id,
+            request,
+            enable_editor=request.enable_editor,
+            presentation_id=request.presentation_id
+        )
         return response
 
     except ValueError as e:
