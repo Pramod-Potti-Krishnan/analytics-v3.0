@@ -75,6 +75,10 @@ class AtomicChartRequest(BaseModel):
         "professional",
         description="Color theme for the chart"
     )
+    enable_editor: bool = Field(
+        True,
+        description="v3.6.0: If True, include edit button for interactive data editing"
+    )
 
     @validator('narrative')
     def validate_narrative(cls, v):

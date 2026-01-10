@@ -1,7 +1,9 @@
 """
-Models for Analytics Microservice v3.0
+Models for Analytics Microservice v3.6.0
 
 This module exposes Pydantic models for request/response handling.
+
+v3.6.0: Added enable_editor parameter to AtomicChartRequest
 """
 
 from .atomic_models import (

@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.5.0
+Atomic Chart Generator for Analytics Microservice v3.6.0
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -10,6 +10,11 @@ Key Features:
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
 - Frontend-ready element IDs
+
+v3.6.0 Changes:
+- Removed internal chart titles (external display only)
+- LLM-generated insight-style titles: "{takeaway}: {explanation}"
+- Title returned in response for slide template to display
 """
 
 import logging
@@ -203,17 +208,24 @@ class AtomicChartGenerator:
             num_points=request.num_points
         )
 
-        # 2. Generate chart title
-        chart_title = request.chart_title or self._generate_title(chart_id, request.narrative)
+        # 2. Generate chart title (v3.6.0: LLM-generated insight-style title)
+        if request.chart_title:
+            # User provided explicit title - use it
+            chart_title = request.chart_title
+        else:
+            # Generate LLM-powered insight-style title
+            chart_title = await self._generate_insight_title(chart_id, data, request.narrative)
 
-        # 3. Generate chart HTML
+        # 3. Generate chart HTML (v3.6.0: with optional edit button)
         chart_html = self._generate_chart_html(
             chart_id=chart_id,
             data=data,
             element_id=element_id,
             width=request.width,
             height=request.height,
-            chart_title=chart_title
+            chart_title=chart_title,
+            enable_editor=request.enable_editor,
+            presentation_id=request.presentation_id
         )
 
         # 4. Optionally generate Key Insights
@@ -248,7 +260,12 @@ class AtomicChartGenerator:
         )
 
     def _generate_title(self, chart_id: str, narrative: Optional[str]) -> str:
-        """Generate appropriate chart title."""
+        """
+        Generate basic chart title (used only as fallback).
+
+        v3.6.0: This is now only used when LLM insight title generation fails.
+        Primary title generation uses _generate_insight_title().
+        """
         if narrative:
             # Extract meaningful title from narrative
             words = narrative.split()[:6]
@@ -257,6 +274,45 @@ class AtomicChartGenerator:
         config = self.CHART_CONFIGS[chart_id]
         return config["display_name"]
 
+    async def _generate_insight_title(
+        self,
+        chart_id: str,
+        data: List[Dict[str, Any]],
+        narrative: Optional[str]
+    ) -> str:
+        """
+        Generate LLM-powered insight-style title.
+
+        v3.6.0: Returns format "{3-word takeaway}: {explanation 35-40 chars}"
+        Example: "Strong Growth: Revenue increased 22% quarter-over-quarter"
+
+        Args:
+            chart_id: Chart type ID
+            data: Generated synthetic data
+            narrative: User's narrative description
+
+        Returns:
+            Insight-style title string
+        """
+        config = self.CHART_CONFIGS[chart_id]
+
+        # Prepare data in format expected by insight generator
+        insight_data = {
+            "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
+            "values": [d.get("value", d.get("y", 0)) for d in data]
+        }
+
+        try:
+            title = await self.insight_generator.generate_insight_title(
+                chart_type=config["display_name"],
+                data=insight_data,
+                narrative=narrative
+            )
+            return title
+        except Exception as e:
+            logger.warning(f"LLM insight title generation failed: {e}, using fallback")
+            return self._generate_title(chart_id, narrative)
+
     def _generate_chart_html(
         self,
         chart_id: str,
@@ -264,12 +320,16 @@ class AtomicChartGenerator:
         element_id: str,
         width: int,
         height: int,
-        chart_title: str
+        chart_title: str,
+        enable_editor: bool = True,
+        presentation_id: Optional[str] = None
     ) -> str:
         """
         Generate self-contained chart HTML.
 
-        Returns HTML with embedded Chart.js initialization.
+        v3.6.0: Added enable_editor and presentation_id for edit button support.
+
+        Returns HTML with embedded Chart.js initialization and optional editor.
         """
         config = self.CHART_CONFIGS[chart_id]
 
@@ -301,14 +361,16 @@ class AtomicChartGenerator:
                 chart_title=chart_title
             )
 
-        # Wrap in atomic container
+        # Wrap in atomic container with optional editor
         return self._wrap_in_atomic_container(
             chart_html=chart_html,
             element_id=element_id,
             width=width,
             height=height,
             chart_id=chart_id,
-            chart_title=chart_title
+            chart_title=chart_title,
+            enable_editor=enable_editor,
+            presentation_id=presentation_id
         )
 
     def _call_generator_method(
@@ -321,8 +383,16 @@ class AtomicChartGenerator:
         chart_title: str,
         config: Dict[str, Any]
     ) -> str:
-        """Call the appropriate ChartJSGenerator method."""
+        """
+        Call the appropriate ChartJSGenerator method.
+
+        v3.6.0: Pass chart_title=None to generator to skip internal title rendering.
+        Title is returned in response for external display (insight-style format).
+        """
         generator = self.chartjs_generator
+
+        # v3.6.0: No internal titles - title returned in response for external display
+        internal_title = None
 
         # Map chart types to generator methods
         if method_name == "generate_line_chart":
@@ -331,7 +401,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_bar_chart":
             orientation = config.get("orientation", "vertical")
@@ -341,7 +411,7 @@ class AtomicChartGenerator:
                     height=height,
                     chart_id=element_id,
                     output_mode="inline_script",
-                    chart_title=chart_title
+                    chart_title=internal_title
                 )
             else:
                 return generator.generate_bar_chart(
@@ -349,7 +419,7 @@ class AtomicChartGenerator:
                     height=height,
                     chart_id=element_id,
                     output_mode="inline_script",
-                    chart_title=chart_title
+                    chart_title=internal_title
                 )
         elif method_name == "generate_pie_chart":
             return generator.generate_pie_chart(
@@ -357,7 +427,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_doughnut_chart":
             return generator.generate_doughnut_chart(
@@ -365,7 +435,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_scatter_chart":
             return generator.generate_scatter_chart(
@@ -373,7 +443,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_bubble_chart":
             return generator.generate_bubble_chart(
@@ -381,7 +451,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_polar_area_chart":
             return generator.generate_polar_area_chart(
@@ -389,7 +459,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_radar_chart":
             return generator.generate_radar_chart(
@@ -397,7 +467,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_area_chart":
             return generator.generate_area_chart(
@@ -405,7 +475,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_stacked_area_chart":
             return generator.generate_stacked_area_chart(
@@ -413,7 +483,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_grouped_bar_chart":
             return generator.generate_grouped_bar_chart(
@@ -421,7 +491,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_stacked_bar_chart":
             return generator.generate_stacked_bar_chart(
@@ -429,7 +499,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         elif method_name == "generate_waterfall_chart":
             return generator.generate_waterfall_chart(
@@ -437,7 +507,7 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=internal_title
             )
         else:
             # Fallback
@@ -446,7 +516,7 @@ class AtomicChartGenerator:
                 data=data,
                 element_id=element_id,
                 height=height,
-                chart_title=chart_title
+                chart_title=internal_title
             )
 
     def _generate_generic_chart(
@@ -535,20 +605,256 @@ class AtomicChartGenerator:
         width: int,
         height: int,
         chart_id: str,
-        chart_title: str
+        chart_title: str,
+        enable_editor: bool = True,
+        presentation_id: Optional[str] = None
     ) -> str:
-        """Wrap chart HTML in atomic container for frontend positioning."""
+        """
+        Wrap chart HTML in atomic container for frontend positioning.
+
+        v3.6.0:
+        - Removed internal title bar - title is now returned in response
+        - Added edit button and modal for interactive data editing
+        """
+        js_safe_id = element_id.replace('-', '_')
+        modal_id = f"modal-{element_id}"
+
+        # Generate edit button and modal if enabled
+        if enable_editor:
+            edit_button = self._generate_edit_button(js_safe_id)
+            editor_modal = self._generate_editor_modal(
+                element_id=element_id,
+                js_safe_id=js_safe_id,
+                modal_id=modal_id,
+                chart_id=chart_id,
+                presentation_id=presentation_id
+            )
+        else:
+            edit_button = ""
+            editor_modal = ""
+
         return f'''<div class="atomic-chart-container"
      data-chart-id="{chart_id}"
      data-element-id="{element_id}"
      style="width: {width}px; height: {height}px; position: relative;">
-  <div class="chart-title-bar" style="padding: 8px 16px; font-weight: 600; font-size: 16px; color: #1f2937;">
-    {chart_title}
-  </div>
-  <div class="chart-content" style="flex: 1; padding: 12px;">
+  <div class="chart-content" style="width: 100%; height: 100%;">
     {chart_html}
   </div>
-</div>'''
+  {edit_button}
+</div>
+{editor_modal}'''
+
+    def _generate_edit_button(self, js_safe_id: str) -> str:
+        """Generate edit button HTML for atomic chart."""
+        return f'''<button class="chart-edit-btn"
+        onclick="openChartEditor_{js_safe_id}()"
+        style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 100; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
+        onmouseover="this.style.background='rgba(0,0,0,0.9)'; this.style.transform='scale(1.05)'"
+        onmouseout="this.style.background='rgba(0,0,0,0.7)'; this.style.transform='scale(1)'">
+    <span style="font-size: 16px;">📊</span> Edit Data
+</button>'''
+
+    def _generate_editor_modal(
+        self,
+        element_id: str,
+        js_safe_id: str,
+        modal_id: str,
+        chart_id: str,
+        presentation_id: Optional[str]
+    ) -> str:
+        """
+        Generate complete editor modal with JavaScript for atomic charts.
+
+        v3.6.0: Self-contained editor for atomic charts.
+        """
+        pres_id = presentation_id or "atomic-standalone"
+
+        return f'''<!-- Atomic Chart Editor Modal -->
+<div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h2 style="margin: 0; font-size: 20px; color: white; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">📊</span> Edit Chart Data
+            </h2>
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: rgba(255,255,255,0.2); border: none; font-size: 24px; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 24px; overflow-y: auto; flex: 1;">
+            <div style="background: #f5f5f5; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+                <p style="margin: 4px 0; font-size: 14px;"><strong>Chart Type:</strong> {chart_id}</p>
+                <p style="margin: 4px 0; font-size: 14px;"><strong>Element ID:</strong> {element_id}</p>
+            </div>
+
+            <div style="overflow-x: auto; margin-bottom: 16px;">
+                <table id="table-{element_id}" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px; width: 50px;">#</th>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;">Label</th>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;">Value</th>
+                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px; width: 80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-{element_id}"></tbody>
+                </table>
+            </div>
+
+            <button onclick="addRow_{js_safe_id}()" style="background: #f0f0f0; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">+</span> Add Row
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e0e0e0; background: #f8f9fa;">
+            <button onclick="closeChartEditor_{js_safe_id}()" style="background: white; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;">Cancel</button>
+            <button onclick="saveChartData_{js_safe_id}()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">💾</span> Save & Update
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Atomic Chart Editor -->
+<script>
+(function() {{
+    let atomicChart_{js_safe_id} = null;
+
+    function findChartInstance_{js_safe_id}() {{
+        // Find the canvas element inside this atomic container
+        const container = document.querySelector('[data-element-id="{element_id}"]');
+        if (!container) return null;
+
+        const canvas = container.querySelector('canvas');
+        if (!canvas) return null;
+
+        // Try to get the Chart.js instance
+        return Chart.getChart(canvas);
+    }}
+
+    function initEditor_{js_safe_id}() {{
+        atomicChart_{js_safe_id} = findChartInstance_{js_safe_id}();
+        if (atomicChart_{js_safe_id}) {{
+            console.log('✅ Atomic chart editor initialized for {element_id}');
+        }}
+    }}
+
+    window.openChartEditor_{js_safe_id} = function() {{
+        if (!atomicChart_{js_safe_id}) {{
+            atomicChart_{js_safe_id} = findChartInstance_{js_safe_id}();
+        }}
+
+        if (!atomicChart_{js_safe_id}) {{
+            alert('Chart not ready yet. Please wait a moment and try again.');
+            return;
+        }}
+
+        // Populate table with current data
+        const tbody = document.getElementById('tbody-{element_id}');
+        tbody.innerHTML = '';
+
+        const labels = atomicChart_{js_safe_id}.data.labels || [];
+        const values = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+
+        labels.forEach((label, index) => {{
+            const value = typeof values[index] === 'object' ? values[index].y || 0 : values[index];
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${{index + 1}}</td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                    <input type="text" class="label-input" value="${{label}}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                    <input type="number" class="value-input" value="${{value}}" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </td>
+                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                    <button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        }});
+
+        // Show modal
+        document.getElementById('{modal_id}').style.display = 'flex';
+    }};
+
+    window.closeChartEditor_{js_safe_id} = function() {{
+        document.getElementById('{modal_id}').style.display = 'none';
+    }};
+
+    window.addRow_{js_safe_id} = function() {{
+        const tbody = document.getElementById('tbody-{element_id}');
+        const rowCount = tbody.querySelectorAll('tr').length;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${{rowCount + 1}}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                <input type="text" class="label-input" value="New Item" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+            </td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                <input type="number" class="value-input" value="0" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+            </td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
+                <button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+        renumberRows_{js_safe_id}();
+    }};
+
+    window.deleteRow_{js_safe_id} = function(btn) {{
+        btn.closest('tr').remove();
+        renumberRows_{js_safe_id}();
+    }};
+
+    function renumberRows_{js_safe_id}() {{
+        const rows = document.querySelectorAll('#tbody-{element_id} tr');
+        rows.forEach((row, index) => {{
+            row.querySelector('td:first-child').textContent = index + 1;
+        }});
+    }}
+
+    window.saveChartData_{js_safe_id} = function() {{
+        // Collect data from table
+        const rows = document.querySelectorAll('#tbody-{element_id} tr');
+        const newLabels = [];
+        const newValues = [];
+
+        rows.forEach(row => {{
+            const label = row.querySelector('.label-input').value;
+            const value = parseFloat(row.querySelector('.value-input').value) || 0;
+            newLabels.push(label);
+            newValues.push(value);
+        }});
+
+        // Update chart in browser
+        atomicChart_{js_safe_id}.data.labels = newLabels;
+        atomicChart_{js_safe_id}.data.datasets[0].data = newValues;
+        atomicChart_{js_safe_id}.update();
+
+        // Show success message
+        const toast = document.createElement('div');
+        toast.innerHTML = '✅ Chart updated successfully!';
+        toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500;';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+
+        // Close modal
+        closeChartEditor_{js_safe_id}();
+    }};
+
+    // Initialize when DOM ready
+    if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', function() {{
+            setTimeout(initEditor_{js_safe_id}, 500);
+        }});
+    }} else {{
+        setTimeout(initEditor_{js_safe_id}, 500);
+    }}
+}})();
+</script>'''
 
     async def _generate_insights_html(
         self,
