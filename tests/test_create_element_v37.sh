@@ -62,7 +62,7 @@ echo -e "${BLUE}--- Step 2: Adding Slide ---${NC}"
 SLIDE_RESPONSE=$(curl -s -X POST "$LAYOUT_URL/api/presentations/$PRES_ID/slides" \
   -H "Content-Type: application/json" \
   -d '{
-    "template": "C1-text",
+    "layout": "C1-text",
     "title": "Create Element Test",
     "subtitle": "Testing chart as independent element"
   }')
