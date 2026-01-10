@@ -310,8 +310,11 @@ async def _get_existing_elements(
             url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}"
             response = await client.get(url)
 
-            if response.status_code == 404:
-                # Slide doesn't exist yet, return empty list
+            # Handle cases where slide query is not supported
+            if response.status_code in [404, 405]:
+                # 404: Slide doesn't exist yet
+                # 405: Method not allowed (Layout Service may not support this endpoint)
+                logger.debug(f"Cannot query existing elements (status {response.status_code}), assuming empty")
                 return []
 
             response.raise_for_status()
@@ -336,9 +339,10 @@ async def _get_existing_elements(
             return elements
 
     except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
+        if e.response.status_code in [404, 405]:
             return []
-        raise
+        logger.warning(f"Layout Service HTTP error: {e.response.status_code}")
+        return []  # Gracefully assume empty rather than failing
     except Exception as e:
         logger.warning(f"Failed to query existing elements: {e}")
         return []  # Assume empty if we can't query
