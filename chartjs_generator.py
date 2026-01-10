@@ -220,7 +220,8 @@ class ChartJSGenerator:
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",  # "inline_script" (Layout Builder) or "revealchart" (legacy)
         semantic_chart_type: Optional[str] = None,  # Semantic type for editor (e.g., "area_stacked")
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1: Use 100% sizing for atomic elements
     ) -> str:
         """
         Generate Chart.js line chart.
@@ -298,7 +299,8 @@ class ChartJSGenerator:
             api_base_url,
             output_mode,  # Pass through output mode
             semantic_chart_type,  # Pass semantic type for editor
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_area_chart(
@@ -311,7 +313,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js area chart (line chart with fill).
@@ -325,6 +328,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
 
         Returns:
             HTML canvas element with Chart.js area chart configuration
@@ -337,7 +341,8 @@ class ChartJSGenerator:
         return self.generate_line_chart(
             data, height, chart_id, options,
             enable_editor, presentation_id, api_base_url, output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_stacked_area_chart(
@@ -350,7 +355,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js stacked area chart.
@@ -364,6 +370,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
 
         Returns:
             HTML canvas element with stacked area chart configuration
@@ -394,7 +401,8 @@ class ChartJSGenerator:
             chart_data, height, chart_id, merged_options,
             enable_editor, presentation_id, api_base_url, output_mode,
             semantic_chart_type="area_stacked",  # Tell editor this is stacked area
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     # ========================================
@@ -412,7 +420,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js bar chart (vertical or horizontal).
@@ -428,6 +437,7 @@ class ChartJSGenerator:
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
             chart_title: Optional title for visual alignment
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
 
         Returns:
             HTML canvas element with Chart.js config
@@ -473,7 +483,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_horizontal_bar_chart(
@@ -486,14 +497,16 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """Generate horizontal bar chart."""
         return self.generate_bar_chart(
             data, height, horizontal=True, chart_id=chart_id, options=options,
             enable_editor=enable_editor, presentation_id=presentation_id,
             api_base_url=api_base_url, output_mode=output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_grouped_bar_chart(
@@ -506,7 +519,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate grouped bar chart (multiple series side-by-side).
@@ -523,7 +537,8 @@ class ChartJSGenerator:
             chart_data, height, horizontal=False, chart_id=chart_id, options=options,
             enable_editor=enable_editor, presentation_id=presentation_id,
             api_base_url=api_base_url, output_mode=output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_stacked_bar_chart(
@@ -537,7 +552,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate stacked bar chart.
@@ -559,7 +575,8 @@ class ChartJSGenerator:
             chart_data, height, horizontal, chart_id, merged_options,
             enable_editor=enable_editor, presentation_id=presentation_id,
             api_base_url=api_base_url, output_mode=output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_waterfall_chart(
@@ -572,7 +589,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js waterfall chart using native floating bars.
@@ -698,7 +716,8 @@ class ChartJSGenerator:
             api_base_url,
             output_mode,
             semantic_chart_type='waterfall',  # v3.4.32: Tell editor this is a waterfall chart
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     # ========================================
@@ -715,7 +734,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js pie chart.
@@ -728,11 +748,13 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         return self._generate_circular_chart(
             "pie", data, height, chart_id, options,
             enable_editor, presentation_id, api_base_url, output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_doughnut_chart(
@@ -745,7 +767,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js doughnut chart.
@@ -758,11 +781,13 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         return self._generate_circular_chart(
             "doughnut", data, height, chart_id, options,
             enable_editor, presentation_id, api_base_url, output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def _generate_circular_chart(
@@ -776,7 +801,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """Internal method for pie/doughnut charts."""
         labels = data.get("labels", [])
@@ -838,7 +864,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     # ========================================
@@ -855,7 +882,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js scatter plot.
@@ -867,6 +895,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         if "datasets" not in data:
             raise ValueError("Scatter plot requires 'datasets' in data")
@@ -888,7 +917,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_bubble_chart(
@@ -901,7 +931,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js bubble chart.
@@ -913,6 +944,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         if "datasets" not in data:
             raise ValueError("Bubble chart requires 'datasets' in data")
@@ -949,7 +981,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     # ========================================
@@ -966,7 +999,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js radar chart.
@@ -979,6 +1013,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         labels = data.get("labels", [])
         format_type = data.get("format", "number")
@@ -1033,7 +1068,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_polar_area_chart(
@@ -1046,7 +1082,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js polar area chart.
@@ -1058,6 +1095,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         labels = data.get("labels", [])
         values = data.get("values", [])
@@ -1113,7 +1151,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     def generate_treemap_chart(
@@ -1126,7 +1165,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate Chart.js treemap chart using chartjs-chart-treemap plugin.
@@ -1145,6 +1185,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
 
         Returns:
             HTML with treemap chart and embedded plugin
@@ -2086,7 +2127,8 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",
-        chart_title: Optional[str] = None  # v3.4.11
+        chart_title: Optional[str] = None,  # v3.4.11
+        responsive_sizing: bool = False  # v3.7.1
     ) -> str:
         """
         Generate mixed chart (e.g., line + bar).
@@ -2100,6 +2142,7 @@ class ChartJSGenerator:
             presentation_id: Presentation ID for editor persistence
             api_base_url: Base URL for chart API endpoints
             output_mode: "revealchart" (legacy) or "inline_script" (Layout Builder)
+            responsive_sizing: Use 100%×100% instead of fixed dimensions (v3.7.1)
         """
         # Transform Director format to Chart.js format (v3.4.4 fix)
         chart_data = self._transform_director_to_chartjs(data)
@@ -2146,7 +2189,8 @@ class ChartJSGenerator:
             presentation_id,
             api_base_url,
             output_mode,
-            chart_title=chart_title  # v3.4.11
+            chart_title=chart_title,  # v3.4.11
+            responsive_sizing=responsive_sizing  # v3.7.1
         )
 
     # ========================================
@@ -2163,7 +2207,8 @@ class ChartJSGenerator:
         api_base_url: str = "/api/charts",
         output_mode: str = "inline_script",  # "revealchart" or "inline_script"
         semantic_chart_type: Optional[str] = None,  # Semantic type for editor
-        chart_title: Optional[str] = None  # v3.4.11: Chart title for visual alignment
+        chart_title: Optional[str] = None,  # v3.4.11: Chart title for visual alignment
+        responsive_sizing: bool = False  # v3.7.1: Use 100% sizing for atomic elements
     ) -> str:
         """
         Wrap Chart.js config in canvas element.
@@ -2181,6 +2226,7 @@ class ChartJSGenerator:
             api_base_url: Base URL for chart API endpoints
             output_mode: Output format ("revealchart" or "inline_script")
             chart_title: Optional chart title for visual alignment with Key Insights
+            responsive_sizing: If True, use 100%×100% instead of fixed dimensions (v3.7.1)
 
         Returns:
             HTML with chart, optionally with interactive editor
@@ -2195,7 +2241,8 @@ class ChartJSGenerator:
                 presentation_id,
                 api_base_url,
                 semantic_chart_type,  # Pass semantic type for editor
-                chart_title  # v3.4.11: Pass chart title
+                chart_title,  # v3.4.11: Pass chart title
+                responsive_sizing  # v3.7.1: Pass responsive sizing flag
             )
 
         # Legacy RevealChart mode
@@ -2237,14 +2284,15 @@ class ChartJSGenerator:
         presentation_id: Optional[str] = None,
         api_base_url: str = "/api/charts",
         semantic_chart_type: Optional[str] = None,  # Semantic type for editor
-        chart_title: Optional[str] = None  # v3.4.11: Chart title for visual alignment
+        chart_title: Optional[str] = None,  # v3.4.11: Chart title for visual alignment
+        responsive_sizing: bool = False  # v3.7.1: Use 100% sizing for atomic elements
     ) -> str:
         """
         Generate Layout Builder-compliant HTML with inline Chart.js script.
 
         Follows exact specification from Layout Builder L02_DIRECTOR_INTEGRATION_GUIDE.md:
         - Container div with class="l02-chart-container"
-        - Explicit dimensions: 1260px × 720px
+        - Explicit dimensions: 1260px × 720px (or 100%×100% if responsive_sizing=True)
         - position: relative for proper rendering
         - Canvas element (no JSON comment)
         - Inline <script> tag with IIFE wrapper
@@ -2262,6 +2310,8 @@ class ChartJSGenerator:
             presentation_id: Required if enable_editor=True
             api_base_url: Base URL for chart API endpoints
             chart_title: Optional title to display above chart
+            responsive_sizing: If True, use 100%×100% instead of fixed dimensions
+                (v3.7.1: For atomic elements that fill their container)
 
         Returns:
             Complete HTML with chart and optional editor, Layout Builder compliant
@@ -2403,7 +2453,10 @@ class ChartJSGenerator:
 
         # Basic chart HTML (no editor) - Director L02 spec compliant
         # v3.4.11: Use flexbox for proper title + canvas layout
-        chart_html = f"""<div class="l02-chart-container" style="width: 1260px; height: 720px; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
+        # v3.7.1: Use 100%×100% for atomic elements, 1260×720 for L02 layout
+        container_width = "100%" if responsive_sizing else "1260px"
+        container_height = "100%" if responsive_sizing else "720px"
+        chart_html = f"""<div class="l02-chart-container" style="width: {container_width}; height: {container_height}; position: relative; box-sizing: border-box; border: none; border-radius: 0; display: flex; flex-direction: column;">
   {title_html}
   <div style="flex: 1; min-height: 0; position: relative;">
     <canvas id="{chart_id}"></canvas>

@@ -410,7 +410,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_bar_chart":
             orientation = config.get("orientation", "vertical")
@@ -420,7 +421,8 @@ class AtomicChartGenerator:
                     height=height,
                     chart_id=element_id,
                     output_mode="inline_script",
-                    chart_title=internal_title
+                    chart_title=internal_title,
+                    responsive_sizing=True  # v3.7.1
                 )
             else:
                 return generator.generate_bar_chart(
@@ -428,7 +430,8 @@ class AtomicChartGenerator:
                     height=height,
                     chart_id=element_id,
                     output_mode="inline_script",
-                    chart_title=internal_title
+                    chart_title=internal_title,
+                    responsive_sizing=True  # v3.7.1
                 )
         elif method_name == "generate_pie_chart":
             return generator.generate_pie_chart(
@@ -436,7 +439,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_doughnut_chart":
             return generator.generate_doughnut_chart(
@@ -444,7 +448,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_scatter_chart":
             return generator.generate_scatter_chart(
@@ -452,7 +457,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_bubble_chart":
             return generator.generate_bubble_chart(
@@ -460,7 +466,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_polar_area_chart":
             return generator.generate_polar_area_chart(
@@ -468,7 +475,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_radar_chart":
             return generator.generate_radar_chart(
@@ -476,7 +484,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_area_chart":
             return generator.generate_area_chart(
@@ -484,7 +493,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_stacked_area_chart":
             return generator.generate_stacked_area_chart(
@@ -492,7 +502,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_grouped_bar_chart":
             return generator.generate_grouped_bar_chart(
@@ -500,7 +511,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_stacked_bar_chart":
             return generator.generate_stacked_bar_chart(
@@ -508,7 +520,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         elif method_name == "generate_waterfall_chart":
             return generator.generate_waterfall_chart(
@@ -516,7 +529,8 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
         else:
             # Fallback
@@ -525,7 +539,8 @@ class AtomicChartGenerator:
                 data=data,
                 element_id=element_id,
                 height=height,
-                chart_title=internal_title
+                chart_title=internal_title,
+                responsive_sizing=True  # v3.7.1: Use 100% sizing for atomic elements
             )
 
     def _generate_generic_chart(

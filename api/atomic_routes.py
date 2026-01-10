@@ -301,45 +301,60 @@ async def _get_existing_elements(
     """
     Query existing elements from Layout Service for position calculation.
 
+    v3.7.1 FIX: Uses GET /presentations/{id} instead of non-existent
+    GET /slides/{index} endpoint.
+
     Returns list of element positions in format:
     [{"grid_row": "4/15", "grid_column": "2/16"}, ...]
     """
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # Get slide data from Layout Service
-            url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}"
+            # v3.7.1 FIX: Query full presentation data, then extract slide
+            url = f"{layout_service_url}/api/presentations/{presentation_id}"
             response = await client.get(url)
 
-            # Handle cases where slide query is not supported
-            if response.status_code in [404, 405]:
-                # 404: Slide doesn't exist yet
-                # 405: Method not allowed (Layout Service may not support this endpoint)
-                logger.debug(f"Cannot query existing elements (status {response.status_code}), assuming empty")
+            # Handle cases where presentation doesn't exist
+            if response.status_code == 404:
+                logger.debug(f"Presentation {presentation_id} not found, assuming empty")
                 return []
 
             response.raise_for_status()
-            slide_data = response.json()
+            presentation_data = response.json()
+
+            # Extract the specific slide from presentation
+            # Try both "slides" array and "presentation.slides"
+            slides = (
+                presentation_data.get("slides") or
+                presentation_data.get("presentation", {}).get("slides") or
+                []
+            )
+
+            if slide_index >= len(slides):
+                logger.debug(f"Slide {slide_index} not in presentation (has {len(slides)} slides)")
+                return []
+
+            slide_data = slides[slide_index]
 
             # Extract element positions
             elements = []
 
             # Check various element types
             for element_type in ["charts", "text_boxes", "images", "diagrams", "infographics"]:
-                if element_type in slide_data:
-                    for elem in slide_data[element_type]:
-                        if "position" in elem:
-                            elements.append(elem["position"])
-                        elif "grid_row" in elem and "grid_column" in elem:
-                            elements.append({
-                                "grid_row": elem["grid_row"],
-                                "grid_column": elem["grid_column"]
-                            })
+                element_list = slide_data.get(element_type, [])
+                for elem in element_list:
+                    if "position" in elem:
+                        elements.append(elem["position"])
+                    elif "grid_row" in elem and "grid_column" in elem:
+                        elements.append({
+                            "grid_row": elem["grid_row"],
+                            "grid_column": elem["grid_column"]
+                        })
 
             logger.debug(f"Found {len(elements)} existing elements on slide {slide_index}")
             return elements
 
     except httpx.HTTPStatusError as e:
-        if e.response.status_code in [404, 405]:
+        if e.response.status_code == 404:
             return []
         logger.warning(f"Layout Service HTTP error: {e.response.status_code}")
         return []  # Gracefully assume empty rather than failing
@@ -357,16 +372,23 @@ async def _create_layout_element(
     z_index: Optional[int] = None
 ) -> dict:
     """
-    Create chart element in Layout Service.
+    Create chart element in Layout Service with correct position.
 
-    Uses POST /api/presentations/{id}/slides/{index}/charts endpoint.
+    v3.7.1 FIX: Layout Service ignores position on POST, so we use CREATE+UPDATE pattern:
+    1. POST to create element (gets default full-page position)
+    2. PUT to update with correct position
+
+    Uses:
+    - POST /api/presentations/{id}/slides/{index}/charts (create)
+    - PUT /api/presentations/{id}/slides/{index}/charts/{chart_id} (update position)
 
     Returns dict with element_id and z_index.
     """
     async with httpx.AsyncClient(timeout=30.0) as client:
-        url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}/charts"
+        # Step 1: Create element via POST
+        create_url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}/charts"
 
-        payload = {
+        create_payload = {
             "position": {
                 "grid_row": position.grid_row,
                 "grid_column": position.grid_column
@@ -375,12 +397,12 @@ async def _create_layout_element(
         }
 
         if z_index is not None:
-            payload["z_index"] = z_index
+            create_payload["z_index"] = z_index
 
-        logger.info(f"Creating element at {url}")
-        logger.debug(f"Payload position: {payload['position']}")
+        logger.info(f"Creating element at {create_url}")
+        logger.debug(f"Payload position: {create_payload['position']}")
 
-        response = await client.post(url, json=payload)
+        response = await client.post(create_url, json=create_payload)
         response.raise_for_status()
 
         result = response.json()
@@ -394,9 +416,33 @@ async def _create_layout_element(
             f"chart_{presentation_id}_{slide_index}"
         )
 
+        final_z_index = result.get("chart", {}).get("z_index") or result.get("z_index") or 150
+
+        # Step 2: Update position via PUT (v3.7.1 FIX)
+        # Layout Service ignores position on POST, so we update immediately
+        update_url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}/charts/{element_id}"
+
+        update_payload = {
+            "position": {
+                "grid_row": position.grid_row,
+                "grid_column": position.grid_column
+            }
+        }
+
+        logger.info(f"Updating element position at {update_url}")
+        logger.debug(f"Update position: {update_payload['position']}")
+
+        try:
+            update_response = await client.put(update_url, json=update_payload)
+            update_response.raise_for_status()
+            logger.info(f"Position updated successfully for {element_id}")
+        except httpx.HTTPStatusError as e:
+            # Log but don't fail if update fails - element was still created
+            logger.warning(f"Failed to update position for {element_id}: {e}")
+
         return {
             "element_id": element_id,
-            "z_index": result.get("chart", {}).get("z_index") or result.get("z_index") or 150
+            "z_index": final_z_index
         }
 
 
