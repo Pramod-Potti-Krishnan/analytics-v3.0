@@ -219,3 +219,187 @@ class AtomicChartCatalogResponse(BaseModel):
     count: int
     chart_types: List[ChartTypeCatalogItem]
     endpoint_pattern: str = "/api/v1/charts/atomic/{chart_id}"
+
+
+# ========================================
+# v3.7.0: CREATE ELEMENT MODELS
+# ========================================
+
+class GridPosition(BaseModel):
+    """Grid position in CSS grid notation (32x18 system)."""
+    grid_row: str = Field(
+        ...,
+        description="Row position in 'start/end' format (e.g., '4/15' for rows 4-14)",
+        regex=r"^\d+/\d+$"
+    )
+    grid_column: str = Field(
+        ...,
+        description="Column position in 'start/end' format (e.g., '2/16' for columns 2-15)",
+        regex=r"^\d+/\d+$"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "grid_row": "4/15",
+                "grid_column": "2/16"
+            }
+        }
+
+
+class GridSize(BaseModel):
+    """Grid size in grid units."""
+    cols: int = Field(..., ge=2, le=30, description="Number of columns")
+    rows: int = Field(..., ge=2, le=14, description="Number of rows")
+
+
+class CreateElementRequest(BaseModel):
+    """
+    Request to create a chart as a Layout Service element.
+
+    v3.7.0: Creates chart as independent element with proper grid positioning,
+    rather than injecting HTML into existing elements.
+    """
+
+    # Required fields
+    presentation_id: str = Field(
+        ...,
+        description="UUID of the presentation to add the chart to"
+    )
+    slide_index: int = Field(
+        ...,
+        ge=0,
+        description="Zero-based index of the slide to add the chart to"
+    )
+    chart_type: str = Field(
+        ...,
+        description="Chart type ID (e.g., 'line', 'bar_vertical', 'pie')"
+    )
+    layout_service_url: str = Field(
+        ...,
+        description="Base URL of the Layout Service (e.g., 'https://web-production-f0d13.up.railway.app')"
+    )
+
+    # Optional chart generation fields
+    narrative: Optional[str] = Field(
+        None,
+        max_length=2000,
+        description="Context for synthetic data generation"
+    )
+    data: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="Explicit data points. If None, synthetic data is generated."
+    )
+    chart_title: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="Override auto-generated chart title"
+    )
+
+    # Optional positioning fields
+    position: Optional[GridPosition] = Field(
+        None,
+        description="Explicit grid position. If None, auto-calculated using stacking algorithm."
+    )
+    size: Optional[GridSize] = Field(
+        None,
+        description="Explicit grid size. If None, calculated based on chart type."
+    )
+
+    # Options
+    theme: str = Field(
+        "professional",
+        description="Color theme for the chart"
+    )
+    enable_editor: bool = Field(
+        True,
+        description="Include edit button for interactive data editing"
+    )
+    z_index: Optional[int] = Field(
+        None,
+        ge=1,
+        le=10000,
+        description="Z-index for layering. If None, auto-assigned by Layout Service."
+    )
+
+    @validator('chart_type')
+    def validate_chart_type(cls, v):
+        """Validate chart type is supported."""
+        if v not in GOLD_STANDARD_CHARTS:
+            raise ValueError(f"Chart type '{v}' not supported. Valid types: {GOLD_STANDARD_CHARTS}")
+        return v
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "presentation_id": "pres-12345678-abcd-1234-efgh-567890abcdef",
+                "slide_index": 0,
+                "chart_type": "line",
+                "layout_service_url": "https://web-production-f0d13.up.railway.app",
+                "narrative": "Show quarterly revenue growth for 2024",
+                "theme": "professional",
+                "enable_editor": True
+            }
+        }
+
+
+class CreateElementResponse(BaseModel):
+    """
+    Response from creating a chart element.
+
+    v3.7.0: Returns element details including position and Layout Service element ID.
+    """
+
+    success: bool = Field(True, description="Whether element creation was successful")
+    element_id: str = Field(..., description="UUID of the created Layout Service element")
+    chart_type: str = Field(..., description="The chart type that was created")
+
+    # Position information
+    position: GridPosition = Field(..., description="Final grid position of the element")
+    size: GridSize = Field(..., description="Grid size of the element")
+
+    # Metadata
+    presentation_id: str = Field(..., description="Presentation the element was added to")
+    slide_index: int = Field(..., description="Slide index the element was added to")
+    z_index: int = Field(..., description="Z-index of the element")
+    generation_time_ms: int = Field(..., description="Processing time in milliseconds")
+
+    # Chart data
+    chart_title: str = Field(..., description="Title of the generated chart")
+    data_points: int = Field(..., description="Number of data points in the chart")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "success": True,
+                "element_id": "chart_a1b2c3d4",
+                "chart_type": "line",
+                "position": {"grid_row": "4/15", "grid_column": "2/16"},
+                "size": {"cols": 14, "rows": 11},
+                "presentation_id": "pres-12345678-abcd-1234-efgh-567890abcdef",
+                "slide_index": 0,
+                "z_index": 150,
+                "generation_time_ms": 156,
+                "chart_title": "Quarterly Revenue Growth 2024",
+                "data_points": 4
+            }
+        }
+
+
+class CreateElementError(BaseModel):
+    """Error response for element creation failures."""
+
+    success: bool = Field(False)
+    error_code: str = Field(..., description="Error code for programmatic handling")
+    message: str = Field(..., description="Human-readable error message")
+    details: Optional[Dict[str, Any]] = Field(None, description="Additional error context")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "success": False,
+                "error_code": "LAYOUT_SERVICE_ERROR",
+                "message": "Failed to create element in Layout Service",
+                "details": {"status_code": 500, "response": "Internal server error"}
+            }
+        }

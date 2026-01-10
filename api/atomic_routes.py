@@ -26,9 +26,18 @@ from models.atomic_models import (
     AtomicChartError,
     AtomicChartCatalogResponse,
     ChartTypeCatalogItem,
-    GOLD_STANDARD_CHARTS
+    GOLD_STANDARD_CHARTS,
+    # v3.7.0: Create element models
+    CreateElementRequest,
+    CreateElementResponse,
+    CreateElementError,
+    GridPosition as GridPositionModel,
+    GridSize as GridSizeModel
 )
 from core.atomic_chart_generator import AtomicChartGenerator
+from core.element_positioner import ElementPositioner, GridPosition, GridSize
+import httpx
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +184,302 @@ async def generate_atomic_chart(
                 "suggestion": "Check server logs for details"
             }
         )
+
+
+# ========================================
+# v3.7.0: CREATE ELEMENT ENDPOINT
+# ========================================
+
+# Initialize position calculator (singleton)
+_positioner: Optional[ElementPositioner] = None
+
+
+def get_positioner() -> ElementPositioner:
+    """Get or create element positioner instance."""
+    global _positioner
+    if _positioner is None:
+        _positioner = ElementPositioner()
+    return _positioner
+
+
+@router.post(
+    "/create-element",
+    response_model=CreateElementResponse,
+    responses={
+        400: {"model": CreateElementError, "description": "Invalid request"},
+        500: {"model": CreateElementError, "description": "Element creation failed"},
+        502: {"model": CreateElementError, "description": "Layout Service error"}
+    },
+    summary="Create chart as Layout Service element",
+    description="""
+    Generate a chart and create it as an independent Layout Service element.
+
+    **v3.7.0 Feature**: Instead of injecting HTML into existing elements,
+    this endpoint creates the chart as a proper Layout Service element with:
+    - Its own grid position
+    - Its own drag handles
+    - Proper border alignment
+    - Independent z-index layer
+
+    **Auto-Positioning**: If no position is specified, uses top-down, left-right
+    stacking algorithm to find optimal placement within content area (rows 4-17,
+    columns 2-30).
+
+    **Auto-Sizing**: If no size is specified, calculates optimal grid size based
+    on chart type (e.g., pie charts get square dimensions, line charts wider).
+    """
+)
+async def create_chart_element(request: CreateElementRequest):
+    """
+    Create a chart as an independent Layout Service element.
+
+    Flow:
+    1. Generate chart HTML using AtomicChartGenerator
+    2. Calculate grid position (if not provided)
+    3. Call Layout Service POST /charts to create element
+    4. Return element ID and final position
+
+    Args:
+        request: CreateElementRequest with presentation, chart type, and options
+
+    Returns:
+        CreateElementResponse with element details and position
+    """
+    start_time = time.time()
+
+    try:
+        # 1. Get positioner and generator
+        positioner = get_positioner()
+        generator = get_generator(request.theme)
+
+        # 2. Calculate chart size
+        if request.size:
+            element_size = GridSize(cols=request.size.cols, rows=request.size.rows)
+        else:
+            element_size = positioner.get_chart_size(request.chart_type)
+
+        logger.info(
+            f"Creating {request.chart_type} element: size={element_size.cols}x{element_size.rows}"
+        )
+
+        # 3. Calculate position if not provided
+        if request.position:
+            position = GridPosition(
+                grid_row=request.position.grid_row,
+                grid_column=request.position.grid_column
+            )
+        else:
+            # Query existing elements from Layout Service
+            existing_elements = await _get_existing_elements(
+                request.layout_service_url,
+                request.presentation_id,
+                request.slide_index
+            )
+            position = positioner.calculate_position(element_size, existing_elements)
+
+        logger.info(f"Calculated position: row={position.grid_row}, col={position.grid_column}")
+
+        # 4. Calculate pixel dimensions for chart HTML
+        # Grid unit = 60px, so convert grid size to pixels
+        chart_width = element_size.cols * 60 - 20  # Subtract padding
+        chart_height = element_size.rows * 60 - 20
+
+        # 5. Generate chart HTML
+        chart_request = AtomicChartRequest(
+            narrative=request.narrative,
+            width=chart_width,
+            height=chart_height,
+            chart_title=request.chart_title,
+            theme=request.theme,
+            enable_editor=request.enable_editor,
+            presentation_id=request.presentation_id
+        )
+
+        chart_response = await generator.generate(request.chart_type, chart_request)
+
+        # 6. Create element in Layout Service
+        element_result = await _create_layout_element(
+            layout_service_url=request.layout_service_url,
+            presentation_id=request.presentation_id,
+            slide_index=request.slide_index,
+            chart_html=chart_response.chart_html,
+            position=position,
+            z_index=request.z_index
+        )
+
+        # 7. Calculate response
+        generation_time_ms = int((time.time() - start_time) * 1000)
+
+        return CreateElementResponse(
+            success=True,
+            element_id=element_result["element_id"],
+            chart_type=request.chart_type,
+            position=GridPositionModel(
+                grid_row=position.grid_row,
+                grid_column=position.grid_column
+            ),
+            size=GridSizeModel(
+                cols=element_size.cols,
+                rows=element_size.rows
+            ),
+            presentation_id=request.presentation_id,
+            slide_index=request.slide_index,
+            z_index=element_result.get("z_index", 150),
+            generation_time_ms=generation_time_ms,
+            chart_title=chart_response.chart_title,
+            data_points=len(chart_response.data_used)
+        )
+
+    except ValueError as e:
+        logger.error(f"Position calculation error: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error_code": "POSITION_ERROR",
+                "message": str(e),
+                "details": {"chart_type": request.chart_type}
+            }
+        )
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Layout Service HTTP error: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "success": False,
+                "error_code": "LAYOUT_SERVICE_ERROR",
+                "message": f"Layout Service returned error: {e.response.status_code}",
+                "details": {
+                    "status_code": e.response.status_code,
+                    "url": str(e.request.url)
+                }
+            }
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Layout Service connection error: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "success": False,
+                "error_code": "LAYOUT_SERVICE_CONNECTION",
+                "message": f"Failed to connect to Layout Service: {str(e)}",
+                "details": {"layout_service_url": request.layout_service_url}
+            }
+        )
+    except Exception as e:
+        logger.error(f"Element creation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error_code": "CREATION_FAILED",
+                "message": f"Element creation failed: {str(e)}",
+                "details": {"exception_type": type(e).__name__}
+            }
+        )
+
+
+async def _get_existing_elements(
+    layout_service_url: str,
+    presentation_id: str,
+    slide_index: int
+) -> list:
+    """
+    Query existing elements from Layout Service for position calculation.
+
+    Returns list of element positions in format:
+    [{"grid_row": "4/15", "grid_column": "2/16"}, ...]
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Get slide data from Layout Service
+            url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}"
+            response = await client.get(url)
+
+            if response.status_code == 404:
+                # Slide doesn't exist yet, return empty list
+                return []
+
+            response.raise_for_status()
+            slide_data = response.json()
+
+            # Extract element positions
+            elements = []
+
+            # Check various element types
+            for element_type in ["charts", "text_boxes", "images", "diagrams", "infographics"]:
+                if element_type in slide_data:
+                    for elem in slide_data[element_type]:
+                        if "position" in elem:
+                            elements.append(elem["position"])
+                        elif "grid_row" in elem and "grid_column" in elem:
+                            elements.append({
+                                "grid_row": elem["grid_row"],
+                                "grid_column": elem["grid_column"]
+                            })
+
+            logger.debug(f"Found {len(elements)} existing elements on slide {slide_index}")
+            return elements
+
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return []
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to query existing elements: {e}")
+        return []  # Assume empty if we can't query
+
+
+async def _create_layout_element(
+    layout_service_url: str,
+    presentation_id: str,
+    slide_index: int,
+    chart_html: str,
+    position: GridPosition,
+    z_index: Optional[int] = None
+) -> dict:
+    """
+    Create chart element in Layout Service.
+
+    Uses POST /api/presentations/{id}/slides/{index}/charts endpoint.
+
+    Returns dict with element_id and z_index.
+    """
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        url = f"{layout_service_url}/api/presentations/{presentation_id}/slides/{slide_index}/charts"
+
+        payload = {
+            "position": {
+                "grid_row": position.grid_row,
+                "grid_column": position.grid_column
+            },
+            "chart_html": chart_html
+        }
+
+        if z_index is not None:
+            payload["z_index"] = z_index
+
+        logger.info(f"Creating element at {url}")
+        logger.debug(f"Payload position: {payload['position']}")
+
+        response = await client.post(url, json=payload)
+        response.raise_for_status()
+
+        result = response.json()
+
+        # Extract element ID from response
+        # Layout Service may return it in different formats
+        element_id = (
+            result.get("chart", {}).get("id") or
+            result.get("element_id") or
+            result.get("id") or
+            f"chart_{presentation_id}_{slide_index}"
+        )
+
+        return {
+            "element_id": element_id,
+            "z_index": result.get("chart", {}).get("z_index") or result.get("z_index") or 150
+        }
 
 
 # ========================================
