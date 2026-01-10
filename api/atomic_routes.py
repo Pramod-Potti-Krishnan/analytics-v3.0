@@ -100,94 +100,8 @@ async def get_atomic_chart_catalog():
 
 
 # ========================================
-# GENERIC CHART ENDPOINT
-# ========================================
-
-@router.post(
-    "/{chart_id}",
-    response_model=AtomicChartResponse,
-    summary="Generate atomic chart",
-    description="Generate a single chart element with synthetic data"
-)
-async def generate_atomic_chart(
-    chart_id: str,
-    request: AtomicChartRequest,
-    theme: str = Query("professional", description="Color theme")
-):
-    """
-    Generate atomic chart element for frontend positioning.
-
-    This endpoint generates a self-contained chart HTML element
-    that can be positioned anywhere on the slide by the frontend.
-
-    **Chart Types:**
-    - line, bar_vertical, bar_horizontal
-    - pie, doughnut, polar_area
-    - scatter, bubble
-    - radar
-    - area, area_stacked
-    - bar_grouped, bar_stacked
-    - waterfall
-
-    **Features:**
-    - Synthetic data generation based on narrative
-    - Optional Key Insights panel
-    - Self-contained HTML with embedded Chart.js
-
-    Args:
-        chart_id: One of 14 gold standard chart types
-        request: Generation parameters
-        theme: Color theme (professional, corporate, vibrant)
-
-    Returns:
-        AtomicChartResponse with chart_html and optional insights_html
-    """
-    # Validate chart_id
-    if chart_id not in GOLD_STANDARD_CHARTS:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "success": False,
-                "error_code": "INVALID_CHART_TYPE",
-                "message": f"Chart type '{chart_id}' is not supported",
-                "details": {"provided": chart_id, "valid_types": GOLD_STANDARD_CHARTS},
-                "suggestion": f"Use one of: {', '.join(GOLD_STANDARD_CHARTS)}"
-            }
-        )
-
-    try:
-        generator = get_generator(theme)
-        response = await generator.generate(chart_id, request)
-        return response
-
-    except ValueError as e:
-        logger.error(f"Validation error for {chart_id}: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "success": False,
-                "error_code": "VALIDATION_ERROR",
-                "message": str(e),
-                "details": {"chart_id": chart_id},
-                "suggestion": "Check request parameters"
-            }
-        )
-    except Exception as e:
-        logger.error(f"Failed to generate atomic chart {chart_id}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "success": False,
-                "error_code": "GENERATION_FAILED",
-                "message": f"Chart generation failed: {str(e)}",
-                "details": {"chart_id": chart_id, "exception_type": type(e).__name__},
-                "suggestion": "Check server logs for details"
-            }
-        )
-
-
-# ========================================
 # v3.7.0: CREATE ELEMENT ENDPOINT
+# (MUST be before /{chart_id} to prevent route conflict)
 # ========================================
 
 # Initialize position calculator (singleton)
@@ -480,6 +394,93 @@ async def _create_layout_element(
             "element_id": element_id,
             "z_index": result.get("chart", {}).get("z_index") or result.get("z_index") or 150
         }
+
+
+# ========================================
+# GENERIC CHART ENDPOINT
+# ========================================
+
+@router.post(
+    "/{chart_id}",
+    response_model=AtomicChartResponse,
+    summary="Generate atomic chart",
+    description="Generate a single chart element with synthetic data"
+)
+async def generate_atomic_chart(
+    chart_id: str,
+    request: AtomicChartRequest,
+    theme: str = Query("professional", description="Color theme")
+):
+    """
+    Generate atomic chart element for frontend positioning.
+
+    This endpoint generates a self-contained chart HTML element
+    that can be positioned anywhere on the slide by the frontend.
+
+    **Chart Types:**
+    - line, bar_vertical, bar_horizontal
+    - pie, doughnut, polar_area
+    - scatter, bubble
+    - radar
+    - area, area_stacked
+    - bar_grouped, bar_stacked
+    - waterfall
+
+    **Features:**
+    - Synthetic data generation based on narrative
+    - Optional Key Insights panel
+    - Self-contained HTML with embedded Chart.js
+
+    Args:
+        chart_id: One of 14 gold standard chart types
+        request: Generation parameters
+        theme: Color theme (professional, corporate, vibrant)
+
+    Returns:
+        AtomicChartResponse with chart_html and optional insights_html
+    """
+    # Validate chart_id
+    if chart_id not in GOLD_STANDARD_CHARTS:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error_code": "INVALID_CHART_TYPE",
+                "message": f"Chart type '{chart_id}' is not supported",
+                "details": {"provided": chart_id, "valid_types": GOLD_STANDARD_CHARTS},
+                "suggestion": f"Use one of: {', '.join(GOLD_STANDARD_CHARTS)}"
+            }
+        )
+
+    try:
+        generator = get_generator(theme)
+        response = await generator.generate(chart_id, request)
+        return response
+
+    except ValueError as e:
+        logger.error(f"Validation error for {chart_id}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error_code": "VALIDATION_ERROR",
+                "message": str(e),
+                "details": {"chart_id": chart_id},
+                "suggestion": "Check request parameters"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate atomic chart {chart_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error_code": "GENERATION_FAILED",
+                "message": f"Chart generation failed: {str(e)}",
+                "details": {"chart_id": chart_id, "exception_type": type(e).__name__},
+                "suggestion": "Check server logs for details"
+            }
+        )
 
 
 # ========================================
