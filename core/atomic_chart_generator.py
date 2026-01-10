@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.6.0
+Atomic Chart Generator for Analytics Microservice v3.6.1
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -10,6 +10,11 @@ Key Features:
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
 - Frontend-ready element IDs
+
+v3.6.1 Changes:
+- Fixed editor modal z-index (10000 -> 999999) for Reveal.js presentations
+- Added pointer-events: auto to modal overlay and dialog
+- Changed modal dimensions from 100% to 100vw/100vh
 
 v3.6.0 Changes:
 - Removed internal chart titles (external display only)
@@ -669,9 +674,9 @@ class AtomicChartGenerator:
         """
         pres_id = presentation_id or "atomic-standalone"
 
-        return f'''<!-- Atomic Chart Editor Modal -->
-<div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+        return f'''<!-- Atomic Chart Editor Modal (v3.6.1: fixed z-index and pointer-events for Reveal.js) -->
+<div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(4px); pointer-events: auto;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; pointer-events: auto; position: relative;">
 
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
