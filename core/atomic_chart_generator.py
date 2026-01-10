@@ -674,11 +674,11 @@ class AtomicChartGenerator:
         """
         Generate complete editor modal with JavaScript for atomic charts.
 
-        v3.6.0: Self-contained editor for atomic charts.
+        v3.6.3: Move modal to document.body to escape Reveal.js stacking context.
         """
         pres_id = presentation_id or "atomic-standalone"
 
-        return f'''<!-- Atomic Chart Editor Modal (v3.6.2: removed backdrop-filter for Reveal.js compatibility) -->
+        return f'''<!-- Atomic Chart Editor Modal (v3.6.3: moved to document.body to escape Reveal.js stacking context) -->
 <div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 999999; align-items: center; justify-content: center; pointer-events: auto;">
     <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; pointer-events: auto; position: relative;">
 
@@ -785,8 +785,13 @@ class AtomicChartGenerator:
             tbody.appendChild(row);
         }});
 
-        // Show modal
-        document.getElementById('{modal_id}').style.display = 'flex';
+        // v3.6.3: Move modal to document.body to escape Reveal.js transform stacking context
+        // This ensures the modal covers the entire viewport, not just the slide container
+        const modal = document.getElementById('{modal_id}');
+        if (modal.parentElement !== document.body) {{
+            document.body.appendChild(modal);
+        }}
+        modal.style.display = 'flex';
     }};
 
     window.closeChartEditor_{js_safe_id} = function() {{
