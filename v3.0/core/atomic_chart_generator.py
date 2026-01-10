@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.5.0
+Atomic Chart Generator for Analytics Microservice v3.5.1
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -10,6 +10,12 @@ Key Features:
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
 - Frontend-ready element IDs
+- Optional chart editor with edit button (v3.5.1)
+
+v3.5.1 Changes:
+- Removed chart-title-bar from atomic container (slide template provides title)
+- Pass chart_title=None to prevent duplicate titles in chart HTML
+- Added enable_editor and presentation_id parameters for edit button support
 """
 
 import logging
@@ -172,7 +178,9 @@ class AtomicChartGenerator:
     async def generate(
         self,
         chart_id: str,
-        request: AtomicChartRequest
+        request: AtomicChartRequest,
+        enable_editor: bool = False,  # v3.5.1: Add editor support
+        presentation_id: str = None   # v3.5.1: Required for editor
     ) -> AtomicChartResponse:
         """
         Generate atomic chart element(s).
@@ -180,6 +188,8 @@ class AtomicChartGenerator:
         Args:
             chart_id: One of the 14 gold standard chart types
             request: Generation parameters
+            enable_editor: If True, adds interactive data editor (v3.5.1)
+            presentation_id: Required if enable_editor=True for persistence (v3.5.1)
 
         Returns:
             AtomicChartResponse with chart HTML and optional insights
@@ -207,13 +217,16 @@ class AtomicChartGenerator:
         chart_title = request.chart_title or self._generate_title(chart_id, request.narrative)
 
         # 3. Generate chart HTML
+        # v3.5.1: Pass enable_editor and presentation_id for edit button support
         chart_html = self._generate_chart_html(
             chart_id=chart_id,
             data=data,
             element_id=element_id,
             width=request.width,
             height=request.height,
-            chart_title=chart_title
+            chart_title=chart_title,
+            enable_editor=enable_editor,
+            presentation_id=presentation_id
         )
 
         # 4. Optionally generate Key Insights
@@ -264,12 +277,16 @@ class AtomicChartGenerator:
         element_id: str,
         width: int,
         height: int,
-        chart_title: str
+        chart_title: str,
+        enable_editor: bool = False,  # v3.5.1: Add editor support
+        presentation_id: str = None   # v3.5.1: Required for editor
     ) -> str:
         """
         Generate self-contained chart HTML.
 
         Returns HTML with embedded Chart.js initialization.
+
+        v3.5.1: Added enable_editor and presentation_id parameters for edit button support.
         """
         config = self.CHART_CONFIGS[chart_id]
 
@@ -289,16 +306,18 @@ class AtomicChartGenerator:
                 element_id=element_id,
                 height=height,
                 chart_title=chart_title,
-                config=config
+                config=config,
+                enable_editor=enable_editor,  # v3.5.1: Pass editor params
+                presentation_id=presentation_id
             )
         else:
-            # Fallback to direct config generation
+            # Fallback to direct config generation (no editor support)
             chart_html = self._generate_generic_chart(
                 chart_id_type=chart_id,
                 data=chartjs_data,
                 element_id=element_id,
                 height=height,
-                chart_title=chart_title
+                chart_title=None  # v3.5.1: Slide template provides title
             )
 
         # Wrap in atomic container
@@ -308,7 +327,7 @@ class AtomicChartGenerator:
             width=width,
             height=height,
             chart_id=chart_id,
-            chart_title=chart_title
+            chart_title=chart_title  # Keep for backward compat but not rendered
         )
 
     def _call_generator_method(
@@ -319,11 +338,20 @@ class AtomicChartGenerator:
         element_id: str,
         height: int,
         chart_title: str,
-        config: Dict[str, Any]
+        config: Dict[str, Any],
+        enable_editor: bool = False,  # v3.5.1: Add editor support
+        presentation_id: str = None   # v3.5.1: Required for editor
     ) -> str:
-        """Call the appropriate ChartJSGenerator method."""
+        """
+        Call the appropriate ChartJSGenerator method.
+
+        v3.5.1: Added enable_editor and presentation_id parameters for edit button.
+        v3.5.1: Pass chart_title=None to avoid duplicate titles in chart HTML.
+        """
         generator = self.chartjs_generator
 
+        # v3.5.1: Don't pass chart_title to avoid duplicate titles
+        # The slide template already provides the title slot
         # Map chart types to generator methods
         if method_name == "generate_line_chart":
             return generator.generate_line_chart(
@@ -331,7 +359,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_bar_chart":
             orientation = config.get("orientation", "vertical")
@@ -341,7 +371,9 @@ class AtomicChartGenerator:
                     height=height,
                     chart_id=element_id,
                     output_mode="inline_script",
-                    chart_title=chart_title
+                    chart_title=None,  # v3.5.1: Slide template provides title
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id
                 )
             else:
                 return generator.generate_bar_chart(
@@ -349,7 +381,9 @@ class AtomicChartGenerator:
                     height=height,
                     chart_id=element_id,
                     output_mode="inline_script",
-                    chart_title=chart_title
+                    chart_title=None,  # v3.5.1: Slide template provides title
+                    enable_editor=enable_editor,
+                    presentation_id=presentation_id
                 )
         elif method_name == "generate_pie_chart":
             return generator.generate_pie_chart(
@@ -357,7 +391,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_doughnut_chart":
             return generator.generate_doughnut_chart(
@@ -365,7 +401,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_scatter_chart":
             return generator.generate_scatter_chart(
@@ -373,7 +411,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_bubble_chart":
             return generator.generate_bubble_chart(
@@ -381,7 +421,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_polar_area_chart":
             return generator.generate_polar_area_chart(
@@ -389,7 +431,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_radar_chart":
             return generator.generate_radar_chart(
@@ -397,7 +441,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_area_chart":
             return generator.generate_area_chart(
@@ -405,7 +451,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_stacked_area_chart":
             return generator.generate_stacked_area_chart(
@@ -413,7 +461,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_grouped_bar_chart":
             return generator.generate_grouped_bar_chart(
@@ -421,7 +471,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_stacked_bar_chart":
             return generator.generate_stacked_bar_chart(
@@ -429,7 +481,9 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         elif method_name == "generate_waterfall_chart":
             return generator.generate_waterfall_chart(
@@ -437,16 +491,18 @@ class AtomicChartGenerator:
                 height=height,
                 chart_id=element_id,
                 output_mode="inline_script",
-                chart_title=chart_title
+                chart_title=None,  # v3.5.1: Slide template provides title
+                enable_editor=enable_editor,
+                presentation_id=presentation_id
             )
         else:
-            # Fallback
+            # Fallback - no editor support for generic charts
             return self._generate_generic_chart(
                 chart_id_type=chart_id_type,
                 data=data,
                 element_id=element_id,
                 height=height,
-                chart_title=chart_title
+                chart_title=None  # v3.5.1: Slide template provides title
             )
 
     def _generate_generic_chart(
@@ -535,17 +591,19 @@ class AtomicChartGenerator:
         width: int,
         height: int,
         chart_id: str,
-        chart_title: str
+        chart_title: str = None  # v3.5.1: Made optional, no longer used
     ) -> str:
-        """Wrap chart HTML in atomic container for frontend positioning."""
+        """
+        Wrap chart HTML in atomic container for frontend positioning.
+
+        v3.5.1: Removed chart-title-bar div - slide template provides title slot.
+        The chart_title parameter is kept for backward compatibility but not rendered.
+        """
         return f'''<div class="atomic-chart-container"
      data-chart-id="{chart_id}"
      data-element-id="{element_id}"
      style="width: {width}px; height: {height}px; position: relative;">
-  <div class="chart-title-bar" style="padding: 8px 16px; font-weight: 600; font-size: 16px; color: #1f2937;">
-    {chart_title}
-  </div>
-  <div class="chart-content" style="flex: 1; padding: 12px;">
+  <div class="chart-content" style="flex: 1; padding: 12px; height: 100%; box-sizing: border-box;">
     {chart_html}
   </div>
 </div>'''
