@@ -88,7 +88,7 @@ class AtomicChartRequest(BaseModel):
         return v.strip() if v else v
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "narrative": "Show quarterly revenue growth for 2024",
                 "include_insights": True,
@@ -155,7 +155,7 @@ class AtomicChartResponse(BaseModel):
     element_id: str = Field(..., description="Unique element ID for frontend positioning")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "chart_id": "line",
@@ -187,7 +187,7 @@ class AtomicChartError(BaseModel):
     suggestion: Optional[str] = Field(None, description="Suggested fix")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": False,
                 "error_code": "INVALID_CHART_TYPE",
@@ -230,16 +230,16 @@ class GridPosition(BaseModel):
     grid_row: str = Field(
         ...,
         description="Row position in 'start/end' format (e.g., '4/15' for rows 4-14)",
-        regex=r"^\d+/\d+$"
+        pattern=r"^\d+/\d+$"
     )
     grid_column: str = Field(
         ...,
         description="Column position in 'start/end' format (e.g., '2/16' for columns 2-15)",
-        regex=r"^\d+/\d+$"
+        pattern=r"^\d+/\d+$"
     )
 
     class Config:
-        schema_extra = {
+        json_json_schema_extra = {
             "example": {
                 "grid_row": "4/15",
                 "grid_column": "2/16"
@@ -330,7 +330,7 @@ class CreateElementRequest(BaseModel):
         return v
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "presentation_id": "pres-12345678-abcd-1234-efgh-567890abcdef",
                 "slide_index": 0,
@@ -369,7 +369,7 @@ class CreateElementResponse(BaseModel):
     data_points: int = Field(..., description="Number of data points in the chart")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "element_id": "chart_a1b2c3d4",
@@ -395,7 +395,7 @@ class CreateElementError(BaseModel):
     details: Optional[Dict[str, Any]] = Field(None, description="Additional error context")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": False,
                 "error_code": "LAYOUT_SERVICE_ERROR",
