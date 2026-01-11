@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.7
+Atomic Chart Generator for Analytics Microservice v3.7.8
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -11,6 +11,13 @@ Key Features:
 - Self-contained HTML with embedded scripts
 - Deterministic element IDs for persistence
 - Auto-loads saved edits on chart initialization
+- Reveal.js slide navigation persistence support
+
+v3.7.8 Changes:
+- CRITICAL FIX: Added Reveal.js slidechanged event listener for navigation persistence
+- Refactored loadSavedData into reloadSavedData function (reusable)
+- Chart data now reloads when navigating back to a slide in Reveal.js
+- Fixes: Edited data showing as original when navigating fwd/backward
 
 v3.7.7 Changes:
 - CRITICAL FIX: openChartEditor now always re-finds chart instance (fixes stale instance bug)
@@ -1097,8 +1104,8 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.7: Auto-load saved chart data with retry logic
-    (async function loadSavedData_{js_safe_id}() {{
+    // v3.7.8: Reusable function to load saved data (called on init AND slide change)
+    async function reloadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
 
@@ -1107,20 +1114,12 @@ class AtomicChartGenerator:
             (window.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1];
 
         if (!presentationId) {{
-            console.debug('No presentation ID found, skipping saved data load');
             return;
         }}
 
-        // v3.7.7: Retry with exponential backoff to ensure chart is ready
-        let chart = null;
-        for (let attempt = 0; attempt < 4; attempt++) {{
-            await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
-            chart = findChartInstance_{js_safe_id}();
-            if (chart) break;
-        }}
-
+        // Find chart instance (should be ready since slide is visible)
+        const chart = findChartInstance_{js_safe_id}();
         if (!chart) {{
-            console.debug('Chart not ready after retries, skipping saved data load');
             return;
         }}
 
@@ -1132,7 +1131,7 @@ class AtomicChartGenerator:
             if (response.ok) {{
                 const saved = await response.json();
 
-                // v3.7.7: Check for saved data with proper array length validation
+                // Check for saved data with proper array length validation
                 if (saved.success && saved.data &&
                     Array.isArray(saved.data.labels) && saved.data.labels.length > 0 &&
                     Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
@@ -1152,9 +1151,37 @@ class AtomicChartGenerator:
             }}
         }} catch (e) {{
             // No saved data is fine - chart keeps original synthetic data
-            console.debug('No saved data for chart:', chartId, e.message);
+            console.debug('No saved data for chart:', chartId);
+        }}
+    }}
+
+    // v3.7.8: Initial load with retry logic
+    (async function initialLoad_{js_safe_id}() {{
+        // Retry with exponential backoff to ensure chart is ready on first load
+        for (let attempt = 0; attempt < 4; attempt++) {{
+            await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+            const chart = findChartInstance_{js_safe_id}();
+            if (chart) {{
+                await reloadSavedData_{js_safe_id}();
+                break;
+            }}
         }}
     }})();
+
+    // v3.7.8: Listen for Reveal.js slide changes to reload data on navigation
+    if (typeof Reveal !== 'undefined') {{
+        Reveal.on('slidechanged', function(event) {{
+            // Check if this chart's container is on the current slide
+            const chartContainer = document.getElementById('{element_id}');
+            if (chartContainer) {{
+                const currentSlide = event.currentSlide;
+                if (currentSlide && currentSlide.contains(chartContainer)) {{
+                    // Small delay to ensure chart is rendered
+                    setTimeout(() => reloadSavedData_{js_safe_id}(), 200);
+                }}
+            }}
+        }});
+    }}
 }})();
 </script>'''
 
