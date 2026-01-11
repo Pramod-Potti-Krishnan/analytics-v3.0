@@ -1,14 +1,22 @@
 """
-Atomic Chart Routes for Analytics Microservice v3.5.0
+Atomic Chart Routes for Analytics Microservice v3.7.5
 
 14 atomic endpoints for gold standard chart types.
 Each endpoint generates a single chart element with synthetic data.
 
 Endpoint Pattern: POST /api/v1/charts/atomic/{chart_id}
 
+v3.7.5 Changes:
+- BREAKING: presentation_id and slide_id are now REQUIRED in request body
+- Deterministic chart IDs enable proper persistence via Layout Service
+- Old requests without slide_id will fail validation
+
 Usage Example:
     POST /api/v1/charts/atomic/line
     {
+        "presentation_id": "pres-12345678",
+        "slide_id": "slide-1",
+        "chart_index": 0,
         "narrative": "Show quarterly revenue growth for 2024",
         "include_insights": true,
         "width": 850,
@@ -201,14 +209,17 @@ async def create_chart_element(request: CreateElementRequest):
         chart_height = element_size.rows * 60 - 20
 
         # 5. Generate chart HTML
+        # v3.7.5: Include required slide_id for deterministic chart IDs
         chart_request = AtomicChartRequest(
+            presentation_id=request.presentation_id,
+            slide_id=f"slide-{request.slide_index}",  # Convert index to slide_id
+            chart_index=0,  # First chart on this slide
             narrative=request.narrative,
             width=chart_width,
             height=chart_height,
             chart_title=request.chart_title,
             theme=request.theme,
-            enable_editor=request.enable_editor,
-            presentation_id=request.presentation_id
+            enable_editor=request.enable_editor
         )
 
         chart_response = await generator.generate(request.chart_type, chart_request)

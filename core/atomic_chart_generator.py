@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.4
+Atomic Chart Generator for Analytics Microservice v3.7.5
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -9,7 +9,13 @@ Key Features:
 - Synthetic data generation
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
-- Frontend-ready element IDs
+- Deterministic element IDs for persistence
+
+v3.7.5 Changes:
+- BREAKING: presentation_id and slide_id are now REQUIRED
+- Deterministic chart IDs: chart-{pres_id}-{slide_id}-{chart_type}-{index}
+- Enables proper persistence via Layout Service (matches V2 pattern)
+- Charts are no longer regenerated on slide revisit
 
 v3.7.4 Changes:
 - Fixed persistence API URL: now uses absolute URL for cross-origin calls
@@ -219,7 +225,10 @@ class AtomicChartGenerator:
             )
 
         config = self.CHART_CONFIGS[chart_id]
-        element_id = f"atomic-chart-{uuid.uuid4().hex[:8]}"
+
+        # v3.7.5: Deterministic chart ID for persistence
+        # Format: chart-{presentation_id}-{slide_id}-{chart_type}-{index}
+        element_id = f"chart-{request.presentation_id}-{request.slide_id}-{chart_id}-{request.chart_index}"
 
         logger.info(f"Generating atomic {chart_id} chart: {element_id}")
 

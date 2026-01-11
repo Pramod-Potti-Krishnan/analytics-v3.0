@@ -1,12 +1,18 @@
 """
-Atomic Chart Models for Analytics Microservice v3.5.0
+Atomic Chart Models for Analytics Microservice v3.7.5
 
 Request/response Pydantic models for atomic chart endpoints.
 Each endpoint generates a single chart element with synthetic data.
+
+v3.7.5 Changes:
+- Added slide_id (required) for deterministic chart IDs
+- Added chart_index (optional, default 0) for multiple charts per slide
+- Made presentation_id required for persistence
+- Chart IDs now follow pattern: chart-{pres_id}-{slide_id}-{chart_type}-{index}
 """
 
 from typing import List, Dict, Any, Optional, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -33,8 +39,32 @@ GOLD_STANDARD_CHARTS = [ct.value for ct in ChartTypeId]
 
 
 class AtomicChartRequest(BaseModel):
-    """Request for atomic chart generation."""
+    """
+    Request for atomic chart generation.
 
+    v3.7.5: presentation_id and slide_id are now required for
+    deterministic chart IDs and proper persistence.
+    """
+
+    # v3.7.5: Required fields for deterministic chart IDs
+    presentation_id: str = Field(
+        ...,
+        min_length=1,
+        description="Presentation UUID (required for persistence)"
+    )
+    slide_id: str = Field(
+        ...,
+        min_length=1,
+        description="Slide identifier (required for deterministic chart IDs)"
+    )
+    chart_index: int = Field(
+        0,
+        ge=0,
+        le=20,
+        description="Index for multiple charts of same type on same slide (default 0)"
+    )
+
+    # Optional generation fields
     narrative: Optional[str] = Field(
         None,
         max_length=2000,
@@ -62,10 +92,6 @@ class AtomicChartRequest(BaseModel):
         le=1500,
         description="Chart container height in pixels"
     )
-    presentation_id: Optional[str] = Field(
-        None,
-        description="Presentation UUID for editor integration"
-    )
     chart_title: Optional[str] = Field(
         None,
         max_length=200,
@@ -80,8 +106,17 @@ class AtomicChartRequest(BaseModel):
         description="v3.6.0: If True, include edit button for interactive data editing"
     )
 
-    @validator('narrative')
-    def validate_narrative(cls, v):
+    @field_validator('presentation_id', 'slide_id')
+    @classmethod
+    def validate_ids(cls, v: str) -> str:
+        """Ensure IDs are not empty or whitespace."""
+        if not v or not v.strip():
+            raise ValueError("cannot be empty or whitespace")
+        return v.strip()
+
+    @field_validator('narrative')
+    @classmethod
+    def validate_narrative(cls, v: Optional[str]) -> Optional[str]:
         """Ensure narrative is meaningful if provided."""
         if v is not None and v.strip() == "":
             return None
@@ -90,6 +125,9 @@ class AtomicChartRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "presentation_id": "pres-12345678-abcd",
+                "slide_id": "slide-1",
+                "chart_index": 0,
                 "narrative": "Show quarterly revenue growth for 2024",
                 "include_insights": True,
                 "num_points": 4,
@@ -173,7 +211,7 @@ class AtomicChartResponse(BaseModel):
                 "synthetic_data": True,
                 "chart_dimensions": {"width": 850, "height": 500},
                 "insights_dimensions": {"width": 400, "height": 500},
-                "element_id": "atomic-chart-abc12345"
+                "element_id": "chart-pres-12345678-abcd-slide-1-line-0"
             }
         }
 
@@ -323,8 +361,9 @@ class CreateElementRequest(BaseModel):
         description="Z-index for layering. If None, auto-assigned by Layout Service."
     )
 
-    @validator('chart_type')
-    def validate_chart_type(cls, v):
+    @field_validator('chart_type')
+    @classmethod
+    def validate_chart_type(cls, v: str) -> str:
         """Validate chart type is supported."""
         if v not in GOLD_STANDARD_CHARTS:
             raise ValueError(f"Chart type '{v}' not supported. Valid types: {GOLD_STANDARD_CHARTS}")

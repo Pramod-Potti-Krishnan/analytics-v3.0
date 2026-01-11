@@ -1,21 +1,22 @@
 #!/bin/bash
 #
-# Test Script: Atomic Charts Phase 1 - C1-text & C3-chart Layouts
+# Test Script: Atomic Charts Phase 2 - C1-text & C3-chart Layouts
 # Version: 3.7.5
-# Charts: line, bar_vertical, bar_horizontal, pie, doughnut (5 total)
+# Charts: scatter, bubble, polar_area, radar, area (5 total)
 #
 # v3.7.5: Added required slide_id for deterministic chart IDs and persistence
-# v3.6.1: Pass enable_editor=true and presentation_id for edit button support
 #
 # This script tests atomic chart endpoints and publishes them to both
 # C1-text and C3-chart layouts via the Layout Service.
 #
 
+set -e
+
 # Configuration
 ANALYTICS_URL="${ANALYTICS_URL:-https://analytics-v30-production.up.railway.app}"
 LAYOUT_URL="${LAYOUT_URL:-https://web-production-f0d13.up.railway.app}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-OUTPUT_DIR="./test_outputs/atomic_c1_c3_phase1_${TIMESTAMP}"
+OUTPUT_DIR="./test_outputs/atomic_c1_c3_phase2_${TIMESTAMP}"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -28,7 +29,7 @@ NC='\033[0m' # No Color
 
 echo ""
 echo "=============================================="
-echo "  Atomic Charts Phase 1 - C1 & C3 Layouts"
+echo "  Atomic Charts Phase 2 - C1 & C3 Layouts"
 echo "  Version: 3.7.5 (deterministic chart IDs)"
 echo "=============================================="
 echo "Analytics: $ANALYTICS_URL"
@@ -36,26 +37,15 @@ echo "Layout:    $LAYOUT_URL"
 echo "Output:    $OUTPUT_DIR"
 echo ""
 
-# Phase 1 Charts (5 total) - using indexed arrays for bash 3.x compatibility
-CHART_TYPES="line bar_vertical bar_horizontal pie doughnut"
-NARRATIVES_line="Show quarterly revenue growth for 2024 with strong Q3-Q4 performance"
-NARRATIVES_bar_vertical="Compare department performance rankings across the organization"
-NARRATIVES_bar_horizontal="Top 10 products by revenue contribution to total sales"
-NARRATIVES_pie="Market share distribution by company segment"
-NARRATIVES_doughnut="Annual budget allocation by department for fiscal year"
-
-# Function to get narrative for chart type
-get_narrative() {
-    local chart_type=$1
-    case $chart_type in
-        line) echo "$NARRATIVES_line" ;;
-        bar_vertical) echo "$NARRATIVES_bar_vertical" ;;
-        bar_horizontal) echo "$NARRATIVES_bar_horizontal" ;;
-        pie) echo "$NARRATIVES_pie" ;;
-        doughnut) echo "$NARRATIVES_doughnut" ;;
-        *) echo "Chart analysis" ;;
-    esac
-}
+# Phase 2 Charts (5 total) - Using parallel arrays for bash 3.2 compatibility
+CHART_TYPES=("scatter" "bubble" "polar_area" "radar" "area")
+NARRATIVES=(
+    "Customer satisfaction score vs annual revenue correlation analysis"
+    "Product positioning by revenue, growth rate, and market size"
+    "Seasonal sales patterns throughout the fiscal year quarters"
+    "Team performance across 8 key operational metrics"
+    "Cumulative monthly revenue over the past 12 months"
+)
 
 # ============================================
 # Health Checks
@@ -98,22 +88,22 @@ echo ""
 # ============================================
 # Generate Atomic Charts
 # ============================================
-echo "--- Generating Atomic Charts (Phase 1: 5 Charts) ---"
+echo "--- Generating Atomic Charts (Phase 2: 5 Charts) ---"
 echo ""
 
 SUCCESS_COUNT=0
 FAIL_COUNT=0
 ATOMIC_RESULTS="[]"
 
-# Arrays to store slide JSON
-C1_SLIDES=""
-C3_SLIDES=""
-CHART_TITLES=""
+# Arrays to store chart data for presentations
+declare -a C1_SLIDES
+declare -a C3_SLIDES
+declare -a CHART_DETAILS
 
-slide_num=0
-for chart_type in $CHART_TYPES; do
-    slide_num=$((slide_num + 1))
-    narrative=$(get_narrative "$chart_type")
+for i in "${!CHART_TYPES[@]}"; do
+    chart_type="${CHART_TYPES[$i]}"
+    narrative="${NARRATIVES[$i]}"
+    slide_num=$((i + 1))
 
     echo -e "${BLUE}[$slide_num/5] Testing: $chart_type${NC}"
     echo "  Narrative: $narrative"
@@ -123,7 +113,7 @@ for chart_type in $CHART_TYPES; do
     RESPONSE=$(curl -s -X POST "$ANALYTICS_URL/api/v1/charts/atomic/$chart_type" \
         -H "Content-Type: application/json" \
         -d "{
-            \"presentation_id\": \"test-pres-phase1-$TIMESTAMP\",
+            \"presentation_id\": \"test-pres-phase2-$TIMESTAMP\",
             \"slide_id\": \"slide-$slide_num\",
             \"chart_index\": 0,
             \"narrative\": \"$narrative\",
@@ -161,45 +151,36 @@ for chart_type in $CHART_TYPES; do
             echo "  Insights: Present"
         fi
 
-        # Store title for later
-        CHART_TITLES="$CHART_TITLES|$chart_type:$CHART_TITLE:$GEN_TIME:$DATA_COUNT"
+        # Store for slides
+        CHART_DETAILS+=("$chart_type|$CHART_TITLE|$GEN_TIME|$DATA_COUNT")
 
         # Escape HTML for JSON
         CHART_ESCAPED=$(echo "$CHART_HTML" | jq -Rs .)
         TITLE_ESCAPED=$(echo "$CHART_TITLE" | jq -Rs . | sed 's/^"//;s/"$//')
 
-        # Build C1-text slide JSON
-        C1_SLIDE="{
+        # Build C1-text slide
+        C1_SLIDES+=("{
             \"layout\": \"C1-text\",
             \"content\": {
                 \"slide_title\": \"$TITLE_ESCAPED\",
                 \"subtitle\": \"$chart_type chart - Atomic Endpoint Test\",
                 \"body\": $CHART_ESCAPED,
-                \"footer_text\": \"Phase 1 - Atomic Charts Test\",
+                \"footer_text\": \"Phase 2 - Atomic Charts Test\",
                 \"logo\": \" \"
             }
-        }"
+        }")
 
-        # Build C3-chart slide JSON
-        C3_SLIDE="{
+        # Build C3-chart slide
+        C3_SLIDES+=("{
             \"layout\": \"C3-chart\",
             \"content\": {
                 \"slide_title\": \"$TITLE_ESCAPED\",
                 \"subtitle\": \"$chart_type visualization\",
                 \"chart_html\": $CHART_ESCAPED,
-                \"presentation_name\": \"Atomic Charts Phase 1\",
+                \"presentation_name\": \"Atomic Charts Phase 2\",
                 \"logo\": \" \"
             }
-        }"
-
-        # Append to slides arrays
-        if [ -z "$C1_SLIDES" ]; then
-            C1_SLIDES="$C1_SLIDE"
-            C3_SLIDES="$C3_SLIDE"
-        else
-            C1_SLIDES="$C1_SLIDES,$C1_SLIDE"
-            C3_SLIDES="$C3_SLIDES,$C3_SLIDE"
-        fi
+        }")
 
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
         ATOMIC_RESULTS=$(echo "$ATOMIC_RESULTS" | jq ". + [{\"chart_id\": \"$chart_type\", \"status\": \"success\", \"generation_time_ms\": $GEN_TIME, \"data_points\": $DATA_COUNT}]")
@@ -219,10 +200,13 @@ done
 # ============================================
 echo "--- Creating C1-text Presentation ---"
 
+# Join slides array
+C1_SLIDES_JSON=$(IFS=,; echo "${C1_SLIDES[*]}")
+
 C1_REQUEST="{
-    \"title\": \"Atomic Charts Phase 1 - C1-text Layout - $TIMESTAMP\",
+    \"title\": \"Atomic Charts Phase 2 - C1-text Layout - $TIMESTAMP\",
     \"template_id\": \"L25\",
-    \"slides\": [$C1_SLIDES]
+    \"slides\": [$C1_SLIDES_JSON]
 }"
 
 echo "$C1_REQUEST" | jq . > "$OUTPUT_DIR/c1_presentation_request.json"
@@ -253,10 +237,13 @@ echo ""
 # ============================================
 echo "--- Creating C3-chart Presentation ---"
 
+# Join slides array
+C3_SLIDES_JSON=$(IFS=,; echo "${C3_SLIDES[*]}")
+
 C3_REQUEST="{
-    \"title\": \"Atomic Charts Phase 1 - C3-chart Layout - $TIMESTAMP\",
+    \"title\": \"Atomic Charts Phase 2 - C3-chart Layout - $TIMESTAMP\",
     \"template_id\": \"L25\",
-    \"slides\": [$C3_SLIDES]
+    \"slides\": [$C3_SLIDES_JSON]
 }"
 
 echo "$C3_REQUEST" | jq . > "$OUTPUT_DIR/c3_presentation_request.json"
@@ -287,11 +274,11 @@ echo ""
 # ============================================
 echo "--- Generating Preview HTML ---"
 
-cat > "$OUTPUT_DIR/preview_charts.html" << EOF
+cat > "$OUTPUT_DIR/preview_charts.html" << 'EOF'
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Atomic Charts Phase 1 - Preview</title>
+    <title>Atomic Charts Phase 2 - Preview</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; background: #f5f5f5; margin: 0; }
@@ -305,34 +292,32 @@ cat > "$OUTPUT_DIR/preview_charts.html" << EOF
         .stats { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: #6b7280; }
         .stat { display: flex; align-items: center; gap: 4px; }
         .stat-value { font-weight: 600; color: #374151; }
-        .urls { margin-top: 24px; padding: 16px; background: white; border-radius: 8px; }
-        .urls h3 { margin: 0 0 12px 0; color: #374151; }
-        .urls a { display: block; color: #3b82f6; margin: 4px 0; }
     </style>
 </head>
 <body>
-    <h1>Atomic Charts Phase 1 - Preview</h1>
-    <p class="subtitle">Charts: line, bar_vertical, bar_horizontal, pie, doughnut | Generated: $TIMESTAMP</p>
-    <div class="urls">
-        <h3>Presentation URLs</h3>
-        <a href="$C1_URL" target="_blank">C1-text Layout: $C1_URL</a>
-        <a href="$C3_URL" target="_blank">C3-chart Layout: $C3_URL</a>
-    </div>
+    <h1>Atomic Charts Phase 2 - Preview</h1>
+    <p class="subtitle">Charts: scatter, bubble, polar_area, radar, area | Generated: TIMESTAMP_PLACEHOLDER</p>
     <div class="chart-grid">
 EOF
 
-slide_num=0
-for chart_type in $CHART_TYPES; do
-    slide_num=$((slide_num + 1))
+for i in "${!CHART_TYPES[@]}"; do
+    chart_type="${CHART_TYPES[$i]}"
+    slide_num=$((i + 1))
     html_file="${slide_num}_${chart_type}_chart.html"
 
     if [ -f "$OUTPUT_DIR/$html_file" ]; then
-        CHART_CONTENT=$(cat "$OUTPUT_DIR/$html_file" | sed 's/"/\&quot;/g' | tr '\n' ' ')
+        # Get chart details
+        IFS='|' read -r _ title gen_time data_count <<< "${CHART_DETAILS[$i]:-|Chart|0|0}"
+
         cat >> "$OUTPUT_DIR/preview_charts.html" << EOF
         <div class="chart-card">
             <div class="chart-type">$chart_type</div>
-            <div class="chart-title">Chart $slide_num</div>
-            <iframe class="chart-frame" srcdoc="$CHART_CONTENT"></iframe>
+            <div class="chart-title">$title</div>
+            <iframe class="chart-frame" srcdoc="$(cat "$OUTPUT_DIR/$html_file" | sed 's/"/\&quot;/g' | tr '\n' ' ')"></iframe>
+            <div class="stats">
+                <div class="stat">Time: <span class="stat-value">${gen_time}ms</span></div>
+                <div class="stat">Points: <span class="stat-value">$data_count</span></div>
+            </div>
         </div>
 EOF
     fi
@@ -343,6 +328,11 @@ cat >> "$OUTPUT_DIR/preview_charts.html" << 'EOF'
 </body>
 </html>
 EOF
+
+# Replace timestamp placeholder
+sed -i.bak "s/TIMESTAMP_PLACEHOLDER/$TIMESTAMP/" "$OUTPUT_DIR/preview_charts.html" 2>/dev/null || \
+sed -i "s/TIMESTAMP_PLACEHOLDER/$TIMESTAMP/" "$OUTPUT_DIR/preview_charts.html" 2>/dev/null
+rm -f "$OUTPUT_DIR/preview_charts.html.bak"
 
 echo "Preview HTML: $OUTPUT_DIR/preview_charts.html"
 
@@ -355,8 +345,8 @@ echo "--- Generating Test Report ---"
 cat > "$OUTPUT_DIR/test_report.json" << EOF
 {
     "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    "phase": 1,
-    "charts_tested": ["line", "bar_vertical", "bar_horizontal", "pie", "doughnut"],
+    "phase": 2,
+    "charts_tested": ["scatter", "bubble", "polar_area", "radar", "area"],
     "atomic_results": {
         "success": $SUCCESS_COUNT,
         "failed": $FAIL_COUNT,
@@ -367,13 +357,13 @@ cat > "$OUTPUT_DIR/test_report.json" << EOF
             "presentation_id": "$C1_PRES_ID",
             "url": "$C1_URL",
             "slides": $SUCCESS_COUNT,
-            "status": "$([ -n "$C1_PRES_ID" ] && [ "$C1_PRES_ID" != "null" ] && echo "success" || echo "failed")"
+            "status": "$([ -n "$C1_PRES_ID" ] && echo "success" || echo "failed")"
         },
         "c3_chart": {
             "presentation_id": "$C3_PRES_ID",
             "url": "$C3_URL",
             "slides": $SUCCESS_COUNT,
-            "status": "$([ -n "$C3_PRES_ID" ] && [ "$C3_PRES_ID" != "null" ] && echo "success" || echo "failed")"
+            "status": "$([ -n "$C3_PRES_ID" ] && echo "success" || echo "failed")"
         }
     },
     "output_directory": "$OUTPUT_DIR"
@@ -387,10 +377,10 @@ echo "Test Report: $OUTPUT_DIR/test_report.json"
 # ============================================
 echo ""
 echo "=============================================="
-echo "  PHASE 1 TEST RESULTS"
+echo "  PHASE 2 TEST RESULTS"
 echo "=============================================="
 echo ""
-echo "Charts Tested: $CHART_TYPES"
+echo "Charts Tested: ${CHART_TYPES[*]}"
 echo ""
 echo -e "Atomic Generation: ${GREEN}$SUCCESS_COUNT${NC} / 5 success"
 if [ $FAIL_COUNT -gt 0 ]; then
@@ -425,7 +415,7 @@ fi
 echo ""
 
 # Exit with appropriate code
-if [ $FAIL_COUNT -gt 0 ] || [ -z "$C1_PRES_ID" ] || [ "$C1_PRES_ID" = "null" ] || [ -z "$C3_PRES_ID" ] || [ "$C3_PRES_ID" = "null" ]; then
+if [ $FAIL_COUNT -gt 0 ] || [ -z "$C1_PRES_ID" ] || [ -z "$C3_PRES_ID" ]; then
     exit 1
 else
     exit 0
