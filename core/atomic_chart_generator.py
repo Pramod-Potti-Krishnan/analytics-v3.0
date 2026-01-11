@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.5
+Atomic Chart Generator for Analytics Microservice v3.7.6
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -10,6 +10,13 @@ Key Features:
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
 - Deterministic element IDs for persistence
+- Auto-loads saved edits on chart initialization
+
+v3.7.6 Changes:
+- Added loadSavedData function that runs on chart initialization
+- Fetches saved edits from /api/charts/get-data/{pres_id}/{chart_id}
+- If saved data exists, updates Chart.js instance with persisted values
+- Fixes issue where edited data was lost on slide navigation
 
 v3.7.5 Changes:
 - BREAKING: presentation_id and slide_id are now REQUIRED
@@ -1084,6 +1091,56 @@ class AtomicChartGenerator:
     }} else {{
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
+
+    // v3.7.6: Auto-load saved chart data on initialization
+    (async function loadSavedData_{js_safe_id}() {{
+        const chartId = '{element_id}';
+        const analyticsServiceUrl = '{settings.analytics_service_url}';
+
+        // Extract presentation ID from URL (format: /p/{{uuid}})
+        const presentationId = window.currentPresentationId ||
+            (window.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1];
+
+        if (!presentationId) {{
+            console.debug('No presentation ID found, skipping saved data load');
+            return;
+        }}
+
+        // Small delay to ensure chart is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        try {{
+            const response = await fetch(
+                `${{analyticsServiceUrl}}/api/charts/get-data/${{presentationId}}/${{chartId}}`
+            );
+
+            if (response.ok) {{
+                const saved = await response.json();
+
+                // Check if we have saved data
+                if (saved.success && saved.data) {{
+                    const chart = findChartInstance_{js_safe_id}();
+
+                    if (chart && saved.data.labels && saved.data.values) {{
+                        // Apply saved labels
+                        chart.data.labels = saved.data.labels;
+
+                        // Apply saved values to first dataset
+                        if (chart.data.datasets && chart.data.datasets[0]) {{
+                            chart.data.datasets[0].data = saved.data.values;
+                        }}
+
+                        // Re-render the chart
+                        chart.update();
+                        console.log('✅ Loaded saved chart data for', chartId);
+                    }}
+                }}
+            }}
+        }} catch (e) {{
+            // No saved data is fine - chart keeps original synthetic data
+            console.debug('No saved data for chart:', chartId, e.message);
+        }}
+    }})();
 }})();
 </script>'''
 
