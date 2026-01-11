@@ -1,8 +1,8 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.9
+Atomic Chart Generator for Analytics Microservice v3.7.10
 
 Generates atomic chart elements with synthetic data for frontend positioning.
-Each chart is a self-contained HTML element ready for placement.
+Each chart is a self-contained HTML element ready for placed.
 
 Key Features:
 - 14 gold standard chart types
@@ -12,7 +12,14 @@ Key Features:
 - Deterministic element IDs for persistence
 - Auto-loads saved edits on chart initialization
 - Reveal.js slide navigation persistence support
-- Scatter/bubble chart x/y/r format persistence
+- Multi-series, waterfall, scatter/bubble persistence
+
+v3.7.10 Changes:
+- FEATURE: Multi-series editor for area_stacked, bar_grouped, bar_stacked
+- FEATURE: Waterfall editor with Start/End columns
+- Dynamic column headers based on dataset series names
+- Multi-series save/load with datasets format
+- Waterfall save/load with [[start, end], ...] format
 
 v3.7.9 Changes:
 - CRITICAL FIX: reloadSavedData now handles scatter/bubble x/y/r format
@@ -778,8 +785,10 @@ class AtomicChartGenerator:
         """
         pres_id = presentation_id or "atomic-standalone"
 
-        # v3.7.2: Chart-type-specific table headers
+        # v3.7.10: Chart-type-specific table headers (multi-series headers built dynamically in JS)
         th_style = 'background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;'
+        multi_series_charts = ['area_stacked', 'bar_grouped', 'bar_stacked']
+
         if chart_id == "scatter":
             table_headers = f'''
                             <th style="{th_style} width: 50px;">#</th>
@@ -795,6 +804,22 @@ class AtomicChartGenerator:
                             <th style="{th_style}">X</th>
                             <th style="{th_style}">Y</th>
                             <th style="{th_style}">Radius</th>
+                            <th style="{th_style} width: 80px;">Actions</th>
+            '''
+        elif chart_id == "waterfall":
+            table_headers = f'''
+                            <th style="{th_style} width: 50px;">#</th>
+                            <th style="{th_style}">Label</th>
+                            <th style="{th_style}">Start</th>
+                            <th style="{th_style}">End</th>
+                            <th style="{th_style} width: 80px;">Actions</th>
+            '''
+        elif chart_id in multi_series_charts:
+            # v3.7.10: Multi-series headers built dynamically - placeholder row updated by JS
+            table_headers = f'''
+                            <th style="{th_style} width: 50px;">#</th>
+                            <th style="{th_style}">Label</th>
+                            <!-- Series columns inserted dynamically by JavaScript -->
                             <th style="{th_style} width: 80px;">Actions</th>
             '''
         else:
@@ -892,7 +917,10 @@ class AtomicChartGenerator:
         const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
         const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>';
 
-        // v3.7.2: Chart-type-specific data extraction
+        // v3.7.10: Chart-type-specific data extraction with multi-series and waterfall support
+        const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
+        const isMultiSeries = multiSeriesCharts.includes(chartType_{js_safe_id});
+
         if (chartType_{js_safe_id} === 'scatter') {{
             const data = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
             data.forEach((point, index) => {{
@@ -920,6 +948,58 @@ class AtomicChartGenerator:
                     <td style="${{tdStyle}}"><input type="number" class="r-input" value="${{point.r || 15}}" step="any" style="${{inputStyle}}"></td>
                     <td style="${{tdStyle}}">${{deleteBtn}}</td>
                 `;
+                tbody.appendChild(row);
+            }});
+        }} else if (chartType_{js_safe_id} === 'waterfall') {{
+            // v3.7.10: Waterfall with Start/End columns
+            const labels = atomicChart_{js_safe_id}.data.labels || [];
+            const data = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+            labels.forEach((label, index) => {{
+                const value = data[index];
+                // Waterfall data is [start, end] array format
+                const start = Array.isArray(value) ? value[0] : 0;
+                const end = Array.isArray(value) ? value[1] : (typeof value === 'number' ? value : 0);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="${{tdStyle}}">${{index + 1}}</td>
+                    <td style="${{tdStyle}}"><input type="text" class="label-input" value="${{label}}" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="start-input" value="${{start}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="end-input" value="${{end}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}">${{deleteBtn}}</td>
+                `;
+                tbody.appendChild(row);
+            }});
+        }} else if (isMultiSeries) {{
+            // v3.7.10: Multi-series charts (area_stacked, bar_grouped, bar_stacked)
+            const labels = atomicChart_{js_safe_id}.data.labels || [];
+            const datasets = atomicChart_{js_safe_id}.data.datasets || [];
+
+            // Store series names for later use
+            window.seriesNames_{js_safe_id} = datasets.map((ds, i) => ds.label || `Series ${{i + 1}}`);
+
+            // Rebuild table header with dynamic series columns
+            const thead = document.querySelector('#table-{element_id} thead tr');
+            const thStyle = 'background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;';
+            let headerHTML = `<th style="${{thStyle}} width: 50px;">#</th><th style="${{thStyle}}">Label</th>`;
+            window.seriesNames_{js_safe_id}.forEach(name => {{
+                headerHTML += `<th style="${{thStyle}}">${{name}}</th>`;
+            }});
+            headerHTML += `<th style="${{thStyle}} width: 80px;">Actions</th>`;
+            thead.innerHTML = headerHTML;
+
+            // Populate data rows
+            labels.forEach((label, rowIndex) => {{
+                const row = document.createElement('tr');
+                let rowHTML = `
+                    <td style="${{tdStyle}}">${{rowIndex + 1}}</td>
+                    <td style="${{tdStyle}}"><input type="text" class="label-input" value="${{label}}" style="${{inputStyle}}"></td>
+                `;
+                datasets.forEach((ds, seriesIndex) => {{
+                    const value = ds.data[rowIndex] !== undefined ? ds.data[rowIndex] : 0;
+                    rowHTML += `<td style="${{tdStyle}}"><input type="number" class="series-input" data-series="${{seriesIndex}}" value="${{value}}" step="any" style="${{inputStyle}}"></td>`;
+                }});
+                rowHTML += `<td style="${{tdStyle}}">${{deleteBtn}}</td>`;
+                row.innerHTML = rowHTML;
                 tbody.appendChild(row);
             }});
         }} else {{
@@ -961,7 +1041,10 @@ class AtomicChartGenerator:
         const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
         const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>';
 
-        // v3.7.2: Chart-type-specific new row templates
+        // v3.7.10: Chart-type-specific new row templates with multi-series and waterfall
+        const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
+        const isMultiSeries = multiSeriesCharts.includes(chartType_{js_safe_id});
+
         if (chartType_{js_safe_id} === 'scatter') {{
             row.innerHTML = `
                 <td style="${{tdStyle}}">${{rowCount + 1}}</td>
@@ -979,6 +1062,26 @@ class AtomicChartGenerator:
                 <td style="${{tdStyle}}"><input type="number" class="r-input" value="15" step="any" style="${{inputStyle}}"></td>
                 <td style="${{tdStyle}}">${{deleteBtn}}</td>
             `;
+        }} else if (chartType_{js_safe_id} === 'waterfall') {{
+            row.innerHTML = `
+                <td style="${{tdStyle}}">${{rowCount + 1}}</td>
+                <td style="${{tdStyle}}"><input type="text" class="label-input" value="New Item" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="start-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="end-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}">${{deleteBtn}}</td>
+            `;
+        }} else if (isMultiSeries) {{
+            // Multi-series: add cells for each series
+            const seriesNames = window.seriesNames_{js_safe_id} || [];
+            let rowHTML = `
+                <td style="${{tdStyle}}">${{rowCount + 1}}</td>
+                <td style="${{tdStyle}}"><input type="text" class="label-input" value="New Item" style="${{inputStyle}}"></td>
+            `;
+            seriesNames.forEach((name, idx) => {{
+                rowHTML += `<td style="${{tdStyle}}"><input type="number" class="series-input" data-series="${{idx}}" value="0" step="any" style="${{inputStyle}}"></td>`;
+            }});
+            rowHTML += `<td style="${{tdStyle}}">${{deleteBtn}}</td>`;
+            row.innerHTML = rowHTML;
         }} else {{
             row.innerHTML = `
                 <td style="${{tdStyle}}">${{rowCount + 1}}</td>
@@ -1007,7 +1110,10 @@ class AtomicChartGenerator:
         // Collect data from table
         const rows = document.querySelectorAll('#tbody-{element_id} tr');
 
-        // v3.7.2: Chart-type-specific save logic
+        // v3.7.10: Chart-type-specific save logic with multi-series and waterfall
+        const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
+        const isMultiSeries = multiSeriesCharts.includes(chartType_{js_safe_id});
+
         if (chartType_{js_safe_id} === 'scatter') {{
             const newData = [];
             rows.forEach(row => {{
@@ -1027,6 +1133,50 @@ class AtomicChartGenerator:
                 newData.push({{ label, x, y, r }});
             }});
             atomicChart_{js_safe_id}.data.datasets[0].data = newData;
+        }} else if (chartType_{js_safe_id} === 'waterfall') {{
+            // v3.7.10: Waterfall with Start/End columns
+            const newLabels = [];
+            const newData = [];
+            rows.forEach(row => {{
+                const label = row.querySelector('.label-input').value;
+                const start = parseFloat(row.querySelector('.start-input').value) || 0;
+                const end = parseFloat(row.querySelector('.end-input').value) || 0;
+                newLabels.push(label);
+                newData.push([start, end]);  // Floating bar format
+            }});
+            atomicChart_{js_safe_id}.data.labels = newLabels;
+            atomicChart_{js_safe_id}.data.datasets[0].data = newData;
+        }} else if (isMultiSeries) {{
+            // v3.7.10: Multi-series charts
+            const newLabels = [];
+            const seriesData = [];
+            const numSeries = window.seriesNames_{js_safe_id}?.length || 0;
+
+            // Initialize series data arrays
+            for (let i = 0; i < numSeries; i++) {{
+                seriesData.push([]);
+            }}
+
+            rows.forEach(row => {{
+                const label = row.querySelector('.label-input').value;
+                newLabels.push(label);
+
+                const seriesInputs = row.querySelectorAll('.series-input');
+                seriesInputs.forEach((input, idx) => {{
+                    const value = parseFloat(input.value) || 0;
+                    if (seriesData[idx]) {{
+                        seriesData[idx].push(value);
+                    }}
+                }});
+            }});
+
+            // Update chart
+            atomicChart_{js_safe_id}.data.labels = newLabels;
+            seriesData.forEach((data, idx) => {{
+                if (atomicChart_{js_safe_id}.data.datasets[idx]) {{
+                    atomicChart_{js_safe_id}.data.datasets[idx].data = data;
+                }}
+            }});
         }} else {{
             // Standard label/value save
             const newLabels = [];
@@ -1063,6 +1213,17 @@ class AtomicChartGenerator:
             }} else if (chartType_{js_safe_id} === 'bubble') {{
                 payload.data = atomicChart_{js_safe_id}.data.datasets[0].data.map(p => ({{
                     x: p.x, y: p.y, r: p.r, label: p.label || ''
+                }}));
+            }} else if (chartType_{js_safe_id} === 'waterfall') {{
+                // v3.7.10: Waterfall persistence with Start/End values
+                payload.labels = atomicChart_{js_safe_id}.data.labels;
+                payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;  // [[start, end], ...]
+            }} else if (isMultiSeries) {{
+                // v3.7.10: Multi-series persistence
+                payload.labels = atomicChart_{js_safe_id}.data.labels;
+                payload.datasets = atomicChart_{js_safe_id}.data.datasets.map(ds => ({{
+                    label: ds.label,
+                    data: ds.data
                 }}));
             }} else {{
                 payload.labels = atomicChart_{js_safe_id}.data.labels;
@@ -1111,8 +1272,8 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.9: Reusable function to load saved data (called on init AND slide change)
-    // Now handles scatter/bubble charts with x/y/r format
+    // v3.7.10: Reusable function to load saved data (called on init AND slide change)
+    // Now handles scatter/bubble, waterfall, and multi-series charts
     async function reloadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
@@ -1131,6 +1292,9 @@ class AtomicChartGenerator:
             return;
         }}
 
+        const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
+        const isMultiSeries = multiSeriesCharts.includes(chartType_{js_safe_id});
+
         try {{
             const response = await fetch(
                 `${{analyticsServiceUrl}}/api/charts/get-data/${{presentationId}}/${{chartId}}`
@@ -1139,33 +1303,69 @@ class AtomicChartGenerator:
             if (response.ok) {{
                 const saved = await response.json();
 
-                if (saved.success && saved.data && Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
-                    const values = saved.data.values;
-
-                    // v3.7.9: Check if this is scatter/bubble format (array of objects with x/y)
-                    const isScatterBubble = chartType_{js_safe_id} === 'scatter' || chartType_{js_safe_id} === 'bubble';
-                    const hasXYFormat = values[0] && typeof values[0] === 'object' && 'x' in values[0] && 'y' in values[0];
-
-                    if (isScatterBubble && hasXYFormat) {{
-                        // Scatter/bubble: apply x/y/r data directly
-                        if (chart.data.datasets && chart.data.datasets[0]) {{
-                            chart.data.datasets[0].data = values.map(p => ({{
-                                x: p.x,
-                                y: p.y,
-                                r: p.r !== undefined ? p.r : 15,
-                                label: p.label || ''
-                            }}));
+                if (saved.success && saved.data) {{
+                    // v3.7.10: Check for multi-series format first (has datasets array)
+                    if (isMultiSeries && saved.data.datasets && Array.isArray(saved.data.datasets)) {{
+                        // Multi-series format: {{ labels: [...], datasets: [{{label, data}}, ...] }}
+                        if (saved.data.labels) {{
+                            chart.data.labels = saved.data.labels;
                         }}
+                        saved.data.datasets.forEach((ds, idx) => {{
+                            if (chart.data.datasets[idx]) {{
+                                chart.data.datasets[idx].data = ds.data;
+                                if (ds.label) {{
+                                    chart.data.datasets[idx].label = ds.label;
+                                }}
+                            }}
+                        }});
                         chart.update();
-                        console.log('✅ Loaded saved scatter/bubble data for', chartId);
-                    }} else if (Array.isArray(saved.data.labels) && saved.data.labels.length > 0) {{
-                        // Standard charts: apply labels and values
-                        chart.data.labels = saved.data.labels;
-                        if (chart.data.datasets && chart.data.datasets[0]) {{
-                            chart.data.datasets[0].data = values;
+                        console.log('✅ Loaded saved multi-series data for', chartId);
+                        return;
+                    }}
+
+                    // Check for values array
+                    if (Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
+                        const values = saved.data.values;
+
+                        // v3.7.9: Check if this is scatter/bubble format (array of objects with x/y)
+                        const isScatterBubble = chartType_{js_safe_id} === 'scatter' || chartType_{js_safe_id} === 'bubble';
+                        const hasXYFormat = values[0] && typeof values[0] === 'object' && 'x' in values[0] && 'y' in values[0];
+
+                        // v3.7.10: Check if this is waterfall format ([[start, end], ...])
+                        const isWaterfall = chartType_{js_safe_id} === 'waterfall';
+                        const hasWaterfallFormat = Array.isArray(values[0]) && values[0].length === 2;
+
+                        if (isScatterBubble && hasXYFormat) {{
+                            // Scatter/bubble: apply x/y/r data directly
+                            if (chart.data.datasets && chart.data.datasets[0]) {{
+                                chart.data.datasets[0].data = values.map(p => ({{
+                                    x: p.x,
+                                    y: p.y,
+                                    r: p.r !== undefined ? p.r : 15,
+                                    label: p.label || ''
+                                }}));
+                            }}
+                            chart.update();
+                            console.log('✅ Loaded saved scatter/bubble data for', chartId);
+                        }} else if (isWaterfall && hasWaterfallFormat) {{
+                            // Waterfall: apply [[start, end], ...] format
+                            if (saved.data.labels) {{
+                                chart.data.labels = saved.data.labels;
+                            }}
+                            if (chart.data.datasets && chart.data.datasets[0]) {{
+                                chart.data.datasets[0].data = values;
+                            }}
+                            chart.update();
+                            console.log('✅ Loaded saved waterfall data for', chartId);
+                        }} else if (Array.isArray(saved.data.labels) && saved.data.labels.length > 0) {{
+                            // Standard charts: apply labels and values
+                            chart.data.labels = saved.data.labels;
+                            if (chart.data.datasets && chart.data.datasets[0]) {{
+                                chart.data.datasets[0].data = values;
+                            }}
+                            chart.update();
+                            console.log('✅ Loaded saved chart data for', chartId);
                         }}
-                        chart.update();
-                        console.log('✅ Loaded saved chart data for', chartId);
                     }}
                 }}
             }}

@@ -423,16 +423,37 @@ async def get_specific_chart_data(presentation_id: str, chart_id: str):
 
                 if result.data and len(result.data) > 0:
                     record = result.data[0]
+                    values = record.get("values", [])
+                    chart_type = record.get("chart_type", "")
+
+                    # v3.7.10: Detect and return multi-series format as 'datasets'
+                    multi_series_charts = ['area_stacked', 'bar_grouped', 'bar_stacked']
+                    is_multi_series = (
+                        chart_type in multi_series_charts and
+                        len(values) > 0 and
+                        isinstance(values[0], dict) and
+                        'label' in values[0] and
+                        'data' in values[0]
+                    )
+
+                    response_data = {
+                        "chart_id": record["chart_id"],
+                        "presentation_id": record["presentation_id"],
+                        "labels": record.get("labels", []),
+                        "chart_type": chart_type,
+                        "updated_at": record.get("updated_at")
+                    }
+
+                    if is_multi_series:
+                        # Return as 'datasets' for multi-series charts
+                        response_data["datasets"] = values
+                    else:
+                        # Return as 'values' for other chart types
+                        response_data["values"] = values
+
                     return {
                         "success": True,
-                        "data": {
-                            "chart_id": record["chart_id"],
-                            "presentation_id": record["presentation_id"],
-                            "labels": record.get("labels", []),
-                            "values": record.get("values", []),
-                            "chart_type": record.get("chart_type"),
-                            "updated_at": record.get("updated_at")
-                        }
+                        "data": response_data
                     }
 
             except Exception as db_error:
