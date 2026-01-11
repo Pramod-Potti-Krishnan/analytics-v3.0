@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.6
+Atomic Chart Generator for Analytics Microservice v3.7.7
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -11,6 +11,12 @@ Key Features:
 - Self-contained HTML with embedded scripts
 - Deterministic element IDs for persistence
 - Auto-loads saved edits on chart initialization
+
+v3.7.7 Changes:
+- CRITICAL FIX: openChartEditor now always re-finds chart instance (fixes stale instance bug)
+- CRITICAL FIX: loadSavedData uses retry with exponential backoff (fixes timing issues)
+- CRITICAL FIX: Array length validation for labels/values (fixes empty array bug)
+- Fixes: Second save failing, data not loading on revisit
 
 v3.7.6 Changes:
 - Added loadSavedData function that runs on chart initialization
@@ -856,9 +862,8 @@ class AtomicChartGenerator:
     }}
 
     window.openChartEditor_{js_safe_id} = function() {{
-        if (!atomicChart_{js_safe_id}) {{
-            atomicChart_{js_safe_id} = findChartInstance_{js_safe_id}();
-        }}
+        // v3.7.7: Always re-find chart instance (previous may be stale after navigation)
+        atomicChart_{js_safe_id} = findChartInstance_{js_safe_id}();
 
         if (!atomicChart_{js_safe_id}) {{
             alert('Chart not ready yet. Please wait a moment and try again.');
@@ -1092,7 +1097,7 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.6: Auto-load saved chart data on initialization
+    // v3.7.7: Auto-load saved chart data with retry logic
     (async function loadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
@@ -1106,8 +1111,18 @@ class AtomicChartGenerator:
             return;
         }}
 
-        // Small delay to ensure chart is fully initialized
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // v3.7.7: Retry with exponential backoff to ensure chart is ready
+        let chart = null;
+        for (let attempt = 0; attempt < 4; attempt++) {{
+            await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+            chart = findChartInstance_{js_safe_id}();
+            if (chart) break;
+        }}
+
+        if (!chart) {{
+            console.debug('Chart not ready after retries, skipping saved data load');
+            return;
+        }}
 
         try {{
             const response = await fetch(
@@ -1117,23 +1132,22 @@ class AtomicChartGenerator:
             if (response.ok) {{
                 const saved = await response.json();
 
-                // Check if we have saved data
-                if (saved.success && saved.data) {{
-                    const chart = findChartInstance_{js_safe_id}();
+                // v3.7.7: Check for saved data with proper array length validation
+                if (saved.success && saved.data &&
+                    Array.isArray(saved.data.labels) && saved.data.labels.length > 0 &&
+                    Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
 
-                    if (chart && saved.data.labels && saved.data.values) {{
-                        // Apply saved labels
-                        chart.data.labels = saved.data.labels;
+                    // Apply saved labels
+                    chart.data.labels = saved.data.labels;
 
-                        // Apply saved values to first dataset
-                        if (chart.data.datasets && chart.data.datasets[0]) {{
-                            chart.data.datasets[0].data = saved.data.values;
-                        }}
-
-                        // Re-render the chart
-                        chart.update();
-                        console.log('✅ Loaded saved chart data for', chartId);
+                    // Apply saved values to first dataset
+                    if (chart.data.datasets && chart.data.datasets[0]) {{
+                        chart.data.datasets[0].data = saved.data.values;
                     }}
+
+                    // Re-render the chart
+                    chart.update();
+                    console.log('✅ Loaded saved chart data for', chartId);
                 }}
             }}
         }} catch (e) {{
