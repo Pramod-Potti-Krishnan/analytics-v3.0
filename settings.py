@@ -65,8 +65,15 @@ class Settings(BaseSettings):
     
     # Railway Configuration
     railway_environment: str = Field(
-        default="development", 
+        default="development",
         description="Railway environment (development/production)"
+    )
+
+    # v3.7.4: Analytics Service Public URL (for persistence API calls from embedded charts)
+    analytics_service_url: str = Field(
+        default="https://analytics-v30-production.up.railway.app",
+        alias="ANALYTICS_SERVICE_URL",
+        description="Public URL of analytics service for cross-origin API calls"
     )
     
     # Application Configuration

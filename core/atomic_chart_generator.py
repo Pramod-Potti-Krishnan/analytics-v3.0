@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.3
+Atomic Chart Generator for Analytics Microservice v3.7.4
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -10,6 +10,12 @@ Key Features:
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
 - Frontend-ready element IDs
+
+v3.7.4 Changes:
+- Fixed persistence API URL: now uses absolute URL for cross-origin calls
+- Charts embedded in frontend now correctly call analytics service for persistence
+- Added visual toast notification when data is persisted to server
+- Fixed validators.py for multi-series dict format detection
 
 v3.7.3 Changes:
 - Fixed multi-series chart generation (radar, area_stacked, bar_grouped, bar_stacked)
@@ -47,6 +53,7 @@ from models.atomic_models import (
 from synthetic_data_generator import SyntheticDataGenerator
 from chartjs_generator import ChartJSGenerator
 from insight_generator import InsightGenerator
+from settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -1019,8 +1026,9 @@ class AtomicChartGenerator:
                 payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;
             }}
 
-            // Call persistence API (async, non-blocking)
-            fetch('/api/charts/update-data', {{
+            // v3.7.4: Call persistence API with absolute URL (cross-origin from frontend)
+            const analyticsServiceUrl = '{settings.analytics_service_url}';
+            fetch(analyticsServiceUrl + '/api/charts/update-data', {{
                 method: 'POST',
                 headers: {{ 'Content-Type': 'application/json' }},
                 body: JSON.stringify(payload)
@@ -1028,6 +1036,14 @@ class AtomicChartGenerator:
             .then(r => r.json())
             .then(result => {{
                 console.log('Chart data persisted:', result.persisted ? 'success' : 'client-only');
+                if (result.persisted) {{
+                    // Update toast to show persistence success
+                    const persistToast = document.createElement('div');
+                    persistToast.innerHTML = '💾 Changes saved to server';
+                    persistToast.style.cssText = 'position: fixed; top: 70px; right: 20px; background: #10B981; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 13px;';
+                    document.body.appendChild(persistToast);
+                    setTimeout(() => persistToast.remove(), 2500);
+                }}
             }})
             .catch(err => console.warn('Persistence failed (client-only):', err));
         }}
