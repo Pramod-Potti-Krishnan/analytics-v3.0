@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.8
+Atomic Chart Generator for Analytics Microservice v3.7.9
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -12,6 +12,13 @@ Key Features:
 - Deterministic element IDs for persistence
 - Auto-loads saved edits on chart initialization
 - Reveal.js slide navigation persistence support
+- Scatter/bubble chart x/y/r format persistence
+
+v3.7.9 Changes:
+- CRITICAL FIX: reloadSavedData now handles scatter/bubble x/y/r format
+- Scatter/bubble data persists correctly with coordinate format
+- Detects chart type and applies appropriate data structure
+- Fixes: Scatter/bubble edits not persisting on navigation/refresh
 
 v3.7.8 Changes:
 - CRITICAL FIX: Added Reveal.js slidechanged event listener for navigation persistence
@@ -1104,7 +1111,8 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.8: Reusable function to load saved data (called on init AND slide change)
+    // v3.7.9: Reusable function to load saved data (called on init AND slide change)
+    // Now handles scatter/bubble charts with x/y/r format
     async function reloadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
@@ -1131,22 +1139,34 @@ class AtomicChartGenerator:
             if (response.ok) {{
                 const saved = await response.json();
 
-                // Check for saved data with proper array length validation
-                if (saved.success && saved.data &&
-                    Array.isArray(saved.data.labels) && saved.data.labels.length > 0 &&
-                    Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
+                if (saved.success && saved.data && Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
+                    const values = saved.data.values;
 
-                    // Apply saved labels
-                    chart.data.labels = saved.data.labels;
+                    // v3.7.9: Check if this is scatter/bubble format (array of objects with x/y)
+                    const isScatterBubble = chartType_{js_safe_id} === 'scatter' || chartType_{js_safe_id} === 'bubble';
+                    const hasXYFormat = values[0] && typeof values[0] === 'object' && 'x' in values[0] && 'y' in values[0];
 
-                    // Apply saved values to first dataset
-                    if (chart.data.datasets && chart.data.datasets[0]) {{
-                        chart.data.datasets[0].data = saved.data.values;
+                    if (isScatterBubble && hasXYFormat) {{
+                        // Scatter/bubble: apply x/y/r data directly
+                        if (chart.data.datasets && chart.data.datasets[0]) {{
+                            chart.data.datasets[0].data = values.map(p => ({{
+                                x: p.x,
+                                y: p.y,
+                                r: p.r !== undefined ? p.r : 15,
+                                label: p.label || ''
+                            }}));
+                        }}
+                        chart.update();
+                        console.log('✅ Loaded saved scatter/bubble data for', chartId);
+                    }} else if (Array.isArray(saved.data.labels) && saved.data.labels.length > 0) {{
+                        // Standard charts: apply labels and values
+                        chart.data.labels = saved.data.labels;
+                        if (chart.data.datasets && chart.data.datasets[0]) {{
+                            chart.data.datasets[0].data = values;
+                        }}
+                        chart.update();
+                        console.log('✅ Loaded saved chart data for', chartId);
                     }}
-
-                    // Re-render the chart
-                    chart.update();
-                    console.log('✅ Loaded saved chart data for', chartId);
                 }}
             }}
         }} catch (e) {{
