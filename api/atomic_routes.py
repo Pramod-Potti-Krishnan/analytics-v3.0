@@ -189,6 +189,8 @@ async def create_chart_element(request: CreateElementRequest):
                 request.presentation_id,
                 request.slide_index
             )
+            # v3.7.2 DEBUG: Log existing elements for stacking debug
+            logger.info(f"[create_element] Found {len(existing_elements)} existing elements: {existing_elements}")
             position = positioner.calculate_position(element_size, existing_elements)
 
         logger.info(f"Calculated position: row={position.grid_row}, col={position.grid_column}")
@@ -335,22 +337,31 @@ async def _get_existing_elements(
 
             slide_data = slides[slide_index]
 
+            # v3.7.2 DEBUG: Log slide data structure
+            logger.info(f"[_get_existing_elements] Slide {slide_index} has keys: {list(slide_data.keys())}")
+
             # Extract element positions
             elements = []
 
             # Check various element types
             for element_type in ["charts", "text_boxes", "images", "diagrams", "infographics"]:
                 element_list = slide_data.get(element_type, [])
+                # v3.7.2 DEBUG: Log element counts per type
+                if element_list:
+                    logger.info(f"[_get_existing_elements] Found {len(element_list)} {element_type}")
                 for elem in element_list:
                     if "position" in elem:
                         elements.append(elem["position"])
+                        logger.info(f"[_get_existing_elements] Extracted position from {element_type}: {elem['position']}")
                     elif "grid_row" in elem and "grid_column" in elem:
-                        elements.append({
+                        pos = {
                             "grid_row": elem["grid_row"],
                             "grid_column": elem["grid_column"]
-                        })
+                        }
+                        elements.append(pos)
+                        logger.info(f"[_get_existing_elements] Extracted flat position from {element_type}: {pos}")
 
-            logger.debug(f"Found {len(elements)} existing elements on slide {slide_index}")
+            logger.info(f"[_get_existing_elements] Total elements found: {len(elements)}")
             return elements
 
     except httpx.HTTPStatusError as e:
