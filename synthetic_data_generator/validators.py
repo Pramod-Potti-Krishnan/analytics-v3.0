@@ -86,6 +86,17 @@ class DataValidator:
         """Validate labels."""
         errors = []
 
+        # v3.7.3: Early return for multi-series dict format (radar, stacked charts)
+        # These charts use {labels: [...], datasets: [...]} structure
+        if isinstance(data, dict) and "labels" in data and "datasets" in data:
+            # Multi-series format - validate labels from the labels array
+            labels_list = data.get("labels", [])
+            if not labels_list:
+                errors.append("Multi-series data: labels array is empty")
+            elif len(labels_list) != len(set(labels_list)):
+                errors.append("Multi-series data: duplicate labels found")
+            return errors
+
         labels = []
         for i, item in enumerate(data):
             if isinstance(item, dict):
@@ -115,6 +126,21 @@ class DataValidator:
     def _validate_values(self, data: List[Dict[str, Any]]) -> List[str]:
         """Validate numeric values."""
         errors = []
+
+        # v3.7.3: Early return for multi-series dict format (radar, stacked charts)
+        # These charts use {labels: [...], datasets: [...]} structure
+        if isinstance(data, dict) and "labels" in data and "datasets" in data:
+            # Multi-series format - validate values from datasets
+            for ds_idx, dataset in enumerate(data.get("datasets", [])):
+                ds_label = dataset.get("label", f"Series {ds_idx}")
+                for val_idx, value in enumerate(dataset.get("data", [])):
+                    if not isinstance(value, (int, float)):
+                        errors.append(f"Dataset '{ds_label}' point {val_idx}: Value is not a number")
+                    elif math.isnan(value):
+                        errors.append(f"Dataset '{ds_label}' point {val_idx}: Value is NaN")
+                    elif math.isinf(value):
+                        errors.append(f"Dataset '{ds_label}' point {val_idx}: Value is Infinity")
+            return errors
 
         for i, item in enumerate(data):
             if isinstance(item, dict):
