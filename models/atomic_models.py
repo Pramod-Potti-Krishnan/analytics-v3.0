@@ -5,7 +5,7 @@ Request/response Pydantic models for atomic chart endpoints.
 Each endpoint generates a single chart element with synthetic data.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field, validator
 from enum import Enum
 
@@ -133,9 +133,10 @@ class AtomicChartResponse(BaseModel):
     )
 
     # Metadata
-    data_used: List[Dict[str, Any]] = Field(
+    # v3.7.4: Accept both list (single-series) and dict (multi-series) formats
+    data_used: Union[List[Dict[str, Any]], Dict[str, Any]] = Field(
         ...,
-        description="The synthetic data used for the chart"
+        description="The synthetic data used for the chart (list for single-series, dict for multi-series)"
     )
     chart_title: str = Field(..., description="Generated or provided chart title")
     generation_time_ms: int = Field(..., description="Processing time in milliseconds")
