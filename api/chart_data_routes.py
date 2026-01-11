@@ -3,17 +3,42 @@ Chart Data API Routes (FastAPI)
 
 Handles saving and loading chart data edits for interactive editor.
 Supports simple, multi-series, and scatter/bubble chart formats.
+
+v3.7.3 Changes:
+- Implemented Supabase persistence for chart data edits
+- Added GET /get-data/{presentation_id}/{chart_id} endpoint
+- Upsert logic for save/update operations
 """
 
 import logging
+import os
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, validator
+from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/charts", tags=["Interactive Editor"])
+
+# Initialize Supabase client for database operations
+_supabase_client: Optional[Client] = None
+
+
+def get_supabase_client() -> Optional[Client]:
+    """Get or create Supabase client for database operations."""
+    global _supabase_client
+    if _supabase_client is None:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        if url and key:
+            try:
+                _supabase_client = create_client(url, key)
+                logger.info("Supabase client initialized for chart data persistence")
+            except Exception as e:
+                logger.error(f"Failed to initialize Supabase client: {e}")
+    return _supabase_client
 
 
 # ========================================
@@ -226,9 +251,67 @@ async def update_chart_data(data: ChartDataUpdate):
                 f"({len(data.labels)} labels, {len(data.values)} values)"
             )
 
-        # TODO: Save to database when ChartData model is available
-        # For now, just return success to allow client-side editing
-        # In production, you'd save to PostgreSQL or Supabase
+        # v3.7.3: Save to Supabase database
+        supabase = get_supabase_client()
+        persisted = False
+
+        if supabase:
+            try:
+                # Prepare data for storage
+                chart_data_record = {
+                    "chart_id": data.chart_id,
+                    "presentation_id": data.presentation_id,
+                    "chart_type": data.chart_type,
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+
+                # Format-specific data storage
+                if is_scatter_bubble:
+                    chart_data_record["labels"] = []  # Scatter/bubble don't use labels
+                    chart_data_record["values"] = [
+                        {"x": p.x, "y": p.y, "r": p.r, "label": p.label}
+                        for p in data.data
+                    ]
+                elif is_multi_series:
+                    chart_data_record["labels"] = data.labels
+                    chart_data_record["values"] = [
+                        {"label": ds.label, "data": ds.data}
+                        for ds in data.datasets
+                    ]
+                else:
+                    chart_data_record["labels"] = data.labels
+                    chart_data_record["values"] = data.values
+
+                # Upsert: Check if record exists, then update or insert
+                existing = supabase.table("chart_data_edits").select("id").eq(
+                    "chart_id", data.chart_id
+                ).eq(
+                    "presentation_id", data.presentation_id
+                ).execute()
+
+                if existing.data:
+                    # Update existing record
+                    result = supabase.table("chart_data_edits").update(
+                        chart_data_record
+                    ).eq(
+                        "chart_id", data.chart_id
+                    ).eq(
+                        "presentation_id", data.presentation_id
+                    ).execute()
+                    logger.info(f"Updated chart data: {data.chart_id}")
+                else:
+                    # Insert new record
+                    chart_data_record["created_at"] = datetime.utcnow().isoformat()
+                    result = supabase.table("chart_data_edits").insert(
+                        chart_data_record
+                    ).execute()
+                    logger.info(f"Inserted chart data: {data.chart_id}")
+
+                persisted = True
+
+            except Exception as db_error:
+                logger.error(f"Database error: {db_error}", exc_info=True)
+                # Continue without persistence - client-side still works
 
         response_data = {
             "success": True,
@@ -237,7 +320,8 @@ async def update_chart_data(data: ChartDataUpdate):
             "presentation_id": data.presentation_id,
             "format": format_type,
             "chart_type": data.chart_type,
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.utcnow().isoformat(),
+            "persisted": persisted  # v3.7.3: Indicate if saved to database
         }
 
         if is_scatter_bubble:
@@ -258,26 +342,108 @@ async def update_chart_data(data: ChartDataUpdate):
 
 
 @router.get("/get-data/{presentation_id}")
-async def get_chart_data(presentation_id: str):
+async def get_all_chart_data(presentation_id: str):
     """
     Get all saved chart data for a presentation.
+
+    v3.7.3: Implemented Supabase persistence retrieval.
 
     Args:
         presentation_id: Presentation UUID
 
     Returns:
-        List of chart data edits
+        List of chart data edits for the presentation
     """
     try:
         logger.info(f"Fetching chart data for presentation: {presentation_id}")
 
-        # TODO: Load from database when ChartData model is available
-        # For now, return empty list
+        supabase = get_supabase_client()
+        charts = []
+
+        if supabase:
+            try:
+                result = supabase.table("chart_data_edits").select("*").eq(
+                    "presentation_id", presentation_id
+                ).execute()
+
+                if result.data:
+                    charts = [
+                        {
+                            "chart_id": record["chart_id"],
+                            "labels": record.get("labels", []),
+                            "values": record.get("values", []),
+                            "chart_type": record.get("chart_type"),
+                            "updated_at": record.get("updated_at")
+                        }
+                        for record in result.data
+                    ]
+                    logger.info(f"Retrieved {len(charts)} chart edits for {presentation_id}")
+
+            except Exception as db_error:
+                logger.error(f"Database error fetching charts: {db_error}")
 
         return {
             "success": True,
             "presentation_id": presentation_id,
-            "charts": []
+            "charts": charts,
+            "count": len(charts)
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to fetch chart data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/get-data/{presentation_id}/{chart_id}")
+async def get_specific_chart_data(presentation_id: str, chart_id: str):
+    """
+    Get saved data for a specific chart.
+
+    v3.7.3: New endpoint for retrieving individual chart edits.
+
+    Args:
+        presentation_id: Presentation UUID
+        chart_id: Chart element ID
+
+    Returns:
+        Chart data if found, or success=False if no saved data
+    """
+    try:
+        logger.info(f"Fetching chart data: {chart_id} in {presentation_id}")
+
+        supabase = get_supabase_client()
+
+        if supabase:
+            try:
+                result = supabase.table("chart_data_edits").select("*").eq(
+                    "chart_id", chart_id
+                ).eq(
+                    "presentation_id", presentation_id
+                ).execute()
+
+                if result.data and len(result.data) > 0:
+                    record = result.data[0]
+                    return {
+                        "success": True,
+                        "data": {
+                            "chart_id": record["chart_id"],
+                            "presentation_id": record["presentation_id"],
+                            "labels": record.get("labels", []),
+                            "values": record.get("values", []),
+                            "chart_type": record.get("chart_type"),
+                            "updated_at": record.get("updated_at")
+                        }
+                    }
+
+            except Exception as db_error:
+                logger.error(f"Database error: {db_error}")
+
+        # No saved data found
+        return {
+            "success": False,
+            "message": "No saved data found for this chart",
+            "chart_id": chart_id,
+            "presentation_id": presentation_id
         }
 
     except Exception as e:
@@ -290,6 +456,8 @@ async def delete_chart_data(request: ChartDataDelete):
     """
     Delete chart data for a specific chart.
 
+    v3.7.3: Implemented Supabase persistence deletion.
+
     Args:
         request: Chart ID and presentation ID to delete
 
@@ -299,14 +467,29 @@ async def delete_chart_data(request: ChartDataDelete):
     try:
         logger.info(f"Deleting chart data: {request.chart_id} in presentation {request.presentation_id}")
 
-        # TODO: Delete from database when ChartData model is available
-        # For now, return success
+        supabase = get_supabase_client()
+        deleted = False
+
+        if supabase:
+            try:
+                result = supabase.table("chart_data_edits").delete().eq(
+                    "chart_id", request.chart_id
+                ).eq(
+                    "presentation_id", request.presentation_id
+                ).execute()
+
+                deleted = True
+                logger.info(f"Deleted chart data: {request.chart_id}")
+
+            except Exception as db_error:
+                logger.error(f"Database error deleting chart: {db_error}")
 
         return {
             "success": True,
             "message": "Chart data deleted successfully",
             "chart_id": request.chart_id,
-            "presentation_id": request.presentation_id
+            "presentation_id": request.presentation_id,
+            "deleted_from_db": deleted
         }
 
     except Exception as e:

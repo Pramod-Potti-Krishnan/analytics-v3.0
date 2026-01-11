@@ -128,7 +128,7 @@ response = requests.post(
 - **Chart Catalog**: [docs/CHART_TYPE_CATALOG.md](docs/CHART_TYPE_CATALOG.md)
 - **Error Codes**: [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
     """,
-    version="3.5.0",
+    version="3.7.3",
     contact={
         "name": "Analytics Service Team",
         "url": "https://github.com/Pramod-Potti-Krishnan/analytics-v3.0"
@@ -549,7 +549,7 @@ async def root():
     """Service information endpoint."""
     return {
         "service": "Analytics Microservice v3",
-        "version": "3.5.0",
+        "version": "3.7.3",
         "status": "running",
         "api_type": "REST",
         "endpoints": {
@@ -632,7 +632,7 @@ async def get_capabilities():
 
     return {
         "service": "analytics-service",
-        "version": "3.5.0",
+        "version": "3.7.3",
         "status": "healthy",
 
         "capabilities": {

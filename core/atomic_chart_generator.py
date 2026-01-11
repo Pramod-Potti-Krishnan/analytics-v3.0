@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.6.2
+Atomic Chart Generator for Analytics Microservice v3.7.3
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -10,6 +10,12 @@ Key Features:
 - Optional Key Insights panel
 - Self-contained HTML with embedded scripts
 - Frontend-ready element IDs
+
+v3.7.3 Changes:
+- Fixed multi-series chart generation (radar, area_stacked, bar_grouped, bar_stacked)
+- _transform_to_chartjs_format() now detects dict format with {labels, datasets}
+- Multi-series data from formatters passed through directly to ChartJSGenerator
+- Fixes "'str' object has no attribute 'get'" error on multi-series charts
 
 v3.6.2 Changes:
 - Removed backdrop-filter: blur(4px) which caused grey artifacts in Reveal.js
@@ -599,9 +605,31 @@ class AtomicChartGenerator:
     def _transform_to_chartjs_format(
         self,
         chart_id: str,
-        data: List[Dict[str, Any]]
+        data
     ) -> Dict[str, Any]:
-        """Transform synthetic data to Chart.js format."""
+        """
+        Transform synthetic data to Chart.js format.
+
+        v3.7.3: Now handles both single-series list AND multi-series dict formats.
+        Multi-series formatters return: {"labels": [...], "datasets": [{...}, {...}]}
+        Single-series formatters return: [{"label": "Q1", "value": 100}, ...]
+
+        ChartJSGenerator expects:
+        - Multi-series: {"labels": [...], "datasets": [...]} - passed through as-is
+        - Single-series: {"labels": [...], "values": [...]}
+        """
+        # v3.7.3: If already in Chart.js multi-series format (dict with labels+datasets), pass through
+        if isinstance(data, dict):
+            if 'labels' in data and 'datasets' in data:
+                # Multi-series format - pass through directly for ChartJSGenerator
+                # generate_grouped_bar_chart, generate_stacked_bar_chart, etc. expect this format
+                logger.debug(f"v3.7.3: Multi-series data detected for {chart_id}, passing through")
+                return data  # Return as-is: {labels, datasets}
+            elif 'labels' in data and 'values' in data:
+                # Already in our expected output format
+                return data
+
+        # Handle scatter and bubble charts (point format)
         if chart_id in ["scatter", "bubble"]:
             # Scatter/bubble uses {x, y, r} format
             return {
@@ -615,12 +643,17 @@ class AtomicChartGenerator:
                     ]
                 }]
             }
-        else:
-            # Standard label-value format
+
+        # Standard single-series label-value format (list input)
+        if isinstance(data, list):
             return {
                 "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
                 "values": [d.get("value", 0) for d in data]
             }
+
+        # Fallback for unexpected formats
+        logger.warning(f"v3.7.3: Unexpected data format for {chart_id}: {type(data)}")
+        return {"labels": [], "values": []}
 
     def _wrap_in_atomic_container(
         self,
@@ -959,6 +992,45 @@ class AtomicChartGenerator:
         }}
 
         atomicChart_{js_safe_id}.update();
+
+        // v3.7.3: Persist to server if presentation context available
+        const presentationId = window.currentPresentationId ||
+            (window.location.pathname.match(/\/p\/([^\/]+)/) || [])[1] ||
+            '';
+
+        if (presentationId) {{
+            // Build persistence payload based on chart type
+            let payload = {{
+                chart_id: '{element_id}',
+                presentation_id: presentationId,
+                chart_type: chartType_{js_safe_id}
+            }};
+
+            if (chartType_{js_safe_id} === 'scatter') {{
+                payload.data = atomicChart_{js_safe_id}.data.datasets[0].data.map(p => ({{
+                    x: p.x, y: p.y, label: p.label || ''
+                }}));
+            }} else if (chartType_{js_safe_id} === 'bubble') {{
+                payload.data = atomicChart_{js_safe_id}.data.datasets[0].data.map(p => ({{
+                    x: p.x, y: p.y, r: p.r, label: p.label || ''
+                }}));
+            }} else {{
+                payload.labels = atomicChart_{js_safe_id}.data.labels;
+                payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;
+            }}
+
+            // Call persistence API (async, non-blocking)
+            fetch('/api/charts/update-data', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify(payload)
+            }})
+            .then(r => r.json())
+            .then(result => {{
+                console.log('Chart data persisted:', result.persisted ? 'success' : 'client-only');
+            }})
+            .catch(err => console.warn('Persistence failed (client-only):', err));
+        }}
 
         // Show success message
         const toast = document.createElement('div');

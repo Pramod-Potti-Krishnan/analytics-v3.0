@@ -2,6 +2,30 @@
 Chart Data Model
 
 Database model for storing chart data edits from interactive editor.
+
+v3.7.3: Supabase table creation SQL (run in Supabase SQL Editor):
+
+```sql
+CREATE TABLE IF NOT EXISTS chart_data_edits (
+    id SERIAL PRIMARY KEY,
+    chart_id VARCHAR(255) NOT NULL,
+    presentation_id VARCHAR(255) NOT NULL,
+    labels JSONB NOT NULL DEFAULT '[]',
+    values JSONB NOT NULL DEFAULT '[]',
+    chart_type VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by VARCHAR(255),
+    UNIQUE(chart_id, presentation_id)
+);
+
+-- Indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_chart_edits_presentation ON chart_data_edits(presentation_id);
+CREATE INDEX IF NOT EXISTS idx_chart_edits_chart ON chart_data_edits(chart_id);
+
+-- Row-Level Security (optional, for multi-tenant)
+ALTER TABLE chart_data_edits ENABLE ROW LEVEL SECURITY;
+```
 """
 
 from sqlalchemy import Column, String, Integer, DateTime
