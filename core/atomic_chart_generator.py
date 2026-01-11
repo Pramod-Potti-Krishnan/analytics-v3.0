@@ -1,8 +1,8 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.10
+Atomic Chart Generator for Analytics Microservice v3.7.11
 
 Generates atomic chart elements with synthetic data for frontend positioning.
-Each chart is a self-contained HTML element ready for placed.
+Each chart is a self-contained HTML element ready for placement.
 
 Key Features:
 - 14 gold standard chart types
@@ -13,6 +13,13 @@ Key Features:
 - Auto-loads saved edits on chart initialization
 - Reveal.js slide navigation persistence support
 - Multi-series, waterfall, scatter/bubble persistence
+- Editable series names in multi-series charts
+
+v3.7.11 Changes:
+- FEATURE: Editable series names in multi-series editor header
+- Series column headers are now input fields (click to edit)
+- Updated series names are saved to chart and persisted
+- Chart legend updates when series names change
 
 v3.7.10 Changes:
 - FEATURE: Multi-series editor for area_stacked, bar_grouped, bar_stacked
@@ -977,12 +984,13 @@ class AtomicChartGenerator:
             // Store series names for later use
             window.seriesNames_{js_safe_id} = datasets.map((ds, i) => ds.label || `Series ${{i + 1}}`);
 
-            // Rebuild table header with dynamic series columns
+            // v3.7.11: Rebuild table header with EDITABLE series name inputs
             const thead = document.querySelector('#table-{element_id} thead tr');
             const thStyle = 'background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;';
+            const seriesInputStyle = 'width: 100%; padding: 6px 8px; border: 1px solid #667eea; border-radius: 4px; font-size: 13px; font-weight: 600; background: #f0f4ff; color: #333;';
             let headerHTML = `<th style="${{thStyle}} width: 50px;">#</th><th style="${{thStyle}}">Label</th>`;
-            window.seriesNames_{js_safe_id}.forEach(name => {{
-                headerHTML += `<th style="${{thStyle}}">${{name}}</th>`;
+            window.seriesNames_{js_safe_id}.forEach((name, idx) => {{
+                headerHTML += `<th style="${{thStyle}}"><input type="text" class="series-name-input" data-series-idx="${{idx}}" value="${{name}}" style="${{seriesInputStyle}}" title="Click to edit series name"></th>`;
             }});
             headerHTML += `<th style="${{thStyle}} width: 80px;">Actions</th>`;
             thead.innerHTML = headerHTML;
@@ -1147,10 +1155,20 @@ class AtomicChartGenerator:
             atomicChart_{js_safe_id}.data.labels = newLabels;
             atomicChart_{js_safe_id}.data.datasets[0].data = newData;
         }} else if (isMultiSeries) {{
-            // v3.7.10: Multi-series charts
+            // v3.7.11: Multi-series charts with editable series names
             const newLabels = [];
             const seriesData = [];
+            const newSeriesNames = [];
             const numSeries = window.seriesNames_{js_safe_id}?.length || 0;
+
+            // v3.7.11: Collect updated series names from header inputs
+            const seriesNameInputs = document.querySelectorAll('#table-{element_id} thead .series-name-input');
+            seriesNameInputs.forEach(input => {{
+                newSeriesNames.push(input.value.trim() || `Series ${{newSeriesNames.length + 1}}`);
+            }});
+
+            // Update stored series names
+            window.seriesNames_{js_safe_id} = newSeriesNames;
 
             // Initialize series data arrays
             for (let i = 0; i < numSeries; i++) {{
@@ -1170,11 +1188,15 @@ class AtomicChartGenerator:
                 }});
             }});
 
-            // Update chart
+            // Update chart labels and data
             atomicChart_{js_safe_id}.data.labels = newLabels;
             seriesData.forEach((data, idx) => {{
                 if (atomicChart_{js_safe_id}.data.datasets[idx]) {{
                     atomicChart_{js_safe_id}.data.datasets[idx].data = data;
+                    // v3.7.11: Also update series names in chart
+                    if (newSeriesNames[idx]) {{
+                        atomicChart_{js_safe_id}.data.datasets[idx].label = newSeriesNames[idx];
+                    }}
                 }}
             }});
         }} else {{
