@@ -1073,16 +1073,24 @@ class AtomicChartGenerator:
     async def _generate_insights_html(
         self,
         chart_id: str,
-        data: List[Dict[str, Any]],
+        data,
         narrative: str,
         height: int
     ) -> str:
         """Generate Key Insights panel HTML."""
-        # Prepare data for insight generator
-        insight_data = {
-            "labels": [d.get("label", "") for d in data],
-            "values": [d.get("value", d.get("y", 0)) for d in data]
-        }
+        # v3.7.4: Handle multi-series dict format {labels, datasets}
+        if isinstance(data, dict) and "labels" in data and "datasets" in data:
+            # Multi-series format: extract labels and flatten values from first dataset
+            insight_data = {
+                "labels": data["labels"],
+                "values": data["datasets"][0].get("data", []) if data["datasets"] else []
+            }
+        else:
+            # Standard list of dicts format
+            insight_data = {
+                "labels": [d.get("label", "") for d in data],
+                "values": [d.get("value", d.get("y", 0)) for d in data]
+            }
 
         config = self.CHART_CONFIGS[chart_id]
 
@@ -1143,12 +1151,19 @@ class AtomicChartGenerator:
 
     def _generate_fallback_insights(
         self,
-        data: List[Dict[str, Any]],
+        data,
         chart_id: str
     ) -> List[str]:
         """Generate fallback insights when LLM fails."""
         config = self.CHART_CONFIGS[chart_id]
-        values = [d.get("value", d.get("y", 0)) for d in data]
+
+        # v3.7.4: Handle multi-series dict format {labels, datasets}
+        if isinstance(data, dict) and "labels" in data and "datasets" in data:
+            # Multi-series format: use values from first dataset
+            values = data["datasets"][0].get("data", []) if data["datasets"] else []
+        else:
+            # Standard list of dicts format
+            values = [d.get("value", d.get("y", 0)) for d in data]
 
         if not values:
             return [
