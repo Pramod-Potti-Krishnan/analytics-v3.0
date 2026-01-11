@@ -690,8 +690,36 @@ class AtomicChartGenerator:
         Generate complete editor modal with JavaScript for atomic charts.
 
         v3.6.3: Move modal to document.body to escape Reveal.js stacking context.
+        v3.7.2: Chart-type-aware columns for scatter (Label/X/Y) and bubble (Label/X/Y/Radius)
         """
         pres_id = presentation_id or "atomic-standalone"
+
+        # v3.7.2: Chart-type-specific table headers
+        th_style = 'background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;'
+        if chart_id == "scatter":
+            table_headers = f'''
+                            <th style="{th_style} width: 50px;">#</th>
+                            <th style="{th_style}">Label</th>
+                            <th style="{th_style}">X</th>
+                            <th style="{th_style}">Y</th>
+                            <th style="{th_style} width: 80px;">Actions</th>
+            '''
+        elif chart_id == "bubble":
+            table_headers = f'''
+                            <th style="{th_style} width: 50px;">#</th>
+                            <th style="{th_style}">Label</th>
+                            <th style="{th_style}">X</th>
+                            <th style="{th_style}">Y</th>
+                            <th style="{th_style}">Radius</th>
+                            <th style="{th_style} width: 80px;">Actions</th>
+            '''
+        else:
+            table_headers = f'''
+                            <th style="{th_style} width: 50px;">#</th>
+                            <th style="{th_style}">Label</th>
+                            <th style="{th_style}">Value</th>
+                            <th style="{th_style} width: 80px;">Actions</th>
+            '''
 
         return f'''<!-- Atomic Chart Editor Modal (v3.6.3: moved to document.body to escape Reveal.js stacking context) -->
 <div id="{modal_id}" class="chart-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 999999; align-items: center; justify-content: center; pointer-events: auto;">
@@ -716,10 +744,7 @@ class AtomicChartGenerator:
                 <table id="table-{element_id}" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
-                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px; width: 50px;">#</th>
-                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;">Label</th>
-                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px;">Value</th>
-                            <th style="background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 14px; width: 80px;">Actions</th>
+{table_headers}
                         </tr>
                     </thead>
                     <tbody id="tbody-{element_id}"></tbody>
@@ -741,10 +766,11 @@ class AtomicChartGenerator:
     </div>
 </div>
 
-<!-- JavaScript for Atomic Chart Editor -->
+<!-- JavaScript for Atomic Chart Editor (v3.7.2: Chart-type-aware for scatter/bubble) -->
 <script>
 (function() {{
     let atomicChart_{js_safe_id} = null;
+    const chartType_{js_safe_id} = '{chart_id}';
 
     function findChartInstance_{js_safe_id}() {{
         // Find the canvas element inside this atomic container
@@ -779,26 +805,57 @@ class AtomicChartGenerator:
         const tbody = document.getElementById('tbody-{element_id}');
         tbody.innerHTML = '';
 
-        const labels = atomicChart_{js_safe_id}.data.labels || [];
-        const values = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+        const inputStyle = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;';
+        const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
+        const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>';
 
-        labels.forEach((label, index) => {{
-            const value = typeof values[index] === 'object' ? values[index].y || 0 : values[index];
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${{index + 1}}</td>
-                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
-                    <input type="text" class="label-input" value="${{label}}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                </td>
-                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
-                    <input type="number" class="value-input" value="${{value}}" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                </td>
-                <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
-                    <button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        }});
+        // v3.7.2: Chart-type-specific data extraction
+        if (chartType_{js_safe_id} === 'scatter') {{
+            const data = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+            data.forEach((point, index) => {{
+                const label = point.label || `Point ${{index + 1}}`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="${{tdStyle}}">${{index + 1}}</td>
+                    <td style="${{tdStyle}}"><input type="text" class="label-input" value="${{label}}" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="x-input" value="${{point.x || 0}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="y-input" value="${{point.y || 0}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}">${{deleteBtn}}</td>
+                `;
+                tbody.appendChild(row);
+            }});
+        }} else if (chartType_{js_safe_id} === 'bubble') {{
+            const data = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+            data.forEach((point, index) => {{
+                const label = point.label || `Point ${{index + 1}}`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="${{tdStyle}}">${{index + 1}}</td>
+                    <td style="${{tdStyle}}"><input type="text" class="label-input" value="${{label}}" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="x-input" value="${{point.x || 0}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="y-input" value="${{point.y || 0}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="r-input" value="${{point.r || 15}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}">${{deleteBtn}}</td>
+                `;
+                tbody.appendChild(row);
+            }});
+        }} else {{
+            // Standard label/value charts
+            const labels = atomicChart_{js_safe_id}.data.labels || [];
+            const values = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+
+            labels.forEach((label, index) => {{
+                const value = typeof values[index] === 'object' ? values[index].y || 0 : values[index];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="${{tdStyle}}">${{index + 1}}</td>
+                    <td style="${{tdStyle}}"><input type="text" class="label-input" value="${{label}}" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}"><input type="number" class="value-input" value="${{value}}" step="any" style="${{inputStyle}}"></td>
+                    <td style="${{tdStyle}}">${{deleteBtn}}</td>
+                `;
+                tbody.appendChild(row);
+            }});
+        }}
 
         // v3.6.3: Move modal to document.body to escape Reveal.js transform stacking context
         // This ensures the modal covers the entire viewport, not just the slide container
@@ -817,18 +874,36 @@ class AtomicChartGenerator:
         const tbody = document.getElementById('tbody-{element_id}');
         const rowCount = tbody.querySelectorAll('tr').length;
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">${{rowCount + 1}}</td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
-                <input type="text" class="label-input" value="New Item" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-            </td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
-                <input type="number" class="value-input" value="0" step="any" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-            </td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #e0e0e0;">
-                <button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>
-            </td>
-        `;
+        const inputStyle = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;';
+        const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
+        const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>';
+
+        // v3.7.2: Chart-type-specific new row templates
+        if (chartType_{js_safe_id} === 'scatter') {{
+            row.innerHTML = `
+                <td style="${{tdStyle}}">${{rowCount + 1}}</td>
+                <td style="${{tdStyle}}"><input type="text" class="label-input" value="New Point" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="x-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="y-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}">${{deleteBtn}}</td>
+            `;
+        }} else if (chartType_{js_safe_id} === 'bubble') {{
+            row.innerHTML = `
+                <td style="${{tdStyle}}">${{rowCount + 1}}</td>
+                <td style="${{tdStyle}}"><input type="text" class="label-input" value="New Point" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="x-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="y-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="r-input" value="15" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}">${{deleteBtn}}</td>
+            `;
+        }} else {{
+            row.innerHTML = `
+                <td style="${{tdStyle}}">${{rowCount + 1}}</td>
+                <td style="${{tdStyle}}"><input type="text" class="label-input" value="New Item" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}"><input type="number" class="value-input" value="0" step="any" style="${{inputStyle}}"></td>
+                <td style="${{tdStyle}}">${{deleteBtn}}</td>
+            `;
+        }}
         tbody.appendChild(row);
         renumberRows_{js_safe_id}();
     }};
@@ -848,19 +923,41 @@ class AtomicChartGenerator:
     window.saveChartData_{js_safe_id} = function() {{
         // Collect data from table
         const rows = document.querySelectorAll('#tbody-{element_id} tr');
-        const newLabels = [];
-        const newValues = [];
 
-        rows.forEach(row => {{
-            const label = row.querySelector('.label-input').value;
-            const value = parseFloat(row.querySelector('.value-input').value) || 0;
-            newLabels.push(label);
-            newValues.push(value);
-        }});
+        // v3.7.2: Chart-type-specific save logic
+        if (chartType_{js_safe_id} === 'scatter') {{
+            const newData = [];
+            rows.forEach(row => {{
+                const label = row.querySelector('.label-input').value;
+                const x = parseFloat(row.querySelector('.x-input').value) || 0;
+                const y = parseFloat(row.querySelector('.y-input').value) || 0;
+                newData.push({{ label, x, y }});
+            }});
+            atomicChart_{js_safe_id}.data.datasets[0].data = newData;
+        }} else if (chartType_{js_safe_id} === 'bubble') {{
+            const newData = [];
+            rows.forEach(row => {{
+                const label = row.querySelector('.label-input').value;
+                const x = parseFloat(row.querySelector('.x-input').value) || 0;
+                const y = parseFloat(row.querySelector('.y-input').value) || 0;
+                const r = parseFloat(row.querySelector('.r-input').value) || 15;
+                newData.push({{ label, x, y, r }});
+            }});
+            atomicChart_{js_safe_id}.data.datasets[0].data = newData;
+        }} else {{
+            // Standard label/value save
+            const newLabels = [];
+            const newValues = [];
+            rows.forEach(row => {{
+                const label = row.querySelector('.label-input').value;
+                const value = parseFloat(row.querySelector('.value-input').value) || 0;
+                newLabels.push(label);
+                newValues.push(value);
+            }});
+            atomicChart_{js_safe_id}.data.labels = newLabels;
+            atomicChart_{js_safe_id}.data.datasets[0].data = newValues;
+        }}
 
-        // Update chart in browser
-        atomicChart_{js_safe_id}.data.labels = newLabels;
-        atomicChart_{js_safe_id}.data.datasets[0].data = newValues;
         atomicChart_{js_safe_id}.update();
 
         // Show success message

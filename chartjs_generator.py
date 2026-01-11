@@ -921,6 +921,9 @@ class ChartJSGenerator:
             responsive_sizing=responsive_sizing  # v3.7.1
         )
 
+    # v3.7.2: Alias for atomic chart generator compatibility (method name mismatch fix)
+    generate_scatter_chart = generate_scatter_plot
+
     def generate_bubble_chart(
         self,
         data: Dict[str, Any],
@@ -3545,8 +3548,8 @@ class ChartJSGenerator:
                     }
                 },
                 "datalabels": {
-                    # GUARANTEED: Always display data labels
-                    "display": True,
+                    # v3.7.2: Disable datalabels for scatter/bubble (they use {x,y} objects that display as "[object Object]")
+                    "display": False if chart_type in ["scatter", "bubble"] else True,
                     "color": "#fff",
                     "font": {"size": 14, "weight": "bold"},
                     "formatter": self._get_datalabel_formatter(format_type),
