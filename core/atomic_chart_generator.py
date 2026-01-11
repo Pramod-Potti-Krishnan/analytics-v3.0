@@ -299,7 +299,7 @@ class AtomicChartGenerator:
     async def _generate_insight_title(
         self,
         chart_id: str,
-        data: List[Dict[str, Any]],
+        data,
         narrative: Optional[str]
     ) -> str:
         """
@@ -318,11 +318,19 @@ class AtomicChartGenerator:
         """
         config = self.CHART_CONFIGS[chart_id]
 
-        # Prepare data in format expected by insight generator
-        insight_data = {
-            "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
-            "values": [d.get("value", d.get("y", 0)) for d in data]
-        }
+        # v3.7.4: Handle multi-series dict format {labels, datasets}
+        if isinstance(data, dict) and "labels" in data and "datasets" in data:
+            # Multi-series format
+            insight_data = {
+                "labels": data["labels"],
+                "values": data["datasets"][0].get("data", []) if data["datasets"] else []
+            }
+        else:
+            # Prepare data in format expected by insight generator
+            insight_data = {
+                "labels": [d.get("label", f"Item {i}") for i, d in enumerate(data)],
+                "values": [d.get("value", d.get("y", 0)) for d in data]
+            }
 
         try:
             title = await self.insight_generator.generate_insight_title(
