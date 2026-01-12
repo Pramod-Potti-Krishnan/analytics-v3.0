@@ -310,6 +310,7 @@ class SyntheticDataRequest(BaseModel):
     narrative: Optional[str] = Field(None, max_length=2000, description="Narrative for context extraction")
     num_points: Optional[int] = Field(None, ge=1, le=50, description="Number of data points to generate")
     scenario: Optional[str] = Field(None, description="Business scenario name (e.g., 'revenue_growth')")
+    series_names: Optional[List[str]] = Field(None, min_items=1, max_items=10, description="Custom series names for multi-series charts (e.g., ['North America', 'EMEA', 'APAC'])")
 
     @validator('chart_type')
     def validate_chart_type(cls, v):
@@ -696,7 +697,8 @@ async def generate_synthetic_data(request: SyntheticDataRequest):
             chart_type=request.chart_type,
             narrative=request.narrative,
             num_points=request.num_points,
-            scenario=request.scenario
+            scenario=request.scenario,
+            series_names=request.series_names
         )
 
         return {

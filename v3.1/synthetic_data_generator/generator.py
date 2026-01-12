@@ -40,6 +40,7 @@ class SyntheticDataGenerator:
         narrative: Optional[str] = None,
         num_points: Optional[int] = None,
         scenario: Optional[str] = None,
+        series_names: Optional[List[str]] = None,
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
@@ -50,6 +51,7 @@ class SyntheticDataGenerator:
             narrative: User narrative for context extraction
             num_points: Number of data points (auto-determined if None)
             scenario: Business scenario name (e.g., 'revenue_growth')
+            series_names: Custom series names for multi-series charts (e.g., ['North America', 'EMEA', 'APAC'])
             **kwargs: Additional generation parameters
 
         Returns:
@@ -93,8 +95,8 @@ class SyntheticDataGenerator:
             constraints=constraints
         )
 
-        # 6. Format for chart type
-        formatted_data = self.formatter.format(data, chart_type)
+        # 6. Format for chart type (pass series_names for multi-series charts)
+        formatted_data = self.formatter.format(data, chart_type, series_names=series_names)
 
         # 7. Validate
         is_valid, errors = self.validator.validate(formatted_data, chart_type)

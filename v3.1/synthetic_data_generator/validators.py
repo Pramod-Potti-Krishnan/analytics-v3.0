@@ -54,7 +54,7 @@ class DataValidator:
 
         return (len(errors) == 0, errors)
 
-    def _validate_structure(self, data: List[Dict[str, Any]]) -> List[str]:
+    def _validate_structure(self, data) -> List[str]:
         """Validate basic data structure."""
         errors = []
 
@@ -62,8 +62,27 @@ class DataValidator:
             errors.append("Data is empty")
             return errors
 
+        # Multi-series format: dict with 'labels' and 'datasets'
+        if isinstance(data, dict):
+            if 'labels' in data and 'datasets' in data:
+                # Valid multi-series format
+                if not data['labels']:
+                    errors.append("Multi-series data has empty labels")
+                if not data['datasets']:
+                    errors.append("Multi-series data has empty datasets")
+                # Validate each dataset has label and data
+                for i, ds in enumerate(data.get('datasets', [])):
+                    if 'label' not in ds:
+                        errors.append(f"Dataset {i}: missing 'label' field")
+                    if 'data' not in ds:
+                        errors.append(f"Dataset {i}: missing 'data' field")
+                return errors
+            else:
+                errors.append(f"Dict data must have 'labels' and 'datasets' keys")
+                return errors
+
         if not isinstance(data, list):
-            errors.append(f"Data must be list, got {type(data)}")
+            errors.append(f"Data must be list or multi-series dict, got {type(data)}")
             return errors
 
         # Check first item has required fields
@@ -76,9 +95,26 @@ class DataValidator:
 
         return errors
 
-    def _validate_labels(self, data: List[Dict[str, Any]]) -> List[str]:
+    def _validate_labels(self, data) -> List[str]:
         """Validate labels."""
         errors = []
+
+        # Multi-series format: validate labels array
+        if isinstance(data, dict) and 'labels' in data:
+            labels = data.get('labels', [])
+            for i, label in enumerate(labels):
+                if not label or (isinstance(label, str) and label.strip() == ''):
+                    errors.append(f"Label {i}: Label is empty")
+                if isinstance(label, str) and len(label) > 100:
+                    errors.append(f"Label {i}: Label exceeds 100 chars")
+            # Check uniqueness
+            if labels and len(labels) != len(set(labels)):
+                errors.append("Duplicate labels found")
+            return errors
+
+        # List format
+        if not isinstance(data, list):
+            return errors
 
         labels = []
         for i, item in enumerate(data):
@@ -106,9 +142,26 @@ class DataValidator:
 
         return errors
 
-    def _validate_values(self, data: List[Dict[str, Any]]) -> List[str]:
+    def _validate_values(self, data) -> List[str]:
         """Validate numeric values."""
         errors = []
+
+        # Multi-series format: validate values in datasets
+        if isinstance(data, dict) and 'datasets' in data:
+            for ds_idx, ds in enumerate(data.get('datasets', [])):
+                for val_idx, value in enumerate(ds.get('data', [])):
+                    if not isinstance(value, (int, float)):
+                        errors.append(f"Dataset {ds_idx}, value {val_idx}: Value is not a number")
+                        continue
+                    if math.isnan(value):
+                        errors.append(f"Dataset {ds_idx}, value {val_idx}: Value is NaN")
+                    if math.isinf(value):
+                        errors.append(f"Dataset {ds_idx}, value {val_idx}: Value is Infinity")
+            return errors
+
+        # List format
+        if not isinstance(data, list):
+            return errors
 
         for i, item in enumerate(data):
             if isinstance(item, dict):
@@ -140,7 +193,7 @@ class DataValidator:
 
     def _validate_chart_specific(
         self,
-        data: List[Dict[str, Any]],
+        data,
         chart_type: str
     ) -> List[str]:
         """Chart-specific validations."""

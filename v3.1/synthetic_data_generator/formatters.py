@@ -5,7 +5,7 @@ Converts simple {label, value} format to chart-specific formats
 (scatter objects, multi-series, hierarchical, etc.)
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import random
 
 
@@ -24,7 +24,8 @@ class DataFormatter:
     def format(
         self,
         data: List[Dict[str, Any]],
-        chart_type: str
+        chart_type: str,
+        series_names: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
         Format data for specific chart type.
@@ -32,16 +33,20 @@ class DataFormatter:
         Args:
             data: Base data in simple {label, value} format
             chart_type: Target chart type ID
+            series_names: Custom series names for multi-series charts (e.g., ['North America', 'EMEA', 'APAC'])
 
         Returns:
             Formatted data ready for chart rendering
         """
+        # Multi-series chart types that support custom series names
+        multi_series_types = {'bar_grouped', 'bar_stacked', 'area_stacked'}
+
+        if chart_type in multi_series_types:
+            return self._format_multi_series(data, chart_type, series_names=series_names)
+
         formatter_map = {
             'scatter': self._format_scatter,
             'bubble': self._format_bubble,
-            'bar_grouped': self._format_multi_series,
-            'bar_stacked': self._format_multi_series,
-            'area_stacked': self._format_multi_series,
             'radar': self._format_radar,
             'd3_sankey': self._format_sankey,
             # All others use simple format
@@ -108,7 +113,8 @@ class DataFormatter:
     def _format_multi_series(
         self,
         data: List[Dict[str, Any]],
-        chart_type: str
+        chart_type: str,
+        series_names: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Convert to multi-series format.
@@ -121,11 +127,21 @@ class DataFormatter:
                 {"label": "Series B", "data": [80, 90, ...]}
             ]
         }
+
+        Args:
+            data: Base data in simple {label, value} format
+            chart_type: Target chart type ID
+            series_names: Custom series names (e.g., ['North America', 'EMEA', 'APAC'])
+                         If None, defaults to 'Series A', 'Series B', 'Series C'
         """
         labels = [item['label'] for item in data]
 
-        # Create 2-3 series with variance
-        num_series = random.randint(2, 3)
+        # Determine number of series: use length of series_names if provided, otherwise 2-3
+        if series_names:
+            num_series = len(series_names)
+        else:
+            num_series = random.randint(2, 3)
+
         datasets = []
 
         for i in range(num_series):
@@ -133,8 +149,14 @@ class DataFormatter:
                 round(item['value'] * random.uniform(0.7, 1.3), 2)
                 for item in data
             ]
+            # Use custom series name if provided, otherwise default to 'Series A', 'Series B', etc.
+            if series_names and i < len(series_names):
+                series_label = series_names[i]
+            else:
+                series_label = f"Series {chr(65+i)}"  # A, B, C
+
             datasets.append({
-                "label": f"Series {chr(65+i)}",  # A, B, C
+                "label": series_label,
                 "data": series_data
             })
 
