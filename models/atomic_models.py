@@ -1,8 +1,13 @@
 """
-Atomic Chart Models for Analytics Microservice v3.7.5
+Atomic Chart Models for Analytics Microservice v3.7.15
 
 Request/response Pydantic models for atomic chart endpoints.
 Each endpoint generates a single chart element with synthetic data.
+
+v3.7.15 Changes:
+- Added show_title field to AtomicChartRequest and CreateElementRequest
+- When show_title=True (default), chart title is displayed above the chart
+- When show_title=False, title is still generated but not rendered in HTML
 
 v3.7.5 Changes:
 - Added slide_id (required) for deterministic chart IDs
@@ -104,6 +109,10 @@ class AtomicChartRequest(BaseModel):
     enable_editor: bool = Field(
         True,
         description="v3.6.0: If True, include edit button for interactive data editing"
+    )
+    show_title: bool = Field(
+        True,
+        description="v3.7.15: If True, display chart title above the chart. If False, title is still generated but not displayed."
     )
 
     @field_validator('presentation_id', 'slide_id')
@@ -353,6 +362,10 @@ class CreateElementRequest(BaseModel):
     enable_editor: bool = Field(
         True,
         description="Include edit button for interactive data editing"
+    )
+    show_title: bool = Field(
+        True,
+        description="v3.7.15: Display chart title above the chart"
     )
     z_index: Optional[int] = Field(
         None,

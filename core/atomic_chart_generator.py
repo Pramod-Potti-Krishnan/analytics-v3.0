@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.14
+Atomic Chart Generator for Analytics Microservice v3.7.15
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -14,6 +14,13 @@ Key Features:
 - Reveal.js slide navigation persistence support
 - Multi-series, waterfall, scatter/bubble persistence
 - Editable series names in multi-series charts
+- Configurable title visibility (show_title)
+
+v3.7.15 Changes:
+- FEATURE: Added show_title parameter for chart title visibility control
+- When show_title=True (default), title is rendered above the chart
+- When show_title=False, title is omitted from HTML but still in response
+- Title uses styled <h3> element with professional typography
 
 v3.7.14 Changes:
 - FEATURE: Waterfall chart persistence now uses dedicated waterfall_data format
@@ -294,7 +301,7 @@ class AtomicChartGenerator:
             # Generate LLM-powered insight-style title
             chart_title = await self._generate_insight_title(chart_id, data, request.narrative)
 
-        # 3. Generate chart HTML (v3.6.0: with optional edit button)
+        # 3. Generate chart HTML (v3.6.0: with optional edit button, v3.7.15: with show_title)
         chart_html = self._generate_chart_html(
             chart_id=chart_id,
             data=data,
@@ -303,7 +310,8 @@ class AtomicChartGenerator:
             height=request.height,
             chart_title=chart_title,
             enable_editor=request.enable_editor,
-            presentation_id=request.presentation_id
+            presentation_id=request.presentation_id,
+            show_title=request.show_title
         )
 
         # 4. Optionally generate Key Insights
@@ -408,11 +416,13 @@ class AtomicChartGenerator:
         height: int,
         chart_title: str,
         enable_editor: bool = True,
-        presentation_id: Optional[str] = None
+        presentation_id: Optional[str] = None,
+        show_title: bool = True
     ) -> str:
         """
         Generate self-contained chart HTML.
 
+        v3.7.15: Added show_title for conditional title rendering.
         v3.6.0: Added enable_editor and presentation_id for edit button support.
 
         Returns HTML with embedded Chart.js initialization and optional editor.
@@ -456,7 +466,8 @@ class AtomicChartGenerator:
             chart_id=chart_id,
             chart_title=chart_title,
             enable_editor=enable_editor,
-            presentation_id=presentation_id
+            presentation_id=presentation_id,
+            show_title=show_title
         )
 
     def _call_generator_method(
@@ -735,10 +746,16 @@ class AtomicChartGenerator:
         chart_id: str,
         chart_title: str,
         enable_editor: bool = True,
-        presentation_id: Optional[str] = None
+        presentation_id: Optional[str] = None,
+        show_title: bool = True
     ) -> str:
         """
         Wrap chart HTML in atomic container for frontend positioning.
+
+        v3.7.15:
+        - Added show_title parameter to conditionally render title above chart
+        - When show_title=True, displays title in styled <h3> element
+        - When show_title=False, title is omitted but still returned in response
 
         v3.6.0:
         - Removed internal title bar - title is now returned in response
@@ -761,11 +778,23 @@ class AtomicChartGenerator:
             edit_button = ""
             editor_modal = ""
 
+        # v3.7.15: Conditionally render title if show_title=True
+        title_html = ""
+        if show_title and chart_title:
+            title_html = f'''<h3 style="margin: 0 0 12px 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 18px; font-weight: 600; color: #1E3A5F; line-height: 1.3;">
+            {chart_title}
+        </h3>'''
+
+        # Calculate chart content height (subtract title height when showing title)
+        content_height = "calc(100% - 40px)" if show_title and chart_title else "100%"
+
         return f'''<div class="atomic-chart-container"
      data-chart-id="{chart_id}"
      data-element-id="{element_id}"
      style="width: {width}px; height: {height}px; position: relative;">
-  <div class="chart-content" style="width: 100%; height: 100%;">
+  {title_html}
+  <div class="chart-content" style="width: 100%; height: {content_height};">
     {chart_html}
   </div>
   {edit_button}
