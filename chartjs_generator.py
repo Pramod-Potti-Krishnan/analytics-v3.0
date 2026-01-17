@@ -3189,11 +3189,12 @@ class ChartJSGenerator:
             // Simple label-value format
             chart.data.labels = newData.map(d => d.label);
 
-            // v3.4.33: Waterfall charts use Start/End format with dynamic colors
+            // v3.7.16: Waterfall charts use Start/End format with dynamic colors and barDirections
             if (chartType === 'waterfall') {{
                 console.log('🌊 Waterfall chart - using Start/End format');
                 const floatingBars = [];
                 const newColors = [];
+                const newDirections = [];
 
                 newData.forEach((d, i) => {{
                     let start, end;
@@ -3216,18 +3217,30 @@ class ChartJSGenerator:
 
                     if (isTotal) {{
                         newColors.push('#93C5FD'); // Blue for totals (opening/closing)
+                        newDirections.push('total');
                     }} else if (isIncrease) {{
                         newColors.push('#A7F3D0'); // Green for increases
+                        newDirections.push('positive');
                     }} else {{
                         newColors.push('#FBCFE8'); // Pink for decreases
+                        newDirections.push('negative');
                     }}
                 }});
 
                 console.log('📊 Floating bars:', floatingBars);
                 console.log('🎨 Colors:', newColors);
+                console.log('📈 Directions:', newDirections);
                 chart.data.datasets[0].data = floatingBars;
                 chart.data.datasets[0].backgroundColor = newColors;
                 chart.data.datasets[0].borderColor = newColors;
+
+                // v3.7.16: Update barDirections for formatter
+                if (chart.config) {{
+                    chart.config.barDirections = newDirections;
+                    if (chart.config._config) {{
+                        chart.config._config.barDirections = newDirections;
+                    }}
+                }}
             }} else {{
                 chart.data.datasets[0].data = newData.map(d => d.value);
             }}

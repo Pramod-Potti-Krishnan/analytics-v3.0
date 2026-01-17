@@ -1404,16 +1404,56 @@ class AtomicChartGenerator:
                         return;
                     }}
 
-                    // v3.7.14: Check for waterfall_data format first (new format)
+                    // v3.7.16: Check for waterfall_data format first (new format)
                     const isWaterfall = chartType_{js_safe_id} === 'waterfall';
                     if (isWaterfall && saved.data.waterfall_data && Array.isArray(saved.data.waterfall_data)) {{
                         const waterfallData = saved.data.waterfall_data;
                         chart.data.labels = waterfallData.map(p => p.label);
+
                         if (chart.data.datasets && chart.data.datasets[0]) {{
-                            chart.data.datasets[0].data = waterfallData.map(p => [p.start, p.end]);
+                            // v3.7.16: Recalculate colors and directions from start/end comparison
+                            const floatingBars = [];
+                            const newColors = [];
+                            const newDirections = [];
+                            const dataLen = waterfallData.length;
+
+                            waterfallData.forEach((p, i) => {{
+                                const start = p.start;
+                                const end = p.end;
+
+                                // Floating bar format: [min, max]
+                                floatingBars.push([Math.min(start, end), Math.max(start, end)]);
+
+                                // Determine direction from start vs end
+                                const isIncrease = end > start;
+                                const isTotal = (i === 0 || i === dataLen - 1) && start === 0;
+
+                                if (isTotal) {{
+                                    newColors.push('#93C5FD'); // Blue for totals
+                                    newDirections.push('total');
+                                }} else if (isIncrease) {{
+                                    newColors.push('#A7F3D0'); // Green for increases
+                                    newDirections.push('positive');
+                                }} else {{
+                                    newColors.push('#FBCFE8'); // Pink for decreases
+                                    newDirections.push('negative');
+                                }}
+                            }});
+
+                            chart.data.datasets[0].data = floatingBars;
+                            chart.data.datasets[0].backgroundColor = newColors;
+                            chart.data.datasets[0].borderColor = newColors;
+
+                            // Update barDirections for formatter
+                            if (chart.config) {{
+                                chart.config.barDirections = newDirections;
+                                if (chart.config._config) {{
+                                    chart.config._config.barDirections = newDirections;
+                                }}
+                            }}
                         }}
                         chart.update();
-                        console.log('✅ Loaded saved waterfall data for', chartId);
+                        console.log('✅ Loaded saved waterfall data with recalculated colors for', chartId);
                         return;
                     }}
 
