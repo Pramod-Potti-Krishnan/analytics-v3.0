@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.15
+Atomic Chart Generator for Analytics Microservice v3.7.16
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -15,6 +15,13 @@ Key Features:
 - Multi-series, waterfall, scatter/bubble persistence
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
+
+v3.7.16 Changes:
+- FIX: Title now appears ABOVE chart instead of on the side
+- Container uses flex layout (display: flex; flex-direction: column)
+- Chart content uses flex: 1 to fill remaining space
+- Title styling improved: single-line, truncates if too long
+- Enhanced debug logging for waterfall persistence troubleshooting
 
 v3.7.15 Changes:
 - FEATURE: Added show_title parameter for chart title visibility control
@@ -301,7 +308,7 @@ class AtomicChartGenerator:
             # Generate LLM-powered insight-style title
             chart_title = await self._generate_insight_title(chart_id, data, request.narrative)
 
-        # 3. Generate chart HTML (v3.6.0: with optional edit button, v3.7.15: with show_title)
+        # 3. Generate chart HTML (v3.6.0: with optional edit button, v3.7.16: with show_title + flex layout)
         chart_html = self._generate_chart_html(
             chart_id=chart_id,
             data=data,
@@ -422,6 +429,7 @@ class AtomicChartGenerator:
         """
         Generate self-contained chart HTML.
 
+        v3.7.16: Flex layout for title positioning, enhanced styling.
         v3.7.15: Added show_title for conditional title rendering.
         v3.6.0: Added enable_editor and presentation_id for edit button support.
 
@@ -752,6 +760,12 @@ class AtomicChartGenerator:
         """
         Wrap chart HTML in atomic container for frontend positioning.
 
+        v3.7.16:
+        - FIX: Title positioning - now uses flex layout to stack title above chart
+        - Container: display: flex; flex-direction: column
+        - Chart content: flex: 1; min-height: 0 (fills remaining space)
+        - Title: single-line with truncation (white-space: nowrap, text-overflow: ellipsis)
+
         v3.7.15:
         - Added show_title parameter to conditionally render title above chart
         - When show_title=True, displays title in styled <h3> element
@@ -778,23 +792,18 @@ class AtomicChartGenerator:
             edit_button = ""
             editor_modal = ""
 
-        # v3.7.15: Conditionally render title if show_title=True
+        # v3.7.16: Conditionally render title with flex-safe styling
         title_html = ""
         if show_title and chart_title:
-            title_html = f'''<h3 style="margin: 0 0 12px 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 18px; font-weight: 600; color: #1E3A5F; line-height: 1.3;">
-            {chart_title}
-        </h3>'''
+            title_html = f'''<h3 style="margin: 0 0 8px 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 600; color: #1E3A5F; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;">{chart_title}</h3>'''
 
-        # Calculate chart content height (subtract title height when showing title)
-        content_height = "calc(100% - 40px)" if show_title and chart_title else "100%"
-
+        # v3.7.16: Use flex layout to stack title above chart content
         return f'''<div class="atomic-chart-container"
      data-chart-id="{chart_id}"
      data-element-id="{element_id}"
-     style="width: {width}px; height: {height}px; position: relative;">
+     style="width: {width}px; height: {height}px; position: relative; display: flex; flex-direction: column;">
   {title_html}
-  <div class="chart-content" style="width: 100%; height: {content_height};">
+  <div class="chart-content" style="width: 100%; flex: 1; min-height: 0;">
     {chart_html}
   </div>
   {edit_button}
@@ -1293,16 +1302,20 @@ class AtomicChartGenerator:
                 payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;
             }}
 
-            // v3.7.4: Call persistence API with absolute URL (cross-origin from frontend)
+            // v3.7.16: Enhanced persistence API call with debug logging
             const analyticsServiceUrl = '{settings.analytics_service_url}';
+            console.log('[v3.7.16] Persistence payload:', JSON.stringify(payload, null, 2));
             fetch(analyticsServiceUrl + '/api/charts/update-data', {{
                 method: 'POST',
                 headers: {{ 'Content-Type': 'application/json' }},
                 body: JSON.stringify(payload)
             }})
-            .then(r => r.json())
+            .then(r => {{
+                console.log('[v3.7.16] Persistence response status:', r.status);
+                return r.json();
+            }})
             .then(result => {{
-                console.log('Chart data persisted:', result.persisted ? 'success' : 'client-only');
+                console.log('[v3.7.16] Persistence result:', JSON.stringify(result));
                 if (result.persisted) {{
                     // Update toast to show persistence success
                     const persistToast = document.createElement('div');
@@ -1310,9 +1323,14 @@ class AtomicChartGenerator:
                     persistToast.style.cssText = 'position: fixed; top: 70px; right: 20px; background: #10B981; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 13px;';
                     document.body.appendChild(persistToast);
                     setTimeout(() => persistToast.remove(), 2500);
+                }} else {{
+                    console.warn('[v3.7.16] Persistence not confirmed - result.persisted is false');
                 }}
             }})
-            .catch(err => console.warn('Persistence failed (client-only):', err));
+            .catch(err => {{
+                console.error('[v3.7.16] Persistence error:', err);
+                console.error('[v3.7.16] Failed payload was:', JSON.stringify(payload));
+            }});
         }}
 
         // Show success message
