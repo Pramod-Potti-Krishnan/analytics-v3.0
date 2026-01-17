@@ -1186,18 +1186,53 @@ class AtomicChartGenerator:
             }});
             atomicChart_{js_safe_id}.data.datasets[0].data = newData;
         }} else if (chartType_{js_safe_id} === 'waterfall') {{
-            // v3.7.10: Waterfall with Start/End columns
+            // v3.7.16: Waterfall with Start/End columns - recalculate colors and directions
             const newLabels = [];
-            const newData = [];
-            rows.forEach(row => {{
+            const floatingBars = [];
+            const newColors = [];
+            const newDirections = [];
+            const rowCount = rows.length;
+
+            rows.forEach((row, i) => {{
                 const label = row.querySelector('.label-input').value;
                 const start = parseFloat(row.querySelector('.start-input').value) || 0;
                 const end = parseFloat(row.querySelector('.end-input').value) || 0;
                 newLabels.push(label);
-                newData.push([start, end]);  // Floating bar format
+
+                // Floating bar format: [min, max] for Chart.js
+                floatingBars.push([Math.min(start, end), Math.max(start, end)]);
+
+                // Determine direction from start vs end comparison
+                const isIncrease = end > start;
+                const isTotal = (i === 0 || i === rowCount - 1) && start === 0;
+
+                if (isTotal) {{
+                    newColors.push('#93C5FD'); // Blue for totals
+                    newDirections.push('total');
+                }} else if (isIncrease) {{
+                    newColors.push('#A7F3D0'); // Green for increases
+                    newDirections.push('positive');
+                }} else {{
+                    newColors.push('#FBCFE8'); // Pink for decreases
+                    newDirections.push('negative');
+                }}
             }});
+
+            // Update chart data, colors, and directions
             atomicChart_{js_safe_id}.data.labels = newLabels;
-            atomicChart_{js_safe_id}.data.datasets[0].data = newData;
+            atomicChart_{js_safe_id}.data.datasets[0].data = floatingBars;
+            atomicChart_{js_safe_id}.data.datasets[0].backgroundColor = newColors;
+            atomicChart_{js_safe_id}.data.datasets[0].borderColor = newColors;
+
+            // Update barDirections for the formatter
+            if (atomicChart_{js_safe_id}.config) {{
+                atomicChart_{js_safe_id}.config.barDirections = newDirections;
+                if (atomicChart_{js_safe_id}.config._config) {{
+                    atomicChart_{js_safe_id}.config._config.barDirections = newDirections;
+                }}
+            }}
+
+            console.log('🌊 Waterfall save - Colors:', newColors, 'Directions:', newDirections);
         }} else if (isMultiSeries) {{
             // v3.7.11: Multi-series charts with editable series names
             const newLabels = [];
