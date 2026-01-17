@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.16
+Atomic Chart Generator for Analytics Microservice v3.7.17
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -15,6 +15,13 @@ Key Features:
 - Multi-series, waterfall, scatter/bubble persistence
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
+
+v3.7.17 Changes:
+- FIX: Waterfall chart colors now persist across navigation and refresh
+- Save waterfall data to localStorage on editor save for immediate reload
+- Check localStorage FIRST in reloadSavedData (sync) before server fetch (async)
+- Fixes timing issue where colors reverted when navigating away and back
+- Colors are recalculated from start/end comparison (green=increase, pink=decrease)
 
 v3.7.16 Changes:
 - FIX: Title now appears ABOVE chart instead of on the side
@@ -1325,6 +1332,13 @@ class AtomicChartGenerator:
                         end: Array.isArray(dataPoint) ? dataPoint[1] : dataPoint
                     }};
                 }});
+
+                // v3.7.17: Also save to localStorage for immediate reload on navigation
+                const storageKey = 'chartData_' + presentationId + '_' + '{element_id}';
+                localStorage.setItem(storageKey, JSON.stringify({{
+                    waterfall_data: payload.waterfall_data
+                }}));
+                console.log('💾 [v3.7.17] Waterfall data saved to localStorage:', storageKey);
             }} else if (isMultiSeries) {{
                 // v3.7.10: Multi-series persistence
                 payload.labels = atomicChart_{js_safe_id}.data.labels;
@@ -1406,6 +1420,71 @@ class AtomicChartGenerator:
         const chart = findChartInstance_{js_safe_id}();
         if (!chart) {{
             return;
+        }}
+
+        // v3.7.17: Check localStorage FIRST for waterfall data (synchronous, fixes timing issue)
+        const isWaterfallChart = chartType_{js_safe_id} === 'waterfall';
+        if (isWaterfallChart) {{
+            const storageKey = 'chartData_' + presentationId + '_' + chartId;
+            const savedLocal = localStorage.getItem(storageKey);
+            if (savedLocal) {{
+                try {{
+                    const parsed = JSON.parse(savedLocal);
+                    if (parsed.waterfall_data && Array.isArray(parsed.waterfall_data)) {{
+                        console.log('📂 [v3.7.17] Loading waterfall data from localStorage:', storageKey);
+                        const waterfallData = parsed.waterfall_data;
+                        chart.data.labels = waterfallData.map(p => p.label);
+
+                        if (chart.data.datasets && chart.data.datasets[0]) {{
+                            // Recalculate colors and directions from start/end comparison
+                            const floatingBars = [];
+                            const newColors = [];
+                            const newDirections = [];
+                            const dataLen = waterfallData.length;
+
+                            waterfallData.forEach((p, i) => {{
+                                const start = p.start;
+                                const end = p.end;
+
+                                // Floating bar format: [min, max]
+                                floatingBars.push([Math.min(start, end), Math.max(start, end)]);
+
+                                // Determine direction from start vs end
+                                const isIncrease = end > start;
+                                const isTotal = (i === 0 || i === dataLen - 1) && start === 0;
+
+                                if (isTotal) {{
+                                    newColors.push('#93C5FD'); // Blue for totals
+                                    newDirections.push('total');
+                                }} else if (isIncrease) {{
+                                    newColors.push('#A7F3D0'); // Green for increases
+                                    newDirections.push('positive');
+                                }} else {{
+                                    newColors.push('#FBCFE8'); // Pink for decreases
+                                    newDirections.push('negative');
+                                }}
+                            }});
+
+                            chart.data.datasets[0].data = floatingBars;
+                            chart.data.datasets[0].backgroundColor = newColors;
+                            chart.data.datasets[0].borderColor = newColors;
+
+                            // Update barDirections for formatter
+                            if (chart.config) {{
+                                chart.config.barDirections = newDirections;
+                                if (chart.config._config) {{
+                                    chart.config._config.barDirections = newDirections;
+                                }}
+                            }}
+                        }}
+                        chart.update();
+                        console.log('✅ [v3.7.17] Waterfall colors restored from localStorage');
+                        return; // Skip server fetch - localStorage is authoritative
+                    }}
+                }} catch (e) {{
+                    console.warn('[v3.7.17] Failed to parse localStorage waterfall data:', e);
+                }}
+            }}
         }}
 
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
