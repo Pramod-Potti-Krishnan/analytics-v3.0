@@ -346,3 +346,121 @@ Generate description:"""
         """Generate basic explanation when LLM fails."""
         data_summary = self._summarize_data(data)
         return f"This visualization presents {narrative}. {data_summary}. The data provides insights into key trends and patterns for informed decision-making."
+
+    async def generate_insight_title(
+        self,
+        chart_type: str,
+        data: Dict[str, Any],
+        narrative: Optional[str] = None
+    ) -> str:
+        """
+        Generate insight-style title for atomic charts.
+
+        v3.6.0: Returns format "{3-word takeaway}: {explanation 35-40 chars}"
+        Example: "Strong Growth: Revenue increased 22% quarter-over-quarter"
+
+        Args:
+            chart_type: Type of chart (line, bar, pie, etc.)
+            data: Chart data with labels and values
+            narrative: User's description of what the chart should show
+
+        Returns:
+            Insight-style title string
+        """
+        data_summary = self._summarize_data(data)
+
+        prompt = f"""Generate an insight-style chart title.
+
+Chart Type: {chart_type}
+Data Summary: {data_summary}
+User Context: {narrative or 'General data visualization'}
+
+**STRICT FORMAT REQUIREMENTS:**
+Generate a title in this EXACT format:
+"{{3-word takeaway}}: {{explanation 35-40 characters}}"
+
+Rules:
+1. Takeaway: EXACTLY 2-3 powerful words (e.g., "Strong Growth", "Market Leader", "Key Finding")
+2. Colon separator
+3. Explanation: 35-40 characters describing the key insight with specific data
+
+Examples:
+- "Strong Growth: Revenue increased 22% quarter-over-quarter"
+- "Market Leader: Sales outpaced competition by 35%"
+- "Steady Decline: Customer churn rose from 5% to 12%"
+- "Clear Winner: Product A leads with 42% market share"
+- "Mixed Results: Performance varied across all regions"
+
+Generate ONE insight-style title (no quotes, no explanation):"""
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a business analyst. Generate concise, impactful chart titles that communicate the key takeaway. Always follow the exact format requested."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=50
+            )
+
+            title = response.choices[0].message.content.strip()
+
+            # Clean up any quotes or extra formatting
+            title = title.strip('"\'')
+
+            # Validate format (should contain a colon)
+            if ':' not in title:
+                # Try to fix by adding takeaway
+                words = title.split()[:3]
+                takeaway = " ".join(words).title()
+                title = f"{takeaway}: {title}"
+
+            logger.info(f"Generated insight title: {title}")
+            return title
+
+        except Exception as e:
+            logger.error(f"Failed to generate insight title: {e}")
+            return self._generate_fallback_insight_title(data, chart_type, narrative)
+
+    def _generate_fallback_insight_title(
+        self,
+        data: Dict[str, Any],
+        chart_type: str,
+        narrative: Optional[str]
+    ) -> str:
+        """Generate fallback insight-style title when LLM fails."""
+        values = data.get("values", [])
+        labels = data.get("labels", [])
+
+        if not values:
+            return f"Data Analysis: {chart_type.replace('_', ' ').title()} visualization"
+
+        # Calculate basic trend for takeaway
+        if len(values) >= 2:
+            first_half = sum(values[:len(values)//2]) / max(len(values)//2, 1)
+            second_half = sum(values[len(values)//2:]) / max(len(values) - len(values)//2, 1)
+
+            if second_half > first_half * 1.1:
+                takeaway = "Upward Trend"
+                pct_change = ((second_half - first_half) / first_half) * 100
+                explanation = f"Values increased by {pct_change:.0f}% overall"
+            elif second_half < first_half * 0.9:
+                takeaway = "Declining Pattern"
+                pct_change = ((first_half - second_half) / first_half) * 100
+                explanation = f"Values decreased by {pct_change:.0f}% overall"
+            else:
+                takeaway = "Stable Performance"
+                avg_val = sum(values) / len(values)
+                explanation = f"Average value of {avg_val:.1f} maintained"
+        else:
+            takeaway = "Key Metric"
+            explanation = f"Value of {values[0]:.1f} recorded"
+
+        return f"{takeaway}: {explanation}"
