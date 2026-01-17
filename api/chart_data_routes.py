@@ -2,7 +2,14 @@
 Chart Data API Routes (FastAPI)
 
 Handles saving and loading chart data edits for interactive editor.
-Supports simple, multi-series, and scatter/bubble chart formats.
+Supports simple, multi-series, scatter/bubble, and waterfall chart formats.
+
+v3.7.14 Changes:
+- FEATURE: Added WaterfallDataPoint model for waterfall chart persistence
+- FEATURE: Added waterfall_data field to ChartDataUpdate model
+- Waterfall charts now use dedicated start/end data format
+- Save/retrieve logic handles waterfall's floating bar format
+- Fixes: Waterfall chart edits not persisting (TypeError on [[start,end]] format)
 
 v3.7.3 Changes:
 - Implemented Supabase persistence for chart data edits
@@ -84,6 +91,22 @@ class ScatterBubbleDataPoint(BaseModel):
         return v
 
 
+class WaterfallDataPoint(BaseModel):
+    """Single data point for waterfall charts (floating bars)."""
+    label: str = Field(..., min_length=1, description="Step label")
+    start: float = Field(..., description="Bar start position")
+    end: float = Field(..., description="Bar end position")
+
+    @validator('start', 'end')
+    def validate_numeric(cls, v):
+        """Validate numeric values for waterfall data points."""
+        if v != v:  # NaN check
+            raise ValueError("Value cannot be NaN")
+        if abs(v) == float('inf'):
+            raise ValueError("Value cannot be infinity")
+        return v
+
+
 class ChartDataUpdate(BaseModel):
     """Request to update chart data - supports simple, multi-series, and scatter/bubble formats."""
     chart_id: str = Field(..., min_length=1, description="Chart identifier")
@@ -99,6 +122,14 @@ class ChartDataUpdate(BaseModel):
 
     # Scatter/bubble charts: data points with x/y/r coordinates
     data: Optional[List[ScatterBubbleDataPoint]] = Field(default=None, min_length=2, max_length=50, description="Data points for scatter/bubble charts")
+
+    # Waterfall charts: data points with start/end values (floating bars)
+    waterfall_data: Optional[List[WaterfallDataPoint]] = Field(
+        default=None,
+        min_length=2,
+        max_length=50,
+        description="Data points for waterfall charts"
+    )
 
     timestamp: Optional[str] = Field(default=None, description="Update timestamp")
 
@@ -139,6 +170,15 @@ class ChartDataUpdate(BaseModel):
         has_values = values.get('values') is not None
         has_datasets = values.get('datasets') is not None
         has_data = v is not None  # scatter/bubble data
+        has_waterfall = values.get('waterfall_data') is not None
+
+        # v3.7.14: Waterfall charts: require 'waterfall_data' field
+        if chart_type == 'waterfall':
+            if not has_waterfall:
+                raise ValueError("Waterfall charts require 'waterfall_data' field with start/end values")
+            if has_labels or has_values or has_datasets or has_data:
+                raise ValueError("Waterfall charts should only use 'waterfall_data' field")
+            return v
 
         # Scatter/bubble charts: require 'data' field
         if chart_type in ['scatter', 'bubble']:
@@ -194,7 +234,7 @@ class ChartDataUpdate(BaseModel):
             return v
 
         # No valid format provided
-        raise ValueError("Must provide either: (1) labels+values for simple charts, (2) labels+datasets for multi-series, or (3) data for scatter/bubble")
+        raise ValueError("Must provide either: (1) labels+values for simple charts, (2) labels+datasets for multi-series, (3) data for scatter/bubble, or (4) waterfall_data for waterfall charts")
 
 
 class ChartDataDelete(BaseModel):
@@ -229,10 +269,17 @@ async def update_chart_data(data: ChartDataUpdate):
     """
     try:
         # Determine format based on chart_type and available fields
+        is_waterfall = data.chart_type == 'waterfall' and data.waterfall_data is not None
         is_scatter_bubble = data.chart_type in ['scatter', 'bubble'] and data.data is not None
-        is_multi_series = data.datasets is not None and not is_scatter_bubble
+        is_multi_series = data.datasets is not None and not is_scatter_bubble and not is_waterfall
 
-        if is_scatter_bubble:
+        if is_waterfall:
+            format_type = "waterfall"
+            logger.info(
+                f"Updating waterfall chart data: {data.chart_id} in presentation {data.presentation_id} "
+                f"({len(data.waterfall_data)} steps)"
+            )
+        elif is_scatter_bubble:
             format_type = data.chart_type
             logger.info(
                 f"Updating {format_type} chart data: {data.chart_id} in presentation {data.presentation_id} "
@@ -266,7 +313,14 @@ async def update_chart_data(data: ChartDataUpdate):
                 }
 
                 # Format-specific data storage
-                if is_scatter_bubble:
+                if is_waterfall:
+                    # v3.7.14: Waterfall stores labels + values with start/end
+                    chart_data_record["labels"] = [p.label for p in data.waterfall_data]
+                    chart_data_record["values"] = [
+                        {"start": p.start, "end": p.end, "label": p.label}
+                        for p in data.waterfall_data
+                    ]
+                elif is_scatter_bubble:
                     chart_data_record["labels"] = []  # Scatter/bubble don't use labels
                     chart_data_record["values"] = [
                         {"x": p.x, "y": p.y, "r": p.r, "label": p.label}
@@ -324,7 +378,9 @@ async def update_chart_data(data: ChartDataUpdate):
             "persisted": persisted  # v3.7.3: Indicate if saved to database
         }
 
-        if is_scatter_bubble:
+        if is_waterfall:
+            response_data["steps_count"] = len(data.waterfall_data)
+        elif is_scatter_bubble:
             response_data["data_points_count"] = len(data.data)
         elif is_multi_series:
             response_data["labels_count"] = len(data.labels)
@@ -426,6 +482,15 @@ async def get_specific_chart_data(presentation_id: str, chart_id: str):
                     values = record.get("values", [])
                     chart_type = record.get("chart_type", "")
 
+                    # v3.7.14: Detect waterfall format (has start/end in values)
+                    is_waterfall = (
+                        chart_type == 'waterfall' and
+                        len(values) > 0 and
+                        isinstance(values[0], dict) and
+                        'start' in values[0] and
+                        'end' in values[0]
+                    )
+
                     # v3.7.10: Detect and return multi-series format as 'datasets'
                     multi_series_charts = ['area_stacked', 'bar_grouped', 'bar_stacked']
                     is_multi_series = (
@@ -444,7 +509,10 @@ async def get_specific_chart_data(presentation_id: str, chart_id: str):
                         "updated_at": record.get("updated_at")
                     }
 
-                    if is_multi_series:
+                    if is_waterfall:
+                        # v3.7.14: Return as 'waterfall_data' for waterfall charts
+                        response_data["waterfall_data"] = values
+                    elif is_multi_series:
                         # Return as 'datasets' for multi-series charts
                         response_data["datasets"] = values
                     else:

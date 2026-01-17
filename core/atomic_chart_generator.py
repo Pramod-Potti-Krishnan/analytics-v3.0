@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.11
+Atomic Chart Generator for Analytics Microservice v3.7.14
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -14,6 +14,12 @@ Key Features:
 - Reveal.js slide navigation persistence support
 - Multi-series, waterfall, scatter/bubble persistence
 - Editable series names in multi-series charts
+
+v3.7.14 Changes:
+- FEATURE: Waterfall chart persistence now uses dedicated waterfall_data format
+- Save payload sends {waterfall_data: [{label, start, end}, ...]}
+- Load logic checks for waterfall_data first, with fallback for old format
+- Fixes: Waterfall edits not persisting (TypeError on [[start,end]] format)
 
 v3.7.11 Changes:
 - FEATURE: Editable series names in multi-series editor header
@@ -1237,9 +1243,15 @@ class AtomicChartGenerator:
                     x: p.x, y: p.y, r: p.r, label: p.label || ''
                 }}));
             }} else if (chartType_{js_safe_id} === 'waterfall') {{
-                // v3.7.10: Waterfall persistence with Start/End values
-                payload.labels = atomicChart_{js_safe_id}.data.labels;
-                payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;  // [[start, end], ...]
+                // v3.7.14: Waterfall persistence with dedicated waterfall_data format
+                payload.waterfall_data = atomicChart_{js_safe_id}.data.labels.map((label, idx) => {{
+                    const dataPoint = atomicChart_{js_safe_id}.data.datasets[0].data[idx];
+                    return {{
+                        label: label,
+                        start: Array.isArray(dataPoint) ? dataPoint[0] : 0,
+                        end: Array.isArray(dataPoint) ? dataPoint[1] : dataPoint
+                    }};
+                }});
             }} else if (isMultiSeries) {{
                 // v3.7.10: Multi-series persistence
                 payload.labels = atomicChart_{js_safe_id}.data.labels;
@@ -1345,6 +1357,19 @@ class AtomicChartGenerator:
                         return;
                     }}
 
+                    // v3.7.14: Check for waterfall_data format first (new format)
+                    const isWaterfall = chartType_{js_safe_id} === 'waterfall';
+                    if (isWaterfall && saved.data.waterfall_data && Array.isArray(saved.data.waterfall_data)) {{
+                        const waterfallData = saved.data.waterfall_data;
+                        chart.data.labels = waterfallData.map(p => p.label);
+                        if (chart.data.datasets && chart.data.datasets[0]) {{
+                            chart.data.datasets[0].data = waterfallData.map(p => [p.start, p.end]);
+                        }}
+                        chart.update();
+                        console.log('✅ Loaded saved waterfall data for', chartId);
+                        return;
+                    }}
+
                     // Check for values array
                     if (Array.isArray(saved.data.values) && saved.data.values.length > 0) {{
                         const values = saved.data.values;
@@ -1353,9 +1378,8 @@ class AtomicChartGenerator:
                         const isScatterBubble = chartType_{js_safe_id} === 'scatter' || chartType_{js_safe_id} === 'bubble';
                         const hasXYFormat = values[0] && typeof values[0] === 'object' && 'x' in values[0] && 'y' in values[0];
 
-                        // v3.7.10: Check if this is waterfall format ([[start, end], ...])
-                        const isWaterfall = chartType_{js_safe_id} === 'waterfall';
-                        const hasWaterfallFormat = Array.isArray(values[0]) && values[0].length === 2;
+                        // v3.7.10: Fallback - check if this is old waterfall format ([[start, end], ...])
+                        const hasOldWaterfallFormat = isWaterfall && Array.isArray(values[0]) && values[0].length === 2;
 
                         if (isScatterBubble && hasXYFormat) {{
                             // Scatter/bubble: apply x/y/r data directly
@@ -1369,8 +1393,8 @@ class AtomicChartGenerator:
                             }}
                             chart.update();
                             console.log('✅ Loaded saved scatter/bubble data for', chartId);
-                        }} else if (isWaterfall && hasWaterfallFormat) {{
-                            // Waterfall: apply [[start, end], ...] format
+                        }} else if (hasOldWaterfallFormat) {{
+                            // Waterfall (old format): apply [[start, end], ...] format
                             if (saved.data.labels) {{
                                 chart.data.labels = saved.data.labels;
                             }}
@@ -1378,7 +1402,7 @@ class AtomicChartGenerator:
                                 chart.data.datasets[0].data = values;
                             }}
                             chart.update();
-                            console.log('✅ Loaded saved waterfall data for', chartId);
+                            console.log('✅ Loaded saved waterfall data (legacy format) for', chartId);
                         }} else if (Array.isArray(saved.data.labels) && saved.data.labels.length > 0) {{
                             // Standard charts: apply labels and values
                             chart.data.labels = saved.data.labels;
