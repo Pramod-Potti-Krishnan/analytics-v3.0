@@ -4,6 +4,12 @@ Chart Data API Routes (FastAPI)
 Handles saving and loading chart data edits for interactive editor.
 Supports simple, multi-series, scatter/bubble, and waterfall chart formats.
 
+v3.7.15 Changes:
+- FIX: Waterfall chart validation failure (HTTP 422) due to Pydantic field ordering
+- Moved waterfall_data field BEFORE data field in ChartDataUpdate model
+- Pydantic v1 validators can only access fields defined earlier in the model
+- Now values.get('waterfall_data') correctly sees the field during validation
+
 v3.7.14 Changes:
 - FEATURE: Added WaterfallDataPoint model for waterfall chart persistence
 - FEATURE: Added waterfall_data field to ChartDataUpdate model
@@ -120,16 +126,18 @@ class ChartDataUpdate(BaseModel):
     # Multi-series charts: labels + datasets
     datasets: Optional[List[DatasetSchema]] = Field(default=None, min_length=1, max_length=20, description="Multiple data series (multi-series charts)")
 
-    # Scatter/bubble charts: data points with x/y/r coordinates
-    data: Optional[List[ScatterBubbleDataPoint]] = Field(default=None, min_length=2, max_length=50, description="Data points for scatter/bubble charts")
-
     # Waterfall charts: data points with start/end values (floating bars)
+    # NOTE: Must be defined BEFORE 'data' field so the validator can access it
+    # (Pydantic v1 validators can only see fields defined earlier in the model)
     waterfall_data: Optional[List[WaterfallDataPoint]] = Field(
         default=None,
         min_length=2,
         max_length=50,
         description="Data points for waterfall charts"
     )
+
+    # Scatter/bubble charts: data points with x/y/r coordinates
+    data: Optional[List[ScatterBubbleDataPoint]] = Field(default=None, min_length=2, max_length=50, description="Data points for scatter/bubble charts")
 
     timestamp: Optional[str] = Field(default=None, description="Update timestamp")
 
