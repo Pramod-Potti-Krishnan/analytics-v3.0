@@ -630,21 +630,25 @@ class ChartJSGenerator:
         cumulative = start_value
         floating_data = []
         bar_colors = []
+        bar_directions = []  # v3.7.15: Track semantic direction for label formatting
 
         for i, value in enumerate(values):
             if value is None:
                 # Total bar - show from 0 to current cumulative
                 floating_data.append([0, cumulative])
-                bar_colors.append(self.palette[3])  # Neutral color for totals
+                bar_colors.append(self.palette[0])  # v3.7.15: Blue for totals (was palette[3] lavender)
+                bar_directions.append('total')
             elif value >= 0:
                 # Positive change - bar goes up
                 floating_data.append([cumulative, cumulative + value])
                 bar_colors.append(self.palette[1])  # Green for positive
+                bar_directions.append('positive')
                 cumulative += value
             else:
                 # Negative change - bar goes down
                 floating_data.append([cumulative + value, cumulative])
                 bar_colors.append(self.palette[4])  # Red for negative
+                bar_directions.append('negative')
                 cumulative += value
 
         # Build Chart.js config with floating bars
@@ -666,6 +670,9 @@ class ChartJSGenerator:
             )
         }
 
+        # v3.7.15: Pass bar directions for formatter to determine sign prefixes
+        config["barDirections"] = bar_directions
+
         # Add waterfall-specific tooltip to show changes
         if "plugins" not in config["options"]:
             config["options"]["plugins"] = {}
@@ -681,21 +688,37 @@ class ChartJSGenerator:
             }
         }
 
-        # Waterfall-specific datalabels formatter (data is [start, end] array, not single value)
+        # v3.7.15: Waterfall-specific datalabels formatter with direction-aware sign prefixes
+        # Uses barDirections from config to show correct +/- signs based on semantic direction
         config["options"]["plugins"]["datalabels"] = {
             "display": True,
             "color": "#fff",
             "font": {"size": 12, "weight": "bold"},
-            "formatter": """function(value) {
+            "formatter": """function(value, context) {
                 if (Array.isArray(value)) {
-                    const diff = value[1] - value[0];
-                    if (Math.abs(diff) >= 1000000) {
-                        return (diff >= 0 ? '+' : '') + (diff/1000000).toFixed(1) + 'M';
-                    } else if (Math.abs(diff) >= 1000) {
-                        return (diff >= 0 ? '+' : '') + (diff/1000).toFixed(0) + 'K';
+                    // v3.7.15: Get direction from config to determine sign prefix
+                    const cfg = context.chart.config;
+                    const directions = cfg.barDirections || cfg._config?.barDirections || [];
+                    const direction = directions[context.dataIndex] || 'positive';
+                    const magnitude = Math.abs(value[1] - value[0]);
+
+                    // Format the magnitude
+                    let formatted;
+                    if (magnitude >= 1000000) {
+                        formatted = (magnitude/1000000).toFixed(1) + 'M';
+                    } else if (magnitude >= 1000) {
+                        formatted = (magnitude/1000).toFixed(0) + 'K';
                     } else {
-                        return (diff >= 0 ? '+' : '') + diff.toFixed(0);
+                        formatted = magnitude.toFixed(0);
                     }
+
+                    // Total bars: no sign prefix
+                    if (direction === 'total') {
+                        return formatted;
+                    }
+
+                    // Add sign based on semantic direction (not calculated diff)
+                    return (direction === 'negative' ? '-' : '+') + formatted;
                 }
                 return value;
             }""",
