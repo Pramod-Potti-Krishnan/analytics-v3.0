@@ -427,10 +427,16 @@ class QueryExecutor:
 
     @staticmethod
     def _map_dtype_to_postgres(dtype: str) -> str:
-        """Map pandas dtype to PostgreSQL type."""
+        """Map pandas/semantic dtype to PostgreSQL type."""
         dtype_lower = str(dtype).lower()
 
-        if "int" in dtype_lower:
+        # Handle semantic types from CSVHandler
+        if dtype_lower == "numeric":
+            return "DOUBLE PRECISION"
+        elif dtype_lower in ("categorical", "text"):
+            return "TEXT"
+        # Handle pandas dtypes
+        elif "int" in dtype_lower:
             return "BIGINT"
         elif "float" in dtype_lower:
             return "DOUBLE PRECISION"
