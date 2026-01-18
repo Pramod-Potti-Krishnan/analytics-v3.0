@@ -1009,14 +1009,38 @@ class AtomicChartGenerator:
                 tbody.appendChild(row);
             }});
         }} else if (chartType_{js_safe_id} === 'waterfall') {{
-            // v3.7.10: Waterfall with Start/End columns
+            // v3.7.18: Waterfall with Start/End columns using barDirections for semantic meaning
             const labels = atomicChart_{js_safe_id}.data.labels || [];
             const data = atomicChart_{js_safe_id}.data.datasets[0]?.data || [];
+
+            // v3.7.18: Get barDirections to determine semantic Start/End
+            const cfg = atomicChart_{js_safe_id}.config;
+            const directions = cfg.barDirections || cfg._config?.barDirections || [];
+
             labels.forEach((label, index) => {{
                 const value = data[index];
-                // Waterfall data is [start, end] array format
-                const start = Array.isArray(value) ? value[0] : 0;
-                const end = Array.isArray(value) ? value[1] : (typeof value === 'number' ? value : 0);
+                const direction = directions[index] || 'positive';
+
+                // v3.7.18: Extract Start/End based on direction for intuitive editing
+                // Positive: Start < End (going up)
+                // Negative: Start > End (going down)
+                // Total: Start = 0
+                let start, end;
+                if (Array.isArray(value)) {{
+                    if (direction === 'negative') {{
+                        // Negative bar: swap so Start > End (intuitive for decrease)
+                        start = value[1];  // Higher value
+                        end = value[0];    // Lower value
+                    }} else {{
+                        // Positive or Total: keep as-is
+                        start = value[0];
+                        end = value[1];
+                    }}
+                }} else {{
+                    start = 0;
+                    end = typeof value === 'number' ? value : 0;
+                }}
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td style="${{tdStyle}}">${{index + 1}}</td>
