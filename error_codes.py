@@ -47,6 +47,17 @@ class ErrorCode(str, Enum):
     # Rate Limiting (429 series)
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 
+    # Data Ingestion Errors (400/500 series)
+    FILE_TOO_LARGE = "FILE_TOO_LARGE"
+    UNSUPPORTED_FILE_TYPE = "UNSUPPORTED_FILE_TYPE"
+    INVALID_CSV_FORMAT = "INVALID_CSV_FORMAT"
+    SESSION_NOT_FOUND = "SESSION_NOT_FOUND"
+    SESSION_EXPIRED = "SESSION_EXPIRED"
+    AMBIGUOUS_INTENT = "AMBIGUOUS_INTENT"
+    TRANSFORM_FAILED = "TRANSFORM_FAILED"
+    AGENT_MAX_STEPS_EXCEEDED = "AGENT_MAX_STEPS_EXCEEDED"
+    DATABASE_NOT_CONFIGURED = "DATABASE_NOT_CONFIGURED"
+
     # Unknown/Generic
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
 
@@ -205,6 +216,16 @@ ERROR_MESSAGES = {
     ErrorCode.MISSING_DATA: "No data provided and generateData is false",
     ErrorCode.INVALID_PALETTE: "Invalid color palette specified",
     ErrorCode.DATA_LIMIT_EXCEEDED: "Data points exceed limit for this grid size",
+    # Data Ingestion Error Messages
+    ErrorCode.FILE_TOO_LARGE: "Uploaded file exceeds maximum size limit",
+    ErrorCode.UNSUPPORTED_FILE_TYPE: "File type not supported. Use CSV, TSV, or TXT",
+    ErrorCode.INVALID_CSV_FORMAT: "Invalid CSV format or structure",
+    ErrorCode.SESSION_NOT_FOUND: "Data session not found",
+    ErrorCode.SESSION_EXPIRED: "Data session has expired",
+    ErrorCode.AMBIGUOUS_INTENT: "Unable to determine visualization intent from narrative",
+    ErrorCode.TRANSFORM_FAILED: "Data transformation failed",
+    ErrorCode.AGENT_MAX_STEPS_EXCEEDED: "Agent reasoning exceeded maximum steps",
+    ErrorCode.DATABASE_NOT_CONFIGURED: "PostgreSQL database not configured for data ingestion",
 }
 
 

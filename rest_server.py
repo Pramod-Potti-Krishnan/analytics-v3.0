@@ -85,6 +85,20 @@ from layout_service_palette import (
 from api.atomic_routes import router as atomic_router
 from api.chart_data_routes import router as chart_data_router
 
+# v3.8.0: Data Ingestion Routes
+try:
+    from api.data_ingestion_routes import (
+        router as data_ingestion_router,
+        init_data_ingestion_db,
+        shutdown_data_ingestion_db
+    )
+    DATA_INGESTION_AVAILABLE = True
+except ImportError as e:
+    DATA_INGESTION_AVAILABLE = False
+    data_ingestion_router = None
+    logger_init = logging.getLogger(__name__)
+    logger_init.warning(f"Data Ingestion module not available: {e}")
+
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
@@ -179,6 +193,10 @@ response = requests.post(
         {
             "name": "Atomic Charts",
             "description": "Generate atomic chart elements with synthetic data for frontend positioning (v3.5.0)"
+        },
+        {
+            "name": "Data Ingestion",
+            "description": "CSV upload and intelligent data visualization with chain-of-thought reasoning (v3.8.0)"
         }
     ]
 )
@@ -200,6 +218,10 @@ app.include_router(atomic_router)
 
 # Interactive Editor routes (chart data CRUD)
 app.include_router(chart_data_router)
+
+# v3.8.0: Data Ingestion routes (CSV upload, agent processing)
+if DATA_INGESTION_AVAILABLE and data_ingestion_router:
+    app.include_router(data_ingestion_router)
 
 
 # Exception handlers
@@ -541,7 +563,28 @@ async def startup_event():
     else:
         logger.warning("Failed to initialize Supabase Storage")
 
+    # v3.8.0: Initialize Data Ingestion database
+    if DATA_INGESTION_AVAILABLE:
+        try:
+            await init_data_ingestion_db()
+            logger.info("Data Ingestion database initialized")
+        except Exception as e:
+            logger.warning(f"Data Ingestion database init skipped: {e}")
+
     logger.info(f"REST API ready on port {settings.API_PORT}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    logger.info("Analytics Microservice v3 shutting down...")
+
+    # v3.8.0: Close Data Ingestion database
+    if DATA_INGESTION_AVAILABLE:
+        try:
+            await shutdown_data_ingestion_db()
+        except Exception as e:
+            logger.warning(f"Data Ingestion shutdown error: {e}")
 
 
 @app.get("/")
