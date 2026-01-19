@@ -300,12 +300,17 @@ class AtomicChartGenerator:
 
         logger.info(f"Generating atomic {chart_id} chart: {element_id}")
 
-        # 1. Generate synthetic data
-        data = self.synthetic_generator.generate(
-            chart_type=chart_id,
-            narrative=request.narrative,
-            num_points=request.num_points
-        )
+        # 1. Use provided data or generate synthetic data
+        # v3.8.0: Support explicit data for data ingestion use case
+        if request.data is not None and len(request.data) > 0:
+            data = request.data
+            logger.info(f"Using provided data with {len(data)} points")
+        else:
+            data = self.synthetic_generator.generate(
+                chart_type=chart_id,
+                narrative=request.narrative,
+                num_points=request.num_points
+            )
 
         # 2. Generate chart title (v3.6.0: LLM-generated insight-style title)
         if request.chart_title:
@@ -345,6 +350,9 @@ class AtomicChartGenerator:
 
         logger.info(f"Generated atomic chart {element_id} in {generation_time_ms}ms")
 
+        # v3.8.0: Determine if data was synthetic or provided
+        used_synthetic = request.data is None or len(request.data) == 0
+
         return AtomicChartResponse(
             success=True,
             chart_id=chart_id,
@@ -353,7 +361,7 @@ class AtomicChartGenerator:
             data_used=data,
             chart_title=chart_title,
             generation_time_ms=generation_time_ms,
-            synthetic_data=True,
+            synthetic_data=used_synthetic,
             chart_dimensions=ChartDimensions(width=request.width, height=request.height),
             insights_dimensions=insights_dimensions,
             element_id=element_id

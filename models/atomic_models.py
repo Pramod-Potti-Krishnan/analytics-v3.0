@@ -114,6 +114,10 @@ class AtomicChartRequest(BaseModel):
         True,
         description="v3.7.15: If True, display chart title above the chart. If False, title is still generated but not displayed."
     )
+    data: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="v3.8.0: Explicit data points. If provided, uses this data instead of synthetic generation."
+    )
 
     @field_validator('presentation_id', 'slide_id')
     @classmethod
