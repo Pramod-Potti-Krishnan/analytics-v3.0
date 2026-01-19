@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.18
+Atomic Chart Generator for Analytics Microservice v3.7.19
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -16,6 +16,12 @@ Key Features:
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
+
+v3.7.19 Changes:
+- FIX: Canvas ID collision with container (v7.5.23 compatibility)
+- Generic fallback now uses canvas-{element_id} instead of {element_id}
+- Fixes: getElementById finding container div instead of canvas element
+- Charts now render correctly when element-manager wraps them in containers
 
 v3.7.18 Changes:
 - FEATURE: Stretch-to-fit styling for chart containers (like tables)
@@ -708,10 +714,11 @@ class AtomicChartGenerator:
         config_json = json.dumps(config)
         js_safe_id = element_id.replace('-', '_')
 
-        return f'''<canvas id="{element_id}"></canvas>
+        # v7.5.23: Use canvas-{element_id} to avoid ID collision with container
+        return f'''<canvas id="canvas-{element_id}"></canvas>
 <script>
 (function() {{
-    const ctx = document.getElementById('{element_id}').getContext('2d');
+    const ctx = document.getElementById('canvas-{element_id}').getContext('2d');
     new Chart(ctx, {config_json});
 }})();
 </script>'''
