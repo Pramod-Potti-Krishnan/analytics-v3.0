@@ -1,10 +1,15 @@
 """
-Atomic Chart Routes for Analytics Microservice v3.7.5
+Atomic Chart Routes for Analytics Microservice v3.8.1
 
 14 atomic endpoints for gold standard chart types.
 Each endpoint generates a single chart element with synthetic data.
 
 Endpoint Pattern: POST /api/v1/charts/atomic/{chart_id}
+
+v3.8.1 Changes:
+- Added grid positioning support: start_col, start_row, position_width, position_height
+- Added grid_position to response for CSS grid placement
+- Compatible with text_table_builder pattern for unified canvas positioning
 
 v3.7.5 Changes:
 - BREAKING: presentation_id and slide_id are now REQUIRED in request body
@@ -69,6 +74,77 @@ def get_generator(theme: str = "professional") -> AtomicChartGenerator:
     if _generator is None or _generator.theme != theme:
         _generator = AtomicChartGenerator(theme=theme)
     return _generator
+
+
+# ========================================
+# v3.8.1: GRID POSITION HELPER FUNCTIONS
+# ========================================
+
+# Grid system constants
+GRID_UNIT_PX = 60  # 1 grid unit = 60 pixels
+
+
+def _calculate_chart_position(request: AtomicChartRequest) -> Optional[dict]:
+    """
+    Calculate grid position from request. Returns None if no position specified.
+
+    Grid System: 32×18 grid (1920×1080px, 60px/cell)
+
+    Args:
+        request: AtomicChartRequest with optional position fields
+
+    Returns:
+        Dict with start_col, start_row, width, height, grid_row, grid_column
+        or None if position not specified
+    """
+    if request.start_col is None and request.start_row is None:
+        return None
+
+    start_col = request.start_col if request.start_col is not None else 2
+    start_row = request.start_row if request.start_row is not None else 4
+
+    # Use grid dimensions if specified, else convert pixels to grid
+    if request.position_width is not None:
+        width = request.position_width
+    else:
+        width = max(4, min(32, (request.width + GRID_UNIT_PX - 1) // GRID_UNIT_PX))
+
+    if request.position_height is not None:
+        height = request.position_height
+    else:
+        height = max(4, min(18, (request.height + GRID_UNIT_PX - 1) // GRID_UNIT_PX))
+
+    end_row = min(start_row + height, 19)
+    end_col = min(start_col + width, 33)
+
+    return {
+        "start_col": start_col,
+        "start_row": start_row,
+        "width": width,
+        "height": height,
+        "grid_row": f"{start_row}/{end_row}",
+        "grid_column": f"{start_col}/{end_col}"
+    }
+
+
+def _get_effective_dimensions(request: AtomicChartRequest, position: Optional[dict]) -> tuple:
+    """
+    Get effective pixel dimensions from grid position or original request.
+
+    Args:
+        request: Original request with width/height
+        position: Calculated grid position (or None)
+
+    Returns:
+        Tuple of (width_px, height_px)
+    """
+    if position:
+        width_px = position['width'] * GRID_UNIT_PX - 20
+        height_px = position['height'] * GRID_UNIT_PX - 20
+    else:
+        width_px = request.width
+        height_px = request.height
+    return width_px, height_px
 
 
 # ========================================
@@ -516,8 +592,25 @@ async def generate_atomic_chart(
         )
 
     try:
+        # v3.8.1: Calculate grid position if specified
+        position_data = _calculate_chart_position(request)
+
+        # Calculate effective dimensions (grid-based or pixel-based)
+        effective_width, effective_height = _get_effective_dimensions(request, position_data)
+
+        # Create modified request with effective dimensions
+        modified_request = request.model_copy(update={
+            'width': effective_width,
+            'height': effective_height
+        })
+
         generator = get_generator(theme)
-        response = await generator.generate(chart_id, request)
+        response = await generator.generate(chart_id, modified_request)
+
+        # Add grid_position to response if calculated
+        if position_data:
+            response.grid_position = position_data
+
         return response
 
     except ValueError as e:

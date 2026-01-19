@@ -1,8 +1,13 @@
 """
-Atomic Chart Models for Analytics Microservice v3.7.15
+Atomic Chart Models for Analytics Microservice v3.8.1
 
 Request/response Pydantic models for atomic chart endpoints.
 Each endpoint generates a single chart element with synthetic data.
+
+v3.8.1 Changes:
+- Added grid positioning fields to AtomicChartRequest: start_col, start_row, position_width, position_height
+- Added grid_position field to AtomicChartResponse for CSS grid placement
+- Compatible with text_table_builder pattern for unified canvas positioning
 
 v3.7.15 Changes:
 - Added show_title field to AtomicChartRequest and CreateElementRequest
@@ -119,6 +124,33 @@ class AtomicChartRequest(BaseModel):
         description="v3.8.0: Explicit data points. If provided, uses this data instead of synthetic generation."
     )
 
+    # Grid positioning (optional, for canvas placement)
+    # v3.8.1: Added for compatibility with text_table_builder pattern
+    start_col: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=32,
+        description="Starting column position (1-32). If null, position not calculated."
+    )
+    start_row: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=18,
+        description="Starting row position (1-18). If null, position not calculated."
+    )
+    position_width: Optional[int] = Field(
+        default=None,
+        ge=4,
+        le=32,
+        description="Width in grid units (4-32). Overrides pixel width."
+    )
+    position_height: Optional[int] = Field(
+        default=None,
+        ge=4,
+        le=18,
+        description="Height in grid units (4-18). Overrides pixel height."
+    )
+
     @field_validator('presentation_id', 'slide_id')
     @classmethod
     def validate_ids(cls, v: str) -> str:
@@ -205,6 +237,13 @@ class AtomicChartResponse(BaseModel):
 
     # Editor integration
     element_id: str = Field(..., description="Unique element ID for frontend positioning")
+
+    # Grid position (returned when position specified in request)
+    # v3.8.1: Added for compatibility with text_table_builder pattern
+    grid_position: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Grid position: {start_col, start_row, width, height, grid_row, grid_column}"
+    )
 
     class Config:
         json_schema_extra = {
