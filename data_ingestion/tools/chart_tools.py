@@ -57,9 +57,9 @@ async def generate_chart(
     start_time = time.time()
 
     # Import AtomicChartGenerator (lazy import to avoid circular deps)
-    # Use relative imports from data_ingestion/tools/ up to analytics_microservice/
-    from ...core.atomic_chart_generator import AtomicChartGenerator
-    from ...models.atomic_models import AtomicChartRequest
+    # Use absolute imports since server runs from analytics_microservice/ directory
+    from core.atomic_chart_generator import AtomicChartGenerator
+    from models.atomic_models import AtomicChartRequest
 
     # Determine chart type
     chart_type = _determine_chart_type(
