@@ -100,12 +100,12 @@ async def generate_chart(
         return ChartResult(
             success=True,
             chart_html=response.chart_html,
-            chart_title=response.title or title,
+            chart_title=response.chart_title or title,
             chart_type=ChartTypeId(chart_type),
             insights_html=response.insights_html if include_insights else None,
             data_points_used=len(transform_result.labels),
             generation_time_ms=generation_time,
-            chart_id=response.chart_id,
+            chart_id=response.element_id,
             presentation_id=presentation_id,
             slide_id=slide_id
         )
