@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.17
+Atomic Chart Generator for Analytics Microservice v3.7.18
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -15,6 +15,15 @@ Key Features:
 - Multi-series, waterfall, scatter/bubble persistence
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
+- Stretch-to-fit container with 10px padding
+
+v3.7.18 Changes:
+- FEATURE: Stretch-to-fit styling for chart containers (like tables)
+- Container now uses 100% width/height instead of fixed pixels
+- Added 10px padding on all sides for consistent margins
+- Added box-sizing: border-box so padding is included in dimensions
+- Added overflow: hidden to clip content that doesn't fit
+- Charts now properly fill their container and resize responsively
 
 v3.7.17 Changes:
 - FIX: Waterfall chart colors now persist across navigation and refresh
@@ -812,13 +821,17 @@ class AtomicChartGenerator:
         if show_title and chart_title:
             title_html = f'''<h3 style="margin: 0 0 8px 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 600; color: #1E3A5F; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;">{chart_title}</h3>'''
 
-        # v3.7.16: Use flex layout to stack title above chart content
+        # v3.7.18: Stretch-to-fit with 10px padding (like tables)
+        # - Uses 100% width/height instead of fixed pixels
+        # - 10px padding on all sides for consistent margins
+        # - box-sizing: border-box so padding is included in dimensions
+        # - overflow: hidden to clip content that doesn't fit
         return f'''<div class="atomic-chart-container"
      data-chart-id="{chart_id}"
      data-element-id="{element_id}"
-     style="width: {width}px; height: {height}px; position: relative; display: flex; flex-direction: column;">
+     style="width: 100%; height: 100%; padding: 10px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden;">
   {title_html}
-  <div class="chart-content" style="width: 100%; flex: 1; min-height: 0;">
+  <div class="chart-content" style="width: 100%; flex: 1; min-height: 0; overflow: hidden;">
     {chart_html}
   </div>
   {edit_button}
