@@ -832,7 +832,7 @@ class AtomicChartGenerator:
         style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 100; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
         onmouseover="this.style.background='rgba(0,0,0,0.9)'; this.style.transform='scale(1.05)'"
         onmouseout="this.style.background='rgba(0,0,0,0.7)'; this.style.transform='scale(1)'">
-    <span style="font-size: 16px;">📊</span> Edit Data
+    <span style="font-size: 16px;">&#128202;</span> Edit Data
 </button>'''
 
     def _generate_editor_modal(
@@ -903,7 +903,7 @@ class AtomicChartGenerator:
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             <h2 style="margin: 0; font-size: 20px; color: white; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px;">📊</span> Edit Chart Data
+                <span style="font-size: 24px;">&#128202;</span> Edit Chart Data
             </h2>
             <button onclick="closeChartEditor_{js_safe_id}()" style="background: rgba(255,255,255,0.2); border: none; font-size: 24px; color: white; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">&times;</button>
         </div>
@@ -935,7 +935,7 @@ class AtomicChartGenerator:
         <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e0e0e0; background: #f8f9fa;">
             <button onclick="closeChartEditor_{js_safe_id}()" style="background: white; color: #333; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;">Cancel</button>
             <button onclick="saveChartData_{js_safe_id}()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">💾</span> Save & Update
+                <span style="font-size: 16px;">&#128190;</span> Save &amp; Update
             </button>
         </div>
     </div>
@@ -981,7 +981,7 @@ class AtomicChartGenerator:
 
         const inputStyle = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;';
         const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
-        const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>';
+        const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">&#128465;</button>';
 
         // v3.7.10: Chart-type-specific data extraction with multi-series and waterfall support
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
@@ -1130,7 +1130,7 @@ class AtomicChartGenerator:
         const row = document.createElement('tr');
         const inputStyle = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;';
         const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
-        const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">🗑️</button>';
+        const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">&#128465;</button>';
 
         // v3.7.10: Chart-type-specific new row templates with multi-series and waterfall
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
@@ -1400,7 +1400,7 @@ class AtomicChartGenerator:
                 if (result.persisted) {{
                     // Update toast to show persistence success
                     const persistToast = document.createElement('div');
-                    persistToast.innerHTML = '💾 Changes saved to server';
+                    persistToast.innerHTML = '&#128190; Changes saved to server';
                     persistToast.style.cssText = 'position: fixed; top: 70px; right: 20px; background: #10B981; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 13px;';
                     document.body.appendChild(persistToast);
                     setTimeout(() => persistToast.remove(), 2500);
@@ -1416,7 +1416,7 @@ class AtomicChartGenerator:
 
         // Show success message
         const toast = document.createElement('div');
-        toast.innerHTML = '✅ Chart updated successfully!';
+        toast.innerHTML = '&#9989; Chart updated successfully!';
         toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500;';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
