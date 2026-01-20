@@ -3611,6 +3611,7 @@ class ChartJSGenerator:
                     # GUARANTEED: Always display X-axis
                     "display": True,
                     "offset": False,  # v7.5.26: Remove edge padding for tighter fit
+                    "bounds": "data",  # v7.5.27: Fit chart area to data, reducing right-side space
                     "grid": {
                         "display": True,  # Always show grid
                         "color": "rgba(107, 114, 128, 0.15)",  # v3.4.18: gray-500 at 15% opacity
@@ -3620,7 +3621,7 @@ class ChartJSGenerator:
                         "display": True,  # Always show labels
                         "font": {"size": 12, "weight": "500"},
                         "color": "#6b7280",  # v3.4.7: Subtle gray (Tailwind gray-500)
-                        "padding": 8,
+                        "padding": 4,  # v7.5.27: Reduced from 8px for tighter margins
                         "autoSkip": False,  # Show all labels
                         "maxRotation": 45,
                         "minRotation": 0
@@ -3646,7 +3647,7 @@ class ChartJSGenerator:
                         "display": True,  # Always show labels
                         "font": {"size": 12, "weight": "500"},
                         "color": "#6b7280",  # v3.4.7: Subtle gray (Tailwind gray-500)
-                        "padding": 8,
+                        "padding": 4,  # v7.5.27: Reduced from 8px for tighter margins
                         **self._get_tick_config(format_type)
                     },
                     "title": {
