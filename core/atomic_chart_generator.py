@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.31
+Atomic Chart Generator for Analytics Microservice v3.7.32
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -16,6 +16,11 @@ Key Features:
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
+
+v3.7.32 Changes:
+- FIX: saveChartData now finds table elements in parent document when modal is moved
+- Table rows and series inputs are now correctly queried from modalDoc
+- Fixes empty labels/values arrays causing 422 server error on save
 
 v3.7.31 Changes:
 - FIX: Expose chart editor functions to parent window when modal is moved
@@ -1251,8 +1256,11 @@ class AtomicChartGenerator:
     }}
 
     window.saveChartData_{js_safe_id} = async function() {{
-        // Collect data from table
-        const rows = document.querySelectorAll('#tbody-{element_id} tr');
+        // v3.7.32: Find table in correct document (modal may be in parent document)
+        const isInIframe = (window.parent && window.parent !== window);
+        const modalDoc = isInIframe ? window.parent.document : document;
+        const rows = modalDoc.querySelectorAll('#tbody-{element_id} tr');
+        console.log('[v3.7.32] Save: Found', rows.length, 'rows in', isInIframe ? 'parent document' : 'current document');
 
         // v3.7.10: Chart-type-specific save logic with multi-series and waterfall
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
@@ -1333,7 +1341,8 @@ class AtomicChartGenerator:
             const numSeries = window.seriesNames_{js_safe_id}?.length || 0;
 
             // v3.7.11: Collect updated series names from header inputs
-            const seriesNameInputs = document.querySelectorAll('#table-{element_id} thead .series-name-input');
+            // v3.7.32: Use modalDoc (modal may be in parent document)
+            const seriesNameInputs = modalDoc.querySelectorAll('#table-{element_id} thead .series-name-input');
             seriesNameInputs.forEach(input => {{
                 newSeriesNames.push(input.value.trim() || `Series ${{newSeriesNames.length + 1}}`);
             }});
