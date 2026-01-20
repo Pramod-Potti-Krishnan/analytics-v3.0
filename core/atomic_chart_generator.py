@@ -826,7 +826,7 @@ class AtomicChartGenerator:
         # v3.7.16: Conditionally render title with flex-safe styling
         title_html = ""
         if show_title and chart_title:
-            title_html = f'''<h3 style="margin: 0 0 8px 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 600; color: #1E3A5F; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;">{chart_title}</h3>'''
+            title_html = f'''<h3 style="margin: 5px 0 8px 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 600; color: #1E3A5F; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;">{chart_title}</h3>'''  # v7.5.26: 5px top margin
 
         # v3.7.18: Stretch-to-fit with 10px padding (like tables)
         # - Uses 100% width/height instead of fixed pixels

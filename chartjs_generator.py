@@ -3610,6 +3610,7 @@ class ChartJSGenerator:
                 x_axis: {
                     # GUARANTEED: Always display X-axis
                     "display": True,
+                    "offset": False,  # v7.5.26: Remove edge padding for tighter fit
                     "grid": {
                         "display": True,  # Always show grid
                         "color": "rgba(107, 114, 128, 0.15)",  # v3.4.18: gray-500 at 15% opacity
@@ -3635,7 +3636,7 @@ class ChartJSGenerator:
                     # GUARANTEED: Always display Y-axis
                     "display": True,
                     "beginAtZero": True,  # Always start at zero
-                    "grace": "15%",  # v3.4.5: Add 15% headroom above max value for data labels
+                    "grace": "5%",  # v7.5.26: Reduced from 15% for tighter vertical fit
                     "grid": {
                         "display": True,  # Always show grid
                         "color": "rgba(107, 114, 128, 0.15)",  # v3.4.18: gray-500 at 15% opacity
