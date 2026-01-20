@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.32
+Atomic Chart Generator for Analytics Microservice v3.7.33
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -16,6 +16,14 @@ Key Features:
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
+
+v3.7.33 Changes:
+- FIX: Defensive modal finding with try-catch error handling
+- Modal now searches parent document first (if previously moved), then falls back to iframe
+- Handles cross-origin/security errors gracefully when accessing parent document
+- Function exposure to parent window now has try-catch protection
+- Added informative console logging for debugging modal location after refresh
+- User alert added when modal cannot be found in any document
 
 v3.7.32 Changes:
 - FIX: saveChartData now finds table elements in parent document when modal is moved
@@ -1149,43 +1157,101 @@ class AtomicChartGenerator:
             }});
         }}
 
-        // v3.7.30: Move modal to PARENT document.body to escape iframe viewport constraint
-        // Charts are rendered inside iframes, so position:fixed is relative to iframe viewport, not parent page
-        const modal = document.getElementById('{modal_id}');
-        const isInIframe = (window.parent && window.parent !== window);
-        const targetBody = isInIframe ? window.parent.document.body : document.body;
+        // v3.7.33: Defensive modal finding with error handling
+        let modal = null;
+        let targetBody = document.body;
+        let isInIframe = false;
 
-        if (modal.parentElement !== targetBody) {{
-            targetBody.appendChild(modal);
+        try {{
+            isInIframe = (window.parent && window.parent !== window);
+            if (isInIframe) {{
+                targetBody = window.parent.document.body;
+                // Try to find modal in parent first (if previously moved)
+                modal = window.parent.document.getElementById('{modal_id}');
+                console.log('[v3.7.33] In iframe, checked parent for modal:', modal ? 'found' : 'not found');
+            }}
+        }} catch (e) {{
+            console.warn('[v3.7.33] Cannot access parent document:', e.message);
+            isInIframe = false;
+            targetBody = document.body;
         }}
 
-        // v3.7.31: Expose functions to parent window so onclick handlers work when modal is in parent
+        // Fallback to iframe document
+        if (!modal) {{
+            modal = document.getElementById('{modal_id}');
+            console.log('[v3.7.33] Fallback to iframe document for modal:', modal ? 'found' : 'not found');
+        }}
+
+        if (!modal) {{
+            console.error('[v3.7.33] Modal not found in any document!');
+            alert('Editor modal not found. Please refresh the page and try again.');
+            return;
+        }}
+
+        // Move modal to target body if needed
+        if (modal.parentElement !== targetBody) {{
+            targetBody.appendChild(modal);
+            console.log('[v3.7.33] Modal moved to', isInIframe ? 'parent' : 'current', 'document.body');
+        }}
+
+        // v3.7.33: Expose functions to parent window with error handling
         if (isInIframe) {{
-            window.parent.saveChartData_{js_safe_id} = window.saveChartData_{js_safe_id};
-            window.parent.closeChartEditor_{js_safe_id} = window.closeChartEditor_{js_safe_id};
-            window.parent.addRow_{js_safe_id} = window.addRow_{js_safe_id};
-            window.parent.deleteRow_{js_safe_id} = window.deleteRow_{js_safe_id};
-            console.log('[v3.7.31] Exposed chart editor functions to parent window for modal:', '{modal_id}');
+            try {{
+                window.parent.saveChartData_{js_safe_id} = window.saveChartData_{js_safe_id};
+                window.parent.closeChartEditor_{js_safe_id} = window.closeChartEditor_{js_safe_id};
+                window.parent.addRow_{js_safe_id} = window.addRow_{js_safe_id};
+                window.parent.deleteRow_{js_safe_id} = window.deleteRow_{js_safe_id};
+                console.log('[v3.7.33] Exposed chart editor functions to parent window for modal:', '{modal_id}');
+            }} catch (e) {{
+                console.warn('[v3.7.33] Cannot expose functions to parent:', e.message);
+            }}
         }}
 
         modal.style.display = 'flex';
     }};
 
-    // v3.7.30: Look for modal in parent document where it was moved
+    // v3.7.33: Defensive modal closing with try-catch
     window.closeChartEditor_{js_safe_id} = function() {{
-        const targetDoc = (window.parent && window.parent !== window)
-            ? window.parent.document
-            : document;
-        const modal = targetDoc.getElementById('{modal_id}') || document.getElementById('{modal_id}');
+        let modal = null;
+        try {{
+            const isInIframe = (window.parent && window.parent !== window);
+            if (isInIframe) {{
+                modal = window.parent.document.getElementById('{modal_id}');
+            }}
+        }} catch (e) {{
+            console.warn('[v3.7.33] Cannot access parent document for close:', e.message);
+        }}
+        // Fallback to iframe document
+        if (!modal) {{
+            modal = document.getElementById('{modal_id}');
+        }}
         if (modal) {{
             modal.style.display = 'none';
         }}
     }};
 
+    // v3.7.33: Helper to find document where modal/table lives
+    function getModalDocument_{js_safe_id}() {{
+        try {{
+            const isInIframe = (window.parent && window.parent !== window);
+            if (isInIframe && window.parent.document.getElementById('{modal_id}')) {{
+                return window.parent.document;
+            }}
+        }} catch (e) {{
+            // Ignore cross-origin errors
+        }}
+        return document;
+    }}
+
     window.addRow_{js_safe_id} = function() {{
-        const tbody = document.getElementById('tbody-{element_id}');
+        const modalDoc = getModalDocument_{js_safe_id}();
+        const tbody = modalDoc.getElementById('tbody-{element_id}');
+        if (!tbody) {{
+            console.error('[v3.7.33] Cannot find tbody in any document');
+            return;
+        }}
         const rowCount = tbody.querySelectorAll('tr').length;
-        const row = document.createElement('tr');
+        const row = modalDoc.createElement('tr');
         const inputStyle = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;';
         const tdStyle = 'padding: 8px 12px; border-bottom: 1px solid #e0e0e0;';
         const deleteBtn = '<button onclick="deleteRow_{js_safe_id}(this)" style="background: #ff4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;">&#128465;</button>';
@@ -1248,19 +1314,20 @@ class AtomicChartGenerator:
         renumberRows_{js_safe_id}();
     }};
 
+    // v3.7.33: Updated to use helper for correct document
     function renumberRows_{js_safe_id}() {{
-        const rows = document.querySelectorAll('#tbody-{element_id} tr');
+        const modalDoc = getModalDocument_{js_safe_id}();
+        const rows = modalDoc.querySelectorAll('#tbody-{element_id} tr');
         rows.forEach((row, index) => {{
             row.querySelector('td:first-child').textContent = index + 1;
         }});
     }}
 
     window.saveChartData_{js_safe_id} = async function() {{
-        // v3.7.32: Find table in correct document (modal may be in parent document)
-        const isInIframe = (window.parent && window.parent !== window);
-        const modalDoc = isInIframe ? window.parent.document : document;
+        // v3.7.33: Use helper to find correct document with try-catch protection
+        const modalDoc = getModalDocument_{js_safe_id}();
         const rows = modalDoc.querySelectorAll('#tbody-{element_id} tr');
-        console.log('[v3.7.32] Save: Found', rows.length, 'rows in', isInIframe ? 'parent document' : 'current document');
+        console.log('[v3.7.33] Save: Found', rows.length, 'rows in', modalDoc === document ? 'current document' : 'parent document');
 
         // v3.7.10: Chart-type-specific save logic with multi-series and waterfall
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
