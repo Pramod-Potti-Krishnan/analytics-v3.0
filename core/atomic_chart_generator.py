@@ -993,6 +993,79 @@ class AtomicChartGenerator:
     let atomicChart_{js_safe_id} = null;
     const chartType_{js_safe_id} = '{chart_id}';
 
+    // v3.7.34: Extract presentationId from chartId as fallback for double-nested iframe scenarios
+    // Chart ID format: chart-{{presentationId}}-slide-{{N}}-{{chartType}}-{{N}}
+    function extractPresentationIdFromChartId_{js_safe_id}(chartId) {{
+        // Format: chart-954b0741-ca31-474c-8130-e8205edae7b8-slide-0-line-0
+        const match = chartId.match(/^chart-([a-f0-9-]{{36}})-slide-/);
+        const result = match ? match[1] : null;
+        console.log('[v3.7.34] extractPresentationIdFromChartId:', chartId, '->', result);
+        return result;
+    }}
+
+    // v3.7.34: Traverse iframe hierarchy to find window with currentPresentationId
+    function findPresentationIdInHierarchy_{js_safe_id}() {{
+        let win = window;
+        const maxDepth = 5; // Prevent infinite loops
+
+        for (let i = 0; i < maxDepth; i++) {{
+            try {{
+                // Check currentPresentationId on this window
+                if (win.currentPresentationId) {{
+                    console.log('[v3.7.34] Found presentationId at depth', i, ':', win.currentPresentationId);
+                    return win.currentPresentationId;
+                }}
+                // Check URL pattern for presentation ID
+                if (win.location && win.location.pathname && win.location.pathname !== 'srcdoc') {{
+                    const urlMatch = win.location.pathname.match(/\\/p\\/([^\\/]+)/);
+                    if (urlMatch && urlMatch[1]) {{
+                        console.log('[v3.7.34] Found presentationId from URL at depth', i, ':', urlMatch[1]);
+                        return urlMatch[1];
+                    }}
+                }}
+                // Move to parent
+                if (win === win.parent) {{
+                    console.log('[v3.7.34] Reached top window at depth', i);
+                    break;
+                }}
+                win = win.parent;
+            }} catch (e) {{
+                console.log('[v3.7.34] Cannot access window at depth', i, ':', e.message);
+                break; // Cross-origin boundary
+            }}
+        }}
+        return null;
+    }}
+
+    // v3.7.34: Find top-level document body (traverse up iframe hierarchy for modal placement)
+    function findTopLevelBody_{js_safe_id}() {{
+        let win = window;
+        let topBody = document.body;
+        let topDoc = document;
+        const maxDepth = 5;
+
+        for (let i = 0; i < maxDepth; i++) {{
+            try {{
+                if (win.parent && win.parent !== win) {{
+                    // Check if parent is a real page (not srcdoc)
+                    const parentPathname = win.parent.location.pathname;
+                    if (parentPathname && parentPathname !== 'srcdoc') {{
+                        topBody = win.parent.document.body;
+                        topDoc = win.parent.document;
+                        console.log('[v3.7.34] Found non-srcdoc parent at depth', i, '- pathname:', parentPathname);
+                    }}
+                    win = win.parent;
+                }} else {{
+                    break;
+                }}
+            }} catch (e) {{
+                console.log('[v3.7.34] Cannot access parent at depth', i, ':', e.message);
+                break;
+            }}
+        }}
+        return {{ body: topBody, doc: topDoc }};
+    }}
+
     function findChartInstance_{js_safe_id}() {{
         // Find the canvas element inside this atomic container
         const container = document.querySelector('[data-element-id="{element_id}"]');
@@ -1157,33 +1230,27 @@ class AtomicChartGenerator:
             }});
         }}
 
-        // v3.7.33: Defensive modal finding with error handling
+        // v3.7.34: Use findTopLevelBody to traverse iframe hierarchy for proper modal placement
+        // This fixes the double-nested iframe issue after page refresh
+        const topLevel = findTopLevelBody_{js_safe_id}();
+        let targetBody = topLevel.body;
+        let targetDoc = topLevel.doc;
         let modal = null;
-        let targetBody = document.body;
-        let isInIframe = false;
 
-        try {{
-            isInIframe = (window.parent && window.parent !== window);
-            if (isInIframe) {{
-                targetBody = window.parent.document.body;
-                // Try to find modal in parent first (if previously moved)
-                modal = window.parent.document.getElementById('{modal_id}');
-                console.log('[v3.7.33] In iframe, checked parent for modal:', modal ? 'found' : 'not found');
-            }}
-        }} catch (e) {{
-            console.warn('[v3.7.33] Cannot access parent document:', e.message);
-            isInIframe = false;
-            targetBody = document.body;
-        }}
+        console.log('[v3.7.34] Modal placement - targetDoc:', targetDoc === document ? 'current' : 'parent');
 
-        // Fallback to iframe document
-        if (!modal) {{
+        // Try to find modal in target document first (may have been moved previously)
+        modal = targetDoc.getElementById('{modal_id}');
+        if (modal) {{
+            console.log('[v3.7.34] Found modal in target document');
+        }} else {{
+            // Fallback: search in current document
             modal = document.getElementById('{modal_id}');
-            console.log('[v3.7.33] Fallback to iframe document for modal:', modal ? 'found' : 'not found');
+            console.log('[v3.7.34] Fallback to current document for modal:', modal ? 'found' : 'not found');
         }}
 
         if (!modal) {{
-            console.error('[v3.7.33] Modal not found in any document!');
+            console.error('[v3.7.34] Modal not found in any document!');
             alert('Editor modal not found. Please refresh the page and try again.');
             return;
         }}
@@ -1191,37 +1258,37 @@ class AtomicChartGenerator:
         // Move modal to target body if needed
         if (modal.parentElement !== targetBody) {{
             targetBody.appendChild(modal);
-            console.log('[v3.7.33] Modal moved to', isInIframe ? 'parent' : 'current', 'document.body');
+            console.log('[v3.7.34] Modal moved to top-level document.body');
         }}
 
-        // v3.7.33: Expose functions to parent window with error handling
-        if (isInIframe) {{
+        // v3.7.34: Expose functions to ALL windows in hierarchy for onclick handlers
+        // This ensures onclick="closeChartEditor_xxx()" works regardless of which window context
+        let exposeWin = window;
+        const maxExposeDepth = 5;
+        for (let i = 0; i < maxExposeDepth; i++) {{
             try {{
-                window.parent.saveChartData_{js_safe_id} = window.saveChartData_{js_safe_id};
-                window.parent.closeChartEditor_{js_safe_id} = window.closeChartEditor_{js_safe_id};
-                window.parent.addRow_{js_safe_id} = window.addRow_{js_safe_id};
-                window.parent.deleteRow_{js_safe_id} = window.deleteRow_{js_safe_id};
-                console.log('[v3.7.33] Exposed chart editor functions to parent window for modal:', '{modal_id}');
+                if (exposeWin !== window) {{
+                    exposeWin.saveChartData_{js_safe_id} = window.saveChartData_{js_safe_id};
+                    exposeWin.closeChartEditor_{js_safe_id} = window.closeChartEditor_{js_safe_id};
+                    exposeWin.addRow_{js_safe_id} = window.addRow_{js_safe_id};
+                    exposeWin.deleteRow_{js_safe_id} = window.deleteRow_{js_safe_id};
+                    console.log('[v3.7.34] Exposed functions to window at depth', i);
+                }}
+                if (exposeWin === exposeWin.parent) break;
+                exposeWin = exposeWin.parent;
             }} catch (e) {{
-                console.warn('[v3.7.33] Cannot expose functions to parent:', e.message);
+                console.log('[v3.7.34] Cannot expose to window at depth', i, ':', e.message);
+                break;
             }}
         }}
 
         modal.style.display = 'flex';
     }};
 
-    // v3.7.33: Defensive modal closing with try-catch
+    // v3.7.34: Modal closing with hierarchy traversal
     window.closeChartEditor_{js_safe_id} = function() {{
-        let modal = null;
-        try {{
-            const isInIframe = (window.parent && window.parent !== window);
-            if (isInIframe) {{
-                modal = window.parent.document.getElementById('{modal_id}');
-            }}
-        }} catch (e) {{
-            console.warn('[v3.7.33] Cannot access parent document for close:', e.message);
-        }}
-        // Fallback to iframe document
+        const topLevel = findTopLevelBody_{js_safe_id}();
+        let modal = topLevel.doc.getElementById('{modal_id}');
         if (!modal) {{
             modal = document.getElementById('{modal_id}');
         }}
@@ -1230,15 +1297,12 @@ class AtomicChartGenerator:
         }}
     }};
 
-    // v3.7.33: Helper to find document where modal/table lives
+    // v3.7.34: Helper to find document where modal/table lives (uses hierarchy traversal)
     function getModalDocument_{js_safe_id}() {{
-        try {{
-            const isInIframe = (window.parent && window.parent !== window);
-            if (isInIframe && window.parent.document.getElementById('{modal_id}')) {{
-                return window.parent.document;
-            }}
-        }} catch (e) {{
-            // Ignore cross-origin errors
+        const topLevel = findTopLevelBody_{js_safe_id}();
+        // Check if modal is in top-level document
+        if (topLevel.doc.getElementById('{modal_id}')) {{
+            return topLevel.doc;
         }}
         return document;
     }}
@@ -1462,14 +1526,17 @@ class AtomicChartGenerator:
 
         atomicChart_{js_safe_id}.update();
 
-        // v3.7.30: Check parent window first (for iframe context) then fallback to current window
-        const parentWindow = (window.parent && window.parent !== window) ? window.parent : window;
-        const presentationId = parentWindow.currentPresentationId ||
-            window.currentPresentationId ||
-            (parentWindow.location.pathname.match(/\/p\/([^\/]+)/) || [])[1] ||
-            (window.location.pathname.match(/\/p\/([^\/]+)/) || [])[1] ||
-            '';
-        console.log('[v3.7.30] Save: presentationId resolved to:', presentationId);
+        // v3.7.34: Use hierarchy traversal first, then extract from chartId as fallback
+        // This fixes the double-nested iframe issue where parent is also a srcdoc
+        let presentationId = findPresentationIdInHierarchy_{js_safe_id}();
+        console.log('[v3.7.34] Save: Hierarchy traversal result:', presentationId);
+
+        // v3.7.34: Fallback - extract from chart ID (works even in double-nested iframes)
+        if (!presentationId) {{
+            presentationId = extractPresentationIdFromChartId_{js_safe_id}('{element_id}');
+            console.log('[v3.7.34] Save: Extracted from chartId:', presentationId);
+        }}
+        console.log('[v3.7.34] Save: Final presentationId:', presentationId);
 
         if (presentationId) {{
             // Build persistence payload based on chart type
@@ -1586,35 +1653,35 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.30: Reusable function to load saved data (called on init AND slide change)
+    // v3.7.34: Reusable function to load saved data (called on init AND slide change)
     // Now handles scatter/bubble, waterfall, and multi-series charts
-    // Added comprehensive debug logging
+    // v3.7.34: Uses hierarchy traversal and chartId extraction for double-nested iframe support
     async function reloadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
 
-        // v3.7.30: Debug logging for troubleshooting persistence issues (with parent window info)
-        const parentWindow = (window.parent && window.parent !== window) ? window.parent : window;
-        console.log('[v3.7.30 Chart Reload] ======= RELOAD START =======');
-        console.log('[v3.7.30 Chart Reload] chartId:', chartId);
-        console.log('[v3.7.30 Chart Reload] analyticsServiceUrl:', analyticsServiceUrl);
-        console.log('[v3.7.30 Chart Reload] Running inside iframe:', window.parent !== window);
-        console.log('[v3.7.30 Chart Reload] parent.currentPresentationId:', parentWindow.currentPresentationId);
-        console.log('[v3.7.30 Chart Reload] window.currentPresentationId:', window.currentPresentationId);
-        console.log('[v3.7.30 Chart Reload] parent.location.pathname:', parentWindow.location.pathname);
-        console.log('[v3.7.30 Chart Reload] window.location.pathname:', window.location.pathname);
+        // v3.7.34: Enhanced debug logging for double-nested iframe troubleshooting
+        console.log('[v3.7.34 Chart Reload] ======= RELOAD START =======');
+        console.log('[v3.7.34 Chart Reload] chartId:', chartId);
+        console.log('[v3.7.34 Chart Reload] analyticsServiceUrl:', analyticsServiceUrl);
+        console.log('[v3.7.34 Chart Reload] Running inside iframe:', window.parent !== window);
 
-        // v3.7.30: Extract presentation ID - check parent window first (for iframe context)
-        const presentationId = parentWindow.currentPresentationId ||
-            window.currentPresentationId ||
-            (parentWindow.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1] ||
-            (window.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1];
+        // v3.7.34: Use hierarchy traversal first, then extract from chartId as fallback
+        // This fixes the double-nested iframe issue where parent is also a srcdoc
+        let presentationId = findPresentationIdInHierarchy_{js_safe_id}();
+        console.log('[v3.7.34 Chart Reload] Hierarchy traversal result:', presentationId);
 
-        console.log('[v3.7.30 Chart Reload] Resolved presentationId:', presentationId);
+        // v3.7.34: Fallback - extract from chart ID (works even in double-nested iframes)
+        if (!presentationId) {{
+            presentationId = extractPresentationIdFromChartId_{js_safe_id}(chartId);
+            console.log('[v3.7.34 Chart Reload] Extracted from chartId:', presentationId);
+        }}
+
+        console.log('[v3.7.34 Chart Reload] Final presentationId:', presentationId);
 
         if (!presentationId) {{
-            console.error('[v3.7.30 Chart Reload] ❌ No presentation ID found! Cannot load saved data.');
-            console.log('[v3.7.30 Chart Reload] ======= RELOAD ABORTED =======');
+            console.error('[v3.7.34 Chart Reload] ❌ No presentation ID found! Cannot load saved data.');
+            console.log('[v3.7.34 Chart Reload] ======= RELOAD ABORTED =======');
             return;
         }}
 
