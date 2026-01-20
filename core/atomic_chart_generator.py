@@ -1217,7 +1217,7 @@ class AtomicChartGenerator:
         }});
     }}
 
-    window.saveChartData_{js_safe_id} = function() {{
+    window.saveChartData_{js_safe_id} = async function() {{
         // Collect data from table
         const rows = document.querySelectorAll('#tbody-{element_id} tr');
 
@@ -1403,46 +1403,65 @@ class AtomicChartGenerator:
                 payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;
             }}
 
-            // v3.7.16: Enhanced persistence API call with debug logging
+            // v3.7.29: Enhanced persistence API call with blocking save (don't close modal until confirmed)
             const analyticsServiceUrl = '{settings.analytics_service_url}';
-            console.log('[v3.7.16] Persistence payload:', JSON.stringify(payload, null, 2));
-            fetch(analyticsServiceUrl + '/api/charts/update-data', {{
-                method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }},
-                body: JSON.stringify(payload)
-            }})
-            .then(r => {{
-                console.log('[v3.7.16] Persistence response status:', r.status);
-                return r.json();
-            }})
-            .then(result => {{
-                console.log('[v3.7.16] Persistence result:', JSON.stringify(result));
-                if (result.persisted) {{
-                    // Update toast to show persistence success
-                    const persistToast = document.createElement('div');
-                    persistToast.innerHTML = '&#128190; Changes saved to server';
-                    persistToast.style.cssText = 'position: fixed; top: 70px; right: 20px; background: #10B981; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 13px;';
-                    document.body.appendChild(persistToast);
-                    setTimeout(() => persistToast.remove(), 2500);
-                }} else {{
-                    console.warn('[v3.7.16] Persistence not confirmed - result.persisted is false');
+            console.log('[v3.7.29] Persistence payload:', JSON.stringify(payload, null, 2));
+            console.log('[v3.7.29] Analytics Service URL:', analyticsServiceUrl);
+
+            try {{
+                const response = await fetch(analyticsServiceUrl + '/api/charts/update-data', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }});
+
+                console.log('[v3.7.29] Persistence response status:', response.status);
+
+                if (!response.ok) {{
+                    throw new Error('Server returned ' + response.status + ': ' + response.statusText);
                 }}
-            }})
-            .catch(err => {{
-                console.error('[v3.7.16] Persistence error:', err);
-                console.error('[v3.7.16] Failed payload was:', JSON.stringify(payload));
-            }});
+
+                const result = await response.json();
+                console.log('[v3.7.29] Persistence result:', JSON.stringify(result));
+
+                if (!result.persisted) {{
+                    throw new Error('Server did not confirm save (persisted=false)');
+                }}
+
+                // SUCCESS: Show toast and close modal
+                const toast = document.createElement('div');
+                toast.innerHTML = '&#9989; Chart saved successfully!';
+                toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+                // Close modal only after save confirmed
+                closeChartEditor_{js_safe_id}();
+
+            }} catch (saveError) {{
+                console.error('[v3.7.29] ❌ Chart save FAILED:', saveError);
+                console.error('[v3.7.29] Failed payload was:', JSON.stringify(payload));
+
+                // Show error alert - DO NOT close modal
+                const errorToast = document.createElement('div');
+                errorToast.innerHTML = '&#10060; Save failed: ' + saveError.message + '<br><small>Check console for details. Try again.</small>';
+                errorToast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500; max-width: 350px;';
+                document.body.appendChild(errorToast);
+                setTimeout(() => errorToast.remove(), 6000);
+
+                // Modal stays open so user can retry
+                return;
+            }}
+        }} else {{
+            // No presentation context - just show local update toast and close
+            const toast = document.createElement('div');
+            toast.innerHTML = '&#9989; Chart updated locally (no presentation context)';
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500;';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            closeChartEditor_{js_safe_id}();
         }}
-
-        // Show success message
-        const toast = document.createElement('div');
-        toast.innerHTML = '&#9989; Chart updated successfully!';
-        toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100000; font-size: 14px; font-weight: 500;';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-
-        // Close modal
-        closeChartEditor_{js_safe_id}();
     }};
 
     // Initialize when DOM ready
@@ -1454,23 +1473,36 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.10: Reusable function to load saved data (called on init AND slide change)
+    // v3.7.29: Reusable function to load saved data (called on init AND slide change)
     // Now handles scatter/bubble, waterfall, and multi-series charts
+    // Added comprehensive debug logging
     async function reloadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
+
+        // v3.7.29: Debug logging for troubleshooting persistence issues
+        console.log('[v3.7.29 Chart Reload] ======= RELOAD START =======');
+        console.log('[v3.7.29 Chart Reload] chartId:', chartId);
+        console.log('[v3.7.29 Chart Reload] analyticsServiceUrl:', analyticsServiceUrl);
+        console.log('[v3.7.29 Chart Reload] window.currentPresentationId:', window.currentPresentationId);
+        console.log('[v3.7.29 Chart Reload] window.location.pathname:', window.location.pathname);
 
         // Extract presentation ID from URL (format: /p/{{uuid}})
         const presentationId = window.currentPresentationId ||
             (window.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1];
 
+        console.log('[v3.7.29 Chart Reload] Resolved presentationId:', presentationId);
+
         if (!presentationId) {{
+            console.error('[v3.7.29 Chart Reload] ❌ No presentation ID found! Cannot load saved data.');
+            console.log('[v3.7.29 Chart Reload] ======= RELOAD ABORTED =======');
             return;
         }}
 
         // Find chart instance (should be ready since slide is visible)
         const chart = findChartInstance_{js_safe_id}();
         if (!chart) {{
+            console.warn('[v3.7.29 Chart Reload] Chart instance not ready yet');
             return;
         }}
 
@@ -1542,13 +1574,18 @@ class AtomicChartGenerator:
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
         const isMultiSeries = multiSeriesCharts.includes(chartType_{js_safe_id});
 
+        // v3.7.29: Debug logging for server fetch
+        const fetchUrl = `${{analyticsServiceUrl}}/api/charts/get-data/${{presentationId}}/${{chartId}}`;
+        console.log('[v3.7.29 Chart Reload] Fetching saved data from:', fetchUrl);
+
         try {{
-            const response = await fetch(
-                `${{analyticsServiceUrl}}/api/charts/get-data/${{presentationId}}/${{chartId}}`
-            );
+            const response = await fetch(fetchUrl);
+
+            console.log('[v3.7.29 Chart Reload] Fetch response status:', response.status, response.statusText);
 
             if (response.ok) {{
                 const saved = await response.json();
+                console.log('[v3.7.29 Chart Reload] Saved data received:', JSON.stringify(saved, null, 2));
 
                 if (saved.success && saved.data) {{
                     // v3.7.10: Check for multi-series format first (has datasets array)
@@ -1667,11 +1704,15 @@ class AtomicChartGenerator:
                         }}
                     }}
                 }}
+            }} else {{
+                console.log('[v3.7.29 Chart Reload] No saved data returned (response not ok or no data)');
             }}
         }} catch (e) {{
-            // No saved data is fine - chart keeps original synthetic data
-            console.debug('No saved data for chart:', chartId);
+            // v3.7.29: Enhanced error logging for debugging
+            console.error('[v3.7.29 Chart Reload] ❌ Error loading saved data:', e);
+            console.error('[v3.7.29 Chart Reload] Error details:', e.message);
         }}
+        console.log('[v3.7.29 Chart Reload] ======= RELOAD END =======');
     }}
 
     // v3.7.8: Initial load with retry logic
