@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.19
+Atomic Chart Generator for Analytics Microservice v3.7.30
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -16,6 +16,14 @@ Key Features:
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
+
+v3.7.30 Changes:
+- FIX: Modal now escapes iframe viewport constraint by appending to parent.document.body
+- FIX: Presentation ID now correctly extracted from parent window for iframe context
+- Charts rendered inside iframes (via srcdoc) now properly access parent's currentPresentationId
+- Modal covers full slide instead of being constrained to small chart container
+- Data persistence now works correctly in text-labs and other iframe contexts
+- Enhanced debug logging to show iframe context and parent window info
 
 v3.7.19 Changes:
 - FIX: Canvas ID collision with container (v7.5.23 compatibility)
@@ -1131,17 +1139,27 @@ class AtomicChartGenerator:
             }});
         }}
 
-        // v3.6.3: Move modal to document.body to escape Reveal.js transform stacking context
-        // This ensures the modal covers the entire viewport, not just the slide container
+        // v3.7.30: Move modal to PARENT document.body to escape iframe viewport constraint
+        // Charts are rendered inside iframes, so position:fixed is relative to iframe viewport, not parent page
         const modal = document.getElementById('{modal_id}');
-        if (modal.parentElement !== document.body) {{
-            document.body.appendChild(modal);
+        const targetBody = (window.parent && window.parent !== window)
+            ? window.parent.document.body
+            : document.body;
+        if (modal.parentElement !== targetBody) {{
+            targetBody.appendChild(modal);
         }}
         modal.style.display = 'flex';
     }};
 
+    // v3.7.30: Look for modal in parent document where it was moved
     window.closeChartEditor_{js_safe_id} = function() {{
-        document.getElementById('{modal_id}').style.display = 'none';
+        const targetDoc = (window.parent && window.parent !== window)
+            ? window.parent.document
+            : document;
+        const modal = targetDoc.getElementById('{modal_id}') || document.getElementById('{modal_id}');
+        if (modal) {{
+            modal.style.display = 'none';
+        }}
     }};
 
     window.addRow_{js_safe_id} = function() {{
@@ -1353,10 +1371,14 @@ class AtomicChartGenerator:
 
         atomicChart_{js_safe_id}.update();
 
-        // v3.7.3: Persist to server if presentation context available
-        const presentationId = window.currentPresentationId ||
+        // v3.7.30: Check parent window first (for iframe context) then fallback to current window
+        const parentWindow = (window.parent && window.parent !== window) ? window.parent : window;
+        const presentationId = parentWindow.currentPresentationId ||
+            window.currentPresentationId ||
+            (parentWindow.location.pathname.match(/\/p\/([^\/]+)/) || [])[1] ||
             (window.location.pathname.match(/\/p\/([^\/]+)/) || [])[1] ||
             '';
+        console.log('[v3.7.30] Save: presentationId resolved to:', presentationId);
 
         if (presentationId) {{
             // Build persistence payload based on chart type
@@ -1403,10 +1425,10 @@ class AtomicChartGenerator:
                 payload.values = atomicChart_{js_safe_id}.data.datasets[0].data;
             }}
 
-            // v3.7.29: Enhanced persistence API call with blocking save (don't close modal until confirmed)
+            // v3.7.30: Enhanced persistence API call with blocking save (don't close modal until confirmed)
             const analyticsServiceUrl = '{settings.analytics_service_url}';
-            console.log('[v3.7.29] Persistence payload:', JSON.stringify(payload, null, 2));
-            console.log('[v3.7.29] Analytics Service URL:', analyticsServiceUrl);
+            console.log('[v3.7.30] Persistence payload:', JSON.stringify(payload, null, 2));
+            console.log('[v3.7.30] Analytics Service URL:', analyticsServiceUrl);
 
             try {{
                 const response = await fetch(analyticsServiceUrl + '/api/charts/update-data', {{
@@ -1415,14 +1437,14 @@ class AtomicChartGenerator:
                     body: JSON.stringify(payload)
                 }});
 
-                console.log('[v3.7.29] Persistence response status:', response.status);
+                console.log('[v3.7.30] Persistence response status:', response.status);
 
                 if (!response.ok) {{
                     throw new Error('Server returned ' + response.status + ': ' + response.statusText);
                 }}
 
                 const result = await response.json();
-                console.log('[v3.7.29] Persistence result:', JSON.stringify(result));
+                console.log('[v3.7.30] Persistence result:', JSON.stringify(result));
 
                 if (!result.persisted) {{
                     throw new Error('Server did not confirm save (persisted=false)');
@@ -1439,8 +1461,8 @@ class AtomicChartGenerator:
                 closeChartEditor_{js_safe_id}();
 
             }} catch (saveError) {{
-                console.error('[v3.7.29] ❌ Chart save FAILED:', saveError);
-                console.error('[v3.7.29] Failed payload was:', JSON.stringify(payload));
+                console.error('[v3.7.30] ❌ Chart save FAILED:', saveError);
+                console.error('[v3.7.30] Failed payload was:', JSON.stringify(payload));
 
                 // Show error alert - DO NOT close modal
                 const errorToast = document.createElement('div');
@@ -1473,36 +1495,42 @@ class AtomicChartGenerator:
         setTimeout(initEditor_{js_safe_id}, 500);
     }}
 
-    // v3.7.29: Reusable function to load saved data (called on init AND slide change)
+    // v3.7.30: Reusable function to load saved data (called on init AND slide change)
     // Now handles scatter/bubble, waterfall, and multi-series charts
     // Added comprehensive debug logging
     async function reloadSavedData_{js_safe_id}() {{
         const chartId = '{element_id}';
         const analyticsServiceUrl = '{settings.analytics_service_url}';
 
-        // v3.7.29: Debug logging for troubleshooting persistence issues
-        console.log('[v3.7.29 Chart Reload] ======= RELOAD START =======');
-        console.log('[v3.7.29 Chart Reload] chartId:', chartId);
-        console.log('[v3.7.29 Chart Reload] analyticsServiceUrl:', analyticsServiceUrl);
-        console.log('[v3.7.29 Chart Reload] window.currentPresentationId:', window.currentPresentationId);
-        console.log('[v3.7.29 Chart Reload] window.location.pathname:', window.location.pathname);
+        // v3.7.30: Debug logging for troubleshooting persistence issues (with parent window info)
+        const parentWindow = (window.parent && window.parent !== window) ? window.parent : window;
+        console.log('[v3.7.30 Chart Reload] ======= RELOAD START =======');
+        console.log('[v3.7.30 Chart Reload] chartId:', chartId);
+        console.log('[v3.7.30 Chart Reload] analyticsServiceUrl:', analyticsServiceUrl);
+        console.log('[v3.7.30 Chart Reload] Running inside iframe:', window.parent !== window);
+        console.log('[v3.7.30 Chart Reload] parent.currentPresentationId:', parentWindow.currentPresentationId);
+        console.log('[v3.7.30 Chart Reload] window.currentPresentationId:', window.currentPresentationId);
+        console.log('[v3.7.30 Chart Reload] parent.location.pathname:', parentWindow.location.pathname);
+        console.log('[v3.7.30 Chart Reload] window.location.pathname:', window.location.pathname);
 
-        // Extract presentation ID from URL (format: /p/{{uuid}})
-        const presentationId = window.currentPresentationId ||
+        // v3.7.30: Extract presentation ID - check parent window first (for iframe context)
+        const presentationId = parentWindow.currentPresentationId ||
+            window.currentPresentationId ||
+            (parentWindow.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1] ||
             (window.location.pathname.match(/\\/p\\/([^\\/]+)/) || [])[1];
 
-        console.log('[v3.7.29 Chart Reload] Resolved presentationId:', presentationId);
+        console.log('[v3.7.30 Chart Reload] Resolved presentationId:', presentationId);
 
         if (!presentationId) {{
-            console.error('[v3.7.29 Chart Reload] ❌ No presentation ID found! Cannot load saved data.');
-            console.log('[v3.7.29 Chart Reload] ======= RELOAD ABORTED =======');
+            console.error('[v3.7.30 Chart Reload] ❌ No presentation ID found! Cannot load saved data.');
+            console.log('[v3.7.30 Chart Reload] ======= RELOAD ABORTED =======');
             return;
         }}
 
         // Find chart instance (should be ready since slide is visible)
         const chart = findChartInstance_{js_safe_id}();
         if (!chart) {{
-            console.warn('[v3.7.29 Chart Reload] Chart instance not ready yet');
+            console.warn('[v3.7.30 Chart Reload] Chart instance not ready yet');
             return;
         }}
 
@@ -1574,18 +1602,18 @@ class AtomicChartGenerator:
         const multiSeriesCharts = ['area_stacked', 'bar_grouped', 'bar_stacked'];
         const isMultiSeries = multiSeriesCharts.includes(chartType_{js_safe_id});
 
-        // v3.7.29: Debug logging for server fetch
+        // v3.7.30: Debug logging for server fetch
         const fetchUrl = `${{analyticsServiceUrl}}/api/charts/get-data/${{presentationId}}/${{chartId}}`;
-        console.log('[v3.7.29 Chart Reload] Fetching saved data from:', fetchUrl);
+        console.log('[v3.7.30 Chart Reload] Fetching saved data from:', fetchUrl);
 
         try {{
             const response = await fetch(fetchUrl);
 
-            console.log('[v3.7.29 Chart Reload] Fetch response status:', response.status, response.statusText);
+            console.log('[v3.7.30 Chart Reload] Fetch response status:', response.status, response.statusText);
 
             if (response.ok) {{
                 const saved = await response.json();
-                console.log('[v3.7.29 Chart Reload] Saved data received:', JSON.stringify(saved, null, 2));
+                console.log('[v3.7.30 Chart Reload] Saved data received:', JSON.stringify(saved, null, 2));
 
                 if (saved.success && saved.data) {{
                     // v3.7.10: Check for multi-series format first (has datasets array)
@@ -1705,14 +1733,14 @@ class AtomicChartGenerator:
                     }}
                 }}
             }} else {{
-                console.log('[v3.7.29 Chart Reload] No saved data returned (response not ok or no data)');
+                console.log('[v3.7.30 Chart Reload] No saved data returned (response not ok or no data)');
             }}
         }} catch (e) {{
-            // v3.7.29: Enhanced error logging for debugging
-            console.error('[v3.7.29 Chart Reload] ❌ Error loading saved data:', e);
-            console.error('[v3.7.29 Chart Reload] Error details:', e.message);
+            // v3.7.30: Enhanced error logging for debugging
+            console.error('[v3.7.30 Chart Reload] ❌ Error loading saved data:', e);
+            console.error('[v3.7.30 Chart Reload] Error details:', e.message);
         }}
-        console.log('[v3.7.29 Chart Reload] ======= RELOAD END =======');
+        console.log('[v3.7.30 Chart Reload] ======= RELOAD END =======');
     }}
 
     // v3.7.8: Initial load with retry logic
