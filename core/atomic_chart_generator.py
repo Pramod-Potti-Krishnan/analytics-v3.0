@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.30
+Atomic Chart Generator for Analytics Microservice v3.7.31
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -16,6 +16,11 @@ Key Features:
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
+
+v3.7.31 Changes:
+- FIX: Expose chart editor functions to parent window when modal is moved
+- Save, Cancel, Add Row, Delete Row buttons now work when modal is in parent document
+- Functions are registered on parent window so onclick handlers can find them
 
 v3.7.30 Changes:
 - FIX: Modal now escapes iframe viewport constraint by appending to parent.document.body
@@ -1142,12 +1147,22 @@ class AtomicChartGenerator:
         // v3.7.30: Move modal to PARENT document.body to escape iframe viewport constraint
         // Charts are rendered inside iframes, so position:fixed is relative to iframe viewport, not parent page
         const modal = document.getElementById('{modal_id}');
-        const targetBody = (window.parent && window.parent !== window)
-            ? window.parent.document.body
-            : document.body;
+        const isInIframe = (window.parent && window.parent !== window);
+        const targetBody = isInIframe ? window.parent.document.body : document.body;
+
         if (modal.parentElement !== targetBody) {{
             targetBody.appendChild(modal);
         }}
+
+        // v3.7.31: Expose functions to parent window so onclick handlers work when modal is in parent
+        if (isInIframe) {{
+            window.parent.saveChartData_{js_safe_id} = window.saveChartData_{js_safe_id};
+            window.parent.closeChartEditor_{js_safe_id} = window.closeChartEditor_{js_safe_id};
+            window.parent.addRow_{js_safe_id} = window.addRow_{js_safe_id};
+            window.parent.deleteRow_{js_safe_id} = window.deleteRow_{js_safe_id};
+            console.log('[v3.7.31] Exposed chart editor functions to parent window for modal:', '{modal_id}');
+        }}
+
         modal.style.display = 'flex';
     }};
 
