@@ -278,7 +278,7 @@ class ChartJSGenerator:
                 "labels": labels,
                 "datasets": datasets
             },
-            "options": self._build_chart_options(format_type, "line", options, dataset_count=len(datasets))
+            "options": self._build_chart_options(format_type, "line", options, dataset_count=len(datasets), labels=labels)
         }
 
         # v3.4.19: Stacked area - show data labels only every 3rd point to reduce clutter
@@ -472,7 +472,7 @@ class ChartJSGenerator:
                 "labels": labels,
                 "datasets": datasets
             },
-            "options": self._build_chart_options(format_type, "bar", options, horizontal, dataset_count=len(datasets))
+            "options": self._build_chart_options(format_type, "bar", options, horizontal, dataset_count=len(datasets), labels=labels)
         }
 
         return self._wrap_in_canvas(
@@ -666,7 +666,7 @@ class ChartJSGenerator:
                 }]
             },
             "options": self._build_chart_options(
-                format_type, "bar", options, horizontal=False, dataset_count=1
+                format_type, "bar", options, horizontal=False, dataset_count=1, labels=labels
             )
         }
 
@@ -2204,7 +2204,7 @@ class ChartJSGenerator:
                 "labels": labels,
                 "datasets": datasets
             },
-            "options": self._build_chart_options(format_type, "mixed", options, dataset_count=len(datasets))
+            "options": self._build_chart_options(format_type, "mixed", options, dataset_count=len(datasets), labels=labels)
         }
 
         return self._wrap_in_canvas(
@@ -3527,7 +3527,8 @@ class ChartJSGenerator:
         chart_type: str,
         custom_options: Optional[Dict[str, Any]] = None,
         horizontal: bool = False,
-        dataset_count: int = 1
+        dataset_count: int = 1,
+        labels: Optional[list] = None
     ) -> dict:
         """
         Build Chart.js options with GUARANTEED visible axes, labels, and formatters.
@@ -3545,6 +3546,7 @@ class ChartJSGenerator:
             custom_options: Custom options to merge
             horizontal: For horizontal bar charts
             dataset_count: Number of datasets (for legend display logic)
+            labels: v7.5.28 - X-axis labels for auto-detecting axis title
 
         Returns:
             Complete options dictionary with guaranteed visibility
@@ -3628,7 +3630,7 @@ class ChartJSGenerator:
                     },
                     "title": {
                         "display": True,
-                        "text": "",  # Will be set per chart if needed
+                        "text": self._detect_x_axis_title(labels) if labels else "",  # v7.5.28: Auto-detect from labels
                         "font": {"size": 13, "weight": "bold"},
                         "color": "#6b7280"  # v3.4.15: Standardized gray-500 for all text
                     }
@@ -3705,6 +3707,46 @@ class ChartJSGenerator:
             return "Percentage (%)"
         else:
             return "Value"
+
+    def _detect_x_axis_title(self, labels: list) -> str:
+        """
+        v7.5.28: Auto-detect X-axis title from data labels.
+
+        Analyzes label patterns to provide appropriate axis titles:
+        - Month names (Jan, Feb, etc.) → "Month"
+        - Quarter patterns (Q1, Q2, etc.) → "Quarter"
+        - Year patterns (2024, 2025, etc.) → "Year"
+        - Otherwise → "" (empty, just show tick labels)
+
+        Args:
+            labels: List of x-axis labels from chart data
+
+        Returns:
+            Appropriate axis title or empty string
+        """
+        if not labels:
+            return ""
+
+        sample = str(labels[0]).lower().strip()
+
+        # Check for month patterns (Jan, Feb, Jan '26, January, etc.)
+        months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+        if any(m in sample for m in months):
+            return "Month"
+
+        # Check for quarter patterns (Q1, Q2, Q1 2024, etc.)
+        if sample.startswith('q') and len(sample) <= 8:
+            return "Quarter"
+
+        # Check for year patterns (2024, 2025, etc.)
+        if sample.isdigit() and len(sample) == 4:
+            return "Year"
+
+        # Check for date patterns (2024-01, 01/2024, etc.)
+        if '-' in sample or '/' in sample:
+            return "Date"
+
+        return ""
 
     def _get_tick_config(self, format_type: str) -> dict:
         """

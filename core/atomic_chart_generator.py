@@ -826,17 +826,17 @@ class AtomicChartGenerator:
         # v3.7.16: Conditionally render title with flex-safe styling
         title_html = ""
         if show_title and chart_title:
-            title_html = f'''<h3 style="margin: 30px 0 8px 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 600; color: #1E3A5F; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;">{chart_title}</h3>'''  # v7.5.27: 30px top margin for breathing room
+            title_html = f'''<h3 style="margin: 30px 0 30px 50px; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 21px; font-weight: 600; color: #1E3A5F; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;">{chart_title}</h3>'''  # v7.5.28: 50px left indent to align with Y-axis, 21px font, 30px bottom margin
 
-        # v3.7.18: Stretch-to-fit with 10px padding (like tables)
+        # v3.7.18: Stretch-to-fit with padding (like tables)
         # - Uses 100% width/height instead of fixed pixels
-        # - 10px padding on all sides for consistent margins
+        # - v7.5.28: 30px left padding for symmetry with right side, 10px top/right/bottom
         # - box-sizing: border-box so padding is included in dimensions
         # - overflow: hidden to clip content that doesn't fit
         return f'''<div class="atomic-chart-container"
      data-chart-id="{chart_id}"
      data-element-id="{element_id}"
-     style="width: 100%; height: 100%; padding: 10px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden;">
+     style="width: 100%; height: 100%; padding: 10px 10px 10px 30px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden;">
   {title_html}
   <div class="chart-content" style="width: 100%; flex: 1; min-height: 0; overflow: hidden;">
     {chart_html}
