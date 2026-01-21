@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.33
+Atomic Chart Generator for Analytics Microservice v3.7.34
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -16,6 +16,13 @@ Key Features:
 - Editable series names in multi-series charts
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
+- v7.5.40: Preservable element_id for chart data persistence
+
+v3.7.34 Changes (v7.5.40 Fix):
+- Use provided element_id if available, otherwise generate new one
+- New IDs now include UUID suffix for robustness: chart-{pres}-{slide}-{type}-{uuid}
+- Fixes chart data persistence bug where edits were lost on regeneration
+- element_id consistency ensures chart_data_edits lookup works after regeneration
 
 v3.7.33 Changes:
 - FIX: Defensive modal finding with try-catch error handling
@@ -335,9 +342,19 @@ class AtomicChartGenerator:
 
         config = self.CHART_CONFIGS[chart_id]
 
-        # v3.7.5: Deterministic chart ID for persistence
-        # Format: chart-{presentation_id}-{slide_id}-{chart_type}-{index}
-        element_id = f"chart-{request.presentation_id}-{request.slide_id}-{chart_id}-{request.chart_index}"
+        # v3.7.34 (v7.5.40 Fix): Use provided element_id if available, otherwise generate new one
+        # This preserves chart data edits when charts are regenerated
+        if request.element_id:
+            # Use the provided element_id to preserve existing chart data edits
+            element_id = request.element_id
+            logger.info(f"Using provided element_id for persistence: {element_id}")
+        else:
+            # Generate new element_id with UUID suffix for robustness
+            # Format: chart-{presentation_id}-{slide_id}-{chart_type}-{uuid8}
+            # UUID suffix prevents ID collisions when charts are created/deleted
+            short_uuid = uuid.uuid4().hex[:8]
+            element_id = f"chart-{request.presentation_id}-{request.slide_id}-{chart_id}-{short_uuid}"
+            logger.info(f"Generated new element_id: {element_id}")
 
         logger.info(f"Generating atomic {chart_id} chart: {element_id}")
 

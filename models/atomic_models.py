@@ -1,8 +1,14 @@
 """
-Atomic Chart Models for Analytics Microservice v3.8.1
+Atomic Chart Models for Analytics Microservice v3.8.2
 
 Request/response Pydantic models for atomic chart endpoints.
 Each endpoint generates a single chart element with synthetic data.
+
+v3.8.2 Changes (v7.5.40 Fix):
+- Added optional element_id field to AtomicChartRequest
+- When element_id is provided, use it instead of generating a new one
+- Fixes chart data persistence bug where edits were lost on regeneration
+- New ID generation adds UUID suffix for robustness when no element_id provided
 
 v3.8.1 Changes:
 - Added grid positioning fields to AtomicChartRequest: start_col, start_row, position_width, position_height
@@ -72,6 +78,13 @@ class AtomicChartRequest(BaseModel):
         ge=0,
         le=20,
         description="Index for multiple charts of same type on same slide (default 0)"
+    )
+
+    # v3.8.2: Optional element_id for chart data persistence
+    element_id: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="Existing element_id to preserve (for chart updates). If provided, this ID is used instead of generating a new one. This ensures chart data edits are preserved across regeneration."
     )
 
     # Optional generation fields
@@ -173,6 +186,7 @@ class AtomicChartRequest(BaseModel):
                 "presentation_id": "pres-12345678-abcd",
                 "slide_id": "slide-1",
                 "chart_index": 0,
+                "element_id": "chart-pres-12345678-abcd-slide-1-line-0-a1b2c3d4",
                 "narrative": "Show quarterly revenue growth for 2024",
                 "include_insights": True,
                 "num_points": 4,
