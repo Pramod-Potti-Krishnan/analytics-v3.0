@@ -1,5 +1,5 @@
 """
-Atomic Chart Generator for Analytics Microservice v3.7.34
+Atomic Chart Generator for Analytics Microservice v3.7.35
 
 Generates atomic chart elements with synthetic data for frontend positioning.
 Each chart is a self-contained HTML element ready for placement.
@@ -17,6 +17,11 @@ Key Features:
 - Configurable title visibility (show_title)
 - Stretch-to-fit container with 10px padding
 - v7.5.40: Preservable element_id for chart data persistence
+
+v3.7.35 Changes:
+- FIX: Chart editor modal now re-opens after save without requiring page refresh
+- openChartEditor now uses getModalDocument_() to find tbody in correct document
+- Fixes crash when modal was moved to parent document on first open
 
 v3.7.34 Changes (v7.5.40 Fix):
 - Use provided element_id if available, otherwise generate new one
@@ -1112,7 +1117,9 @@ class AtomicChartGenerator:
         }}
 
         // Populate table with current data
-        const tbody = document.getElementById('tbody-{element_id}');
+        // v3.7.35: Use getModalDocument_() to find tbody in correct document (iframe or parent)
+        const modalDoc = getModalDocument_{js_safe_id}();
+        const tbody = modalDoc.getElementById('tbody-{element_id}');
         tbody.innerHTML = '';
 
         const inputStyle = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;';
