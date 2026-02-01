@@ -1,10 +1,16 @@
 """
-Atomic Chart Routes for Analytics Microservice v3.8.1
+Atomic Chart Routes for Analytics Microservice v3.9.0
 
-14 atomic endpoints for gold standard chart types.
+14 atomic endpoints for gold standard chart types + DATA_ARCHITECTURE diagrams.
 Each endpoint generates a single chart element with synthetic data.
 
 Endpoint Pattern: POST /api/v1/charts/atomic/{chart_id}
+
+v3.9.0 Changes:
+- Added DATA_ARCHITECTURE endpoint for ER diagrams
+- New endpoint: POST /api/v1/charts/atomic/DATA_ARCHITECTURE
+- Supports explicit entity/relationship definitions or LLM generation
+- Crow's foot notation for cardinality visualization
 
 v3.8.1 Changes:
 - Added grid positioning support: start_col, start_row, position_width, position_height
@@ -47,8 +53,20 @@ from models.atomic_models import (
     GridPosition as GridPositionModel,
     GridSize as GridSizeModel
 )
+# v3.9.0: DATA_ARCHITECTURE models
+from models.data_architecture_atomic_models import (
+    DataArchitectureAtomicRequest,
+    DataArchitectureAtomicResponse,
+    DataArchitectureAtomicError,
+    DataEntity,
+    DataField,
+    DataRelationship
+)
 from core.atomic_chart_generator import AtomicChartGenerator
 from core.element_positioner import ElementPositioner, GridPosition, GridSize
+# v3.9.0: DATA_ARCHITECTURE services
+from core.data_architecture_atomic_service import DataArchitectureAtomicService
+from core.data_architecture_planner import DataArchitecturePlanner, DataArchitecturePlanRequest
 import httpx
 import time
 
@@ -74,6 +92,30 @@ def get_generator(theme: str = "professional") -> AtomicChartGenerator:
     if _generator is None or _generator.theme != theme:
         _generator = AtomicChartGenerator(theme=theme)
     return _generator
+
+
+# ========================================
+# v3.9.0: DATA_ARCHITECTURE SINGLETONS
+# ========================================
+
+_data_arch_service: Optional[DataArchitectureAtomicService] = None
+_data_arch_planner: Optional[DataArchitecturePlanner] = None
+
+
+def get_data_arch_service() -> DataArchitectureAtomicService:
+    """Get or create DATA_ARCHITECTURE service instance."""
+    global _data_arch_service
+    if _data_arch_service is None:
+        _data_arch_service = DataArchitectureAtomicService()
+    return _data_arch_service
+
+
+def get_data_arch_planner() -> DataArchitecturePlanner:
+    """Get or create DATA_ARCHITECTURE planner instance."""
+    global _data_arch_planner
+    if _data_arch_planner is None:
+        _data_arch_planner = DataArchitecturePlanner()
+    return _data_arch_planner
 
 
 # ========================================
@@ -533,6 +575,153 @@ async def _create_layout_element(
             "element_id": element_id,
             "z_index": final_z_index
         }
+
+
+# ========================================
+# v3.9.0: DATA_ARCHITECTURE ENDPOINT
+# ========================================
+
+@router.post(
+    "/DATA_ARCHITECTURE",
+    response_model=DataArchitectureAtomicResponse,
+    responses={
+        400: {"model": DataArchitectureAtomicError, "description": "Invalid request"},
+        500: {"model": DataArchitectureAtomicError, "description": "Generation failed"}
+    },
+    summary="Generate DATA_ARCHITECTURE ER diagram",
+    description="""
+    Generate an Entity-Relationship (ER) diagram visualization.
+
+    **Input Modes:**
+    1. **Explicit**: Provide `entities` and `relationships` arrays directly
+    2. **LLM Generation**: Provide a `prompt` to generate the schema
+    3. **Placeholder**: Set `placeholder_mode: true` for fallback schemas
+
+    **Features:**
+    - Entity cards with table structure (fields, types, constraints)
+    - Crow's foot notation for cardinality (1:1, 1:N, M:N)
+    - Light/dark theme support
+    - Interactive drag/drop positioning
+    - Edit mode for modifications
+
+    **Example Request (LLM mode):**
+    ```json
+    {
+        "presentation_id": "pres-123",
+        "slide_id": "slide-1",
+        "prompt": "Design a database for an e-commerce platform"
+    }
+    ```
+
+    **Example Request (Explicit mode):**
+    ```json
+    {
+        "presentation_id": "pres-123",
+        "slide_id": "slide-1",
+        "entities": [
+            {"name": "users", "type": "table", "fields": [...], "x_position": 20, "y_position": 30}
+        ],
+        "relationships": [
+            {"from_entity": "ent-001", "to_entity": "ent-002", "cardinality": "one_to_many"}
+        ]
+    }
+    ```
+    """
+)
+async def generate_data_architecture(
+    request: DataArchitectureAtomicRequest
+) -> DataArchitectureAtomicResponse:
+    """
+    Generate DATA_ARCHITECTURE ER diagram visualization.
+
+    This endpoint generates a self-contained HTML element showing an
+    Entity-Relationship diagram with tables, fields, and relationships.
+
+    Args:
+        request: DataArchitectureAtomicRequest with entities/relationships or prompt
+
+    Returns:
+        DataArchitectureAtomicResponse with HTML content and diagram data
+    """
+    try:
+        service = get_data_arch_service()
+        planner = get_data_arch_planner()
+
+        # Determine input mode and get entities/relationships
+        if request.entities and len(request.entities) > 0:
+            # Explicit mode - use provided entities
+            entities = request.entities
+            relationships = request.relationships
+            source = "explicit"
+            title = request.title or "Database Schema"
+            logger.info(f"DATA_ARCHITECTURE: Using explicit mode with {len(entities)} entities")
+
+        elif request.placeholder_mode:
+            # Placeholder mode - use fallback schema without LLM
+            plan_result = planner.get_placeholder_schema(request.prompt)
+            entities = plan_result.entities
+            relationships = plan_result.relationships
+            source = "placeholder"
+            title = request.title or plan_result.title or "Database Schema"
+            logger.info(f"DATA_ARCHITECTURE: Using placeholder mode, got {len(entities)} entities")
+
+        elif request.prompt:
+            # LLM mode - generate from prompt
+            plan_request = DataArchitecturePlanRequest(prompt=request.prompt)
+            plan_result = await planner.plan(plan_request)
+            entities = plan_result.entities
+            relationships = plan_result.relationships
+            source = "llm" if plan_result.reasoning else "placeholder"
+            title = request.title or plan_result.title or "Database Schema"
+            logger.info(f"DATA_ARCHITECTURE: LLM generated {len(entities)} entities")
+
+        else:
+            # No input provided - use basic fallback
+            plan_result = planner.get_placeholder_schema()
+            entities = plan_result.entities
+            relationships = plan_result.relationships
+            source = "placeholder"
+            title = request.title or plan_result.title or "Database Schema"
+            logger.info("DATA_ARCHITECTURE: No input, using basic fallback schema")
+
+        # Generate visualization
+        response = service.generate(
+            request=request,
+            entities=entities,
+            relationships=relationships,
+            title=title,
+            source=source
+        )
+
+        # Add reasoning if from LLM
+        if source == "llm" and hasattr(plan_result, 'reasoning'):
+            response.reasoning = plan_result.reasoning
+
+        return response
+
+    except ValueError as e:
+        logger.error(f"DATA_ARCHITECTURE validation error: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error_code": "VALIDATION_ERROR",
+                "message": str(e),
+                "suggestion": "Check request parameters and entity/relationship definitions"
+            }
+        )
+    except Exception as e:
+        logger.error(f"DATA_ARCHITECTURE generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error_code": "GENERATION_FAILED",
+                "message": f"ER diagram generation failed: {str(e)}",
+                "details": {"exception_type": type(e).__name__},
+                "suggestion": "Try using placeholder_mode=true or provide explicit entities"
+            }
+        )
 
 
 # ========================================
